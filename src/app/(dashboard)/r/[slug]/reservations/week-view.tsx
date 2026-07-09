@@ -29,7 +29,7 @@ export function WeekView({
         const isToday = day.toDateString() === new Date().toDateString();
 
         return (
-          <div key={day.toISOString()} className="min-h-40 rounded-xl border border-border p-2">
+          <div key={day.toISOString()} className="min-h-40 rounded-[5px] border border-border p-2">
             <button
               type="button"
               onClick={() => onDayClick(day)}

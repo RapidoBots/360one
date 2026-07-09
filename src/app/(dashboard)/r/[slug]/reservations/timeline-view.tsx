@@ -71,8 +71,10 @@ export function TimelineView({
     onSlotClick(tableId, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
   }
 
+  const hourCells = hourMarks.slice(0, -1);
+
   return (
-    <div className="relative overflow-x-auto rounded-2xl border border-border">
+    <div className="relative overflow-x-auto rounded-[5px] border border-border">
       <div className="flex border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
         <div style={{ width: LABEL_COLUMN }} className="shrink-0 p-3">
           Tables
@@ -107,9 +109,18 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-16 min-w-[600px] flex-1 cursor-pointer bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)]"
+              className="relative h-16 min-w-[600px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
+              <div className="absolute inset-0 flex">
+                {hourCells.map((hour) => (
+                  <div
+                    key={hour}
+                    className="h-full flex-1 border-r border-border/60 bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)] last:border-r-0"
+                  />
+                ))}
+              </div>
+
               {tableReservations.map((r) => (
                 <button
                   key={r.id}
@@ -119,7 +130,7 @@ export function TimelineView({
                     onReservationClick(r.id);
                   }}
                   className={cn(
-                    "absolute top-1/2 h-12 -translate-y-1/2 truncate rounded-lg border-l-4 bg-background px-2.5 py-1 text-left shadow-sm hover:shadow-md",
+                    "absolute top-1/2 z-10 h-12 -translate-y-1/2 truncate rounded-lg border-l-4 bg-background px-2.5 py-1 text-left shadow-sm hover:shadow-md",
                     STATUS_ACCENT[r.status]
                   )}
                   style={{ left: `${offsetPercent(r.startsAt)}%`, width: `${widthPercent(r.durationMinutes)}%` }}

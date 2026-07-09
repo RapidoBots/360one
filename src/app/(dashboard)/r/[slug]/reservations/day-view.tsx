@@ -29,7 +29,7 @@ export function DayView({
   }
 
   return (
-    <ul className="divide-y divide-border rounded-2xl border border-border">
+    <ul className="divide-y divide-border rounded-[5px] border border-border">
       {sorted.map((r) => (
         <li
           key={r.id}

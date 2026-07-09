@@ -76,10 +76,16 @@ export function ReservationsCalendar({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={view} onValueChange={(v) => updateParams({ view: v })}>
-          <TabsList>
-            <TabsTrigger value="day">Day</TabsTrigger>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsList className="h-11">
+            <TabsTrigger value="day" className="px-4 py-2 text-base">
+              Day
+            </TabsTrigger>
+            <TabsTrigger value="week" className="px-4 py-2 text-base">
+              Week
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="px-4 py-2 text-base">
+              Timeline
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -87,11 +93,11 @@ export function ReservationsCalendar({
           type="date"
           value={searchParams.get("date") ?? toLocalDateInput(date)}
           onChange={(e) => updateParams({ date: e.target.value })}
-          className="h-9 w-40"
+          className="h-11 w-44 text-base"
           aria-label="Jump to day"
         />
 
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by status">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
           {ALL_STATUSES.map((s) => {
             const active = selectedStatuses.includes(s);
             return (
@@ -100,7 +106,7 @@ export function ReservationsCalendar({
                 type="button"
                 onClick={() => toggleStatus(s)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity",
+                  "rounded-[5px] border px-3.5 py-2 text-sm font-medium transition-opacity",
                   STATUS_STYLES[s],
                   active ? "border-current" : "border-transparent opacity-50 hover:opacity-80"
                 )}
@@ -115,13 +121,14 @@ export function ReservationsCalendar({
           <Input
             placeholder="Search guest name or phone"
             defaultValue={searchParams.get("q") ?? ""}
-            className="h-9 w-56"
+            className="h-11 w-64 text-base"
             onChange={(e) => updateParams({ q: e.target.value })}
           />
-          <Button variant="outline" onClick={() => setTablesOpen(true)}>
+          <Button variant="outline" className="h-11 px-5 text-base" onClick={() => setTablesOpen(true)}>
             Manage tables
           </Button>
           <Button
+            className="h-11 px-5 text-base"
             onClick={() => {
               setEditingId(null);
               setPrefill(undefined);
