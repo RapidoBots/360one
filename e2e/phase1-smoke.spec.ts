@@ -65,22 +65,16 @@ test.describe("Phase 1 foundation", () => {
     await expect(page.getByRole("heading")).toContainText("The Blue Fork");
   });
 
-  test("sidebar navigation reaches every stub page with no 404s", async ({ page }) => {
+  test("sidebar navigation reaches every remaining stub page with no 404s", async ({ page }) => {
+    // Reservations and Customers are excluded here -- Phase 3 made them real
+    // pages; they get their own coverage in phase3-reservations.spec.ts.
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill("owner@blue-fork.example.com");
     await page.getByLabel("Password").fill("password1234");
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/r\/blue-fork\/dashboard/);
 
-    for (const label of [
-      "Reservations",
-      "Waitlist",
-      "Floor Manager",
-      "Customers",
-      "Reports",
-      "Notifications",
-      "Settings",
-    ]) {
+    for (const label of ["Waitlist", "Floor Manager", "Reports", "Notifications", "Settings"]) {
       await page.getByRole("link", { name: label }).click();
       await expect(page.getByText("Coming in Phase")).toBeVisible();
     }

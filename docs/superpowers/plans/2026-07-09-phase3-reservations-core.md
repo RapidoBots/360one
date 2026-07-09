@@ -1416,6 +1416,7 @@ git commit -m "feat: add reservations Timeline view and tables manager dialog"
 > 1. `createTableAction` (Task 4) crashed uncaught on a duplicate table number (`P2002` unique constraint) instead of returning a friendly `{ok: false, error}` — the modal was left silently stuck open. Wrapped the create call in try/catch, returning `Table "X" already exists.` for that case and re-throwing anything else.
 > 2. The reservation modal's edit-mode "Status" label collided with the toolbar's status-filter `<div role="group" aria-label="Filter by status">` — Playwright's `getByLabel("Status")` substring-matches both, so it errors with "resolved to 2 elements." Renamed the modal's field label to "Reservation status" (Task 6's code and Task 12's e2e test both updated).
 > 3. `getByText("Seated")` (Task 12) is case-insensitive by default, so it also matched the toolbar's uppercase "SEATED" filter chip and the Select's lingering value/listbox markup ("resolved to 3 elements"). Added `{ exact: true }`, which Playwright also makes case-sensitive.
+> 4. **Real race condition, caught by the full suite run (not the isolated manual check):** Task 12's first e2e test clicked "Confirm reservation" then immediately called `page.goto()` to the Day view. `page.goto` doesn't wait for the prior click's async Server Action to finish — the reservation was still confirmed to land in the database (verified via `psql`), just not always before the next navigation fired, so the assertion sometimes ran against a page that predated the write. Fixed by asserting `await expect(page.getByRole("dialog")).toBeHidden()` right after the click — the modal only calls `onOpenChange(false)` once the action resolves, so this is a real synchronization point, not an arbitrary sleep.
 
 **Files:**
 - Create: `src/app/(dashboard)/r/[slug]/reservations/reservations-calendar.tsx`
@@ -1894,6 +1895,7 @@ test.describe("Phase 3 reservations core", () => {
     await page.getByLabel("Assigned table").click();
     await page.getByRole("option", { name: /Table E2E-1/ }).click();
     await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
 
     await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-01");
     await expect(page.getByText("Taylor Guest")).toBeVisible();
