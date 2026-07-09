@@ -13,7 +13,7 @@ export default async function DashboardPage({
   return (
     <div className="space-y-2">
       <h1 className="text-2xl font-semibold">Welcome to {restaurant.name}</h1>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-base text-muted-foreground">
         Reservation widgets, occupancy, and today&apos;s arrivals land here in Phase 3.
       </p>
     </div>

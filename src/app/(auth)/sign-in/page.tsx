@@ -38,7 +38,7 @@ export default function SignInPage() {
           <Label htmlFor="password">Password</Label>
           <Input id="password" type="password" className="h-11" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-base text-destructive">{error}</p>}
         <Button type="submit" className="h-12 w-full text-base">Sign in</Button>
       </form>
     </div>

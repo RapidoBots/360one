@@ -18,7 +18,7 @@ export function TopNav({ title }: { title: string }) {
       <div className="flex items-center gap-3">
         <Brand className="text-lg font-bold" />
         <span className="h-5 w-px bg-border" />
-        <span className="text-sm font-semibold">{title}</span>
+        <span className="text-base font-semibold">{title}</span>
       </div>
       <Button variant="ghost" size="sm" onClick={handleSignOut}>
         Sign out
