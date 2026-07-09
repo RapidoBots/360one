@@ -91,7 +91,8 @@ enum Role {
 
 ## 5. Dev Environment, Tooling & Seed Data
 
-- `docker-compose.yml`: single Postgres service. `pnpm db:up` / `pnpm db:down` wrap `docker compose up/down`.
+- **Amendment (2026-07-10):** Docker Desktop requires WSL2, which wasn't installed and needed a restart to set up. Switched to natively-installed PostgreSQL 17 (Windows service, already present on this machine) instead of Docker Compose. A local `app` role/`reservation_saas` database were created directly via `psql`. `DATABASE_URL` still points at `localhost:5432` either way, so nothing downstream (Prisma, Better Auth) changes — only the "how Postgres runs locally" mechanism differs from the original docker-compose plan.
+- ~~`docker-compose.yml`: single Postgres service. `pnpm db:up` / `pnpm db:down` wrap `docker compose up/down`.~~ (superseded — see amendment above)
 - `pnpm prisma migrate dev` against local Postgres.
 - `prisma/seed.ts` creates: one Super Admin user, one demo restaurant with one Owner and one Staff user — so login works immediately after `pnpm db:seed`.
 - `.env.example` committed with placeholder values; `.env.local` gitignored.

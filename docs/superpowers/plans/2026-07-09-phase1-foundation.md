@@ -137,38 +137,22 @@ git commit -m "chore: scaffold Next.js 15 project with TypeScript strict mode"
 
 ### Task 2: Local Postgres + Prisma schema & migration
 
+> **Amendment (2026-07-10):** Docker required WSL2 (not installed, needs a restart). Switched to natively-installed PostgreSQL 17 (Windows service already on this machine) — created the `app` role and `reservation_saas` database directly via `psql` (see `scripts/reset-postgres-local.ps1`, a one-time password-reset helper since the postgres superuser password was unknown). Steps 1 and 6 below are superseded; everything else is unchanged since `DATABASE_URL` still just points at `localhost:5432`.
+
 **Files:**
-- Create: `docker-compose.yml`, `.env.example`, `prisma/schema.prisma`, `src/lib/prisma.ts`
+- Create: `.env.example`, `prisma/schema.prisma`, `src/lib/prisma.ts`
 - Modify: `.gitignore` (ensure `.env.local` is ignored)
 
 **Interfaces:**
 - Produces: `prisma.restaurant`, `prisma.user` (with `role: Role`, `restaurantId: string | null`), `prisma.session`, `prisma.account`, `prisma.verification` — all consumed by Task 3+ (Better Auth) and Task 4/5 (guards).
 
-- [ ] **Step 1: Add Docker Compose Postgres service**
+- [x] **Step 1 (superseded): Local Postgres via native Windows install**
 
-`docker-compose.yml`:
+Done via `scripts/reset-postgres-local.ps1` instead of Docker Compose — created role `app` (password `app`) and database `reservation_saas` on the natively-installed PostgreSQL 17 Windows service.
 
-```yaml
-services:
-  postgres:
-    image: postgres:16
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: reservation_saas
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+- [ ] **Step 2 (adjusted): Add env files**
 
-volumes:
-  pgdata:
-```
-
-- [ ] **Step 2: Add env files**
-
-`.env.example`:
+`.env.example` (note: a single `.env` is used, not `.env.local` — see Step 3 amendment):
 
 ```
 DATABASE_URL="postgresql://app:app@localhost:5432/reservation_saas"
@@ -176,36 +160,38 @@ BETTER_AUTH_SECRET="replace-with-a-long-random-string"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-Copy it to `.env.local` (gitignored) with the same values, generating a real secret:
+Copy it to `.env` (gitignored) with the same values, generating a real secret:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Confirm `.gitignore` contains `.env*.local`.
+Confirm `.gitignore` contains `.env*` with a `!.env.example` exception (both already present from Task 1's scaffold).
 
-- [ ] **Step 3: Install Prisma and Better Auth's peer deps**
+- [ ] **Step 3 (adjusted for Prisma 7): Install Prisma and Better Auth's peer deps**
+
+> **Amendment (2026-07-10):** `npx prisma init` (Prisma 7) also generates `prisma.config.ts` (centralizes the datasource URL — the schema's `datasource` block no longer has a `url =` line) and requires `dotenv` since `prisma.config.ts` does `import "dotenv/config"`.
 
 ```bash
 pnpm add prisma @prisma/client
-pnpm add -D tsx
+pnpm add -D tsx dotenv
 npx prisma init --datasource-provider postgresql
 ```
 
-This creates `prisma/schema.prisma` — replace its contents with the schema below.
+This creates `prisma/schema.prisma` and `prisma.config.ts` — replace `schema.prisma`'s contents with the schema below; leave the generated `prisma.config.ts` as-is.
 
-- [ ] **Step 4: Write the full schema**
+- [ ] **Step 4 (adjusted for Prisma 7): Write the full schema**
 
 `prisma/schema.prisma`:
 
 ```prisma
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -295,26 +281,34 @@ model Verification {
 }
 ```
 
-- [ ] **Step 5: Prisma client singleton**
+- [ ] **Step 5 (adjusted for Prisma 7): Prisma client singleton**
+
+> **Amendment (2026-07-10):** The installed Prisma version (7.8.0) generates the client to `src/generated/prisma` (not `node_modules/@prisma/client`) and requires an explicit driver adapter (`@prisma/adapter-pg`) — the old no-args `new PrismaClient()` no longer type-checks. Also install `pnpm add @prisma/adapter-pg pg` and `pnpm add -D @types/pg`.
 
 `src/lib/prisma.ts`:
 
 ```typescript
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 ```
 
-- [ ] **Step 6: Start Postgres and run the migration**
+Note: scripts run via `tsx` outside Next.js's own env loading (the seed script in Task 11, any ad-hoc script) must `import "dotenv/config"` as their first line, or `process.env.DATABASE_URL` will be undefined.
+
+- [ ] **Step 6 (adjusted): Run the migration**
+
+Postgres is already running as a native Windows service (no `pnpm db:up` needed):
 
 ```bash
-pnpm db:up
 npx prisma migrate dev --name init
 ```
 
@@ -331,7 +325,7 @@ Expected: Browser opens showing `restaurant`, `user`, `session`, `account`, `ver
 - [ ] **Step 8: Commit**
 
 ```bash
-git add docker-compose.yml .env.example .gitignore prisma package.json pnpm-lock.yaml src/lib/prisma.ts
+git add .env.example .gitignore prisma prisma.config.ts package.json pnpm-lock.yaml src/lib/prisma.ts
 git commit -m "feat: add local Postgres, Prisma schema, and client singleton"
 ```
 
