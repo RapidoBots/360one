@@ -28,18 +28,18 @@ export default function SignInPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border p-8 shadow-sm">
-        <Brand className="text-2xl font-bold" />
+        <Brand className="block py-6 text-center text-4xl font-bold" />
         <h1 className="text-lg font-semibold">Sign in</h1>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input id="email" type="email" className="h-11" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Input id="password" type="password" className="h-11" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="w-full">Sign in</Button>
+        <Button type="submit" className="h-12 w-full text-base">Sign in</Button>
       </form>
     </div>
   );
