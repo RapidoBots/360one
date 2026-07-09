@@ -85,7 +85,7 @@ export function TimelineView({
             <span
               key={hour}
               className="absolute top-1/2 -translate-y-1/2 pl-1.5 whitespace-nowrap"
-              style={trackLeftStyle(minutesToOffsetPercent((hour - DAY_START_HOUR) * 60))}
+              style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
             >
               {formatHour(hour)}
             </span>
