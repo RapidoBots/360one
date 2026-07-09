@@ -3,8 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import type { NavItem } from "./nav-config";
+import {
+  LayoutDashboard,
+  CalendarClock,
+  ListOrdered,
+  Map,
+  Users,
+  BarChart3,
+  Bell,
+  Settings,
+  Building2,
+  CreditCard,
+  type LucideIcon,
+} from "lucide-react";
+import type { NavIconName, NavItem } from "./nav-config";
 import { cn } from "@/lib/utils";
+
+const ICONS: Record<NavIconName, LucideIcon> = {
+  LayoutDashboard,
+  CalendarClock,
+  ListOrdered,
+  Map,
+  Users,
+  BarChart3,
+  Bell,
+  Settings,
+  Building2,
+  CreditCard,
+};
 
 export function Sidebar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
@@ -14,6 +40,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
       <nav className="flex flex-col gap-1">
         {items.map((item) => {
           const active = pathname.startsWith(item.href);
+          const Icon = ICONS[item.icon];
           return (
             <Link key={item.href} href={item.href}>
               <motion.div
@@ -26,7 +53,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
                     : "text-foreground/70 hover:bg-muted"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" />
                 {item.label}
               </motion.div>
             </Link>
