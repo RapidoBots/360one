@@ -1209,11 +1209,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 2: Install Framer Motion and wire into root layout**
+- [x] **Step 2 (adjusted): Wire into root layout**
 
-```bash
-pnpm add framer-motion
-```
+> **Amendment (2026-07-10):** `framer-motion` was already installed during Task 7, since the Sidebar's hover animation needed it before this task ran. No install step needed here.
 
 In `src/app/layout.tsx`, wrap `{children}` with `<PageTransition>{children}</PageTransition>` (import from `@/components/shell/page-transition`).
 
