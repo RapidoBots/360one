@@ -11,6 +11,7 @@ import { WeekView } from "./week-view";
 import { TimelineView } from "./timeline-view";
 import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
 import { TablesManagerDialog, type TableRow } from "./tables-manager-dialog";
+import { STATUS_LABELS, STATUS_STYLES } from "./reservation-badge";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -44,12 +45,6 @@ export function ReservationsCalendar({
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(next)) params.set(key, value);
     router.push(`${pathname}?${params.toString()}`);
-  }
-
-  function shiftDate(days: number) {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    updateParams({ date: toLocalDateInput(d) });
   }
 
   const selectedStatuses = (searchParams.get("status") ?? "").split(",").filter(Boolean) as ReservationStatus[];
@@ -88,34 +83,32 @@ export function ReservationsCalendar({
           </TabsList>
         </Tabs>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => shiftDate(view === "week" ? -7 : -1)}>
-            Prev
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => updateParams({ date: toLocalDateInput(new Date()) })}>
-            Today
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => shiftDate(view === "week" ? 7 : 1)}>
-            Next
-          </Button>
-        </div>
+        <Input
+          type="date"
+          value={searchParams.get("date") ?? toLocalDateInput(date)}
+          onChange={(e) => updateParams({ date: e.target.value })}
+          className="h-9 w-40"
+          aria-label="Jump to day"
+        />
 
         <div className="flex flex-wrap gap-1" role="group" aria-label="Filter by status">
-          {ALL_STATUSES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => toggleStatus(s)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium",
-                selectedStatuses.includes(s)
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {s}
-            </button>
-          ))}
+          {ALL_STATUSES.map((s) => {
+            const active = selectedStatuses.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleStatus(s)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition-opacity",
+                  STATUS_STYLES[s],
+                  active ? "border-current" : "border-transparent opacity-50 hover:opacity-80"
+                )}
+              >
+                {STATUS_LABELS[s]}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-2">

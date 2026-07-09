@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ReservationStatus } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
-const STATUS_STYLES: Record<ReservationStatus, string> = {
+export const STATUS_STYLES: Record<ReservationStatus, string> = {
   CONFIRMED: "bg-primary/10 text-primary",
   SEATED: "bg-emerald-500/10 text-emerald-600",
   COMPLETED: "bg-muted text-muted-foreground",
@@ -10,7 +10,7 @@ const STATUS_STYLES: Record<ReservationStatus, string> = {
   NO_SHOW: "bg-amber-500/10 text-amber-600",
 };
 
-const STATUS_LABELS: Record<ReservationStatus, string> = {
+export const STATUS_LABELS: Record<ReservationStatus, string> = {
   CONFIRMED: "Confirmed",
   SEATED: "Seated",
   COMPLETED: "Completed",

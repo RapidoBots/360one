@@ -42,8 +42,12 @@ export function TimelineView({
   }
 
   const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
   const nowMinutes = (now.getHours() - DAY_START_HOUR) * 60 + now.getMinutes();
+  // Only show the current-time line when "now" actually falls within the
+  // visible hour range for today -- otherwise it has nothing meaningful to
+  // point at and previously just pinned to the left edge, which read as a
+  // stray line rather than "it's currently outside business hours."
+  const showNowLine = date.toDateString() === now.toDateString() && nowMinutes >= 0 && nowMinutes <= TOTAL_MINUTES;
   const nowPercent = minutesToOffsetPercent(nowMinutes);
   const nowLabel = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
@@ -86,7 +90,7 @@ export function TimelineView({
         </div>
       </div>
 
-      {isToday && (
+      {showNowLine && (
         <div className="pointer-events-none absolute inset-y-0 z-10" style={trackLeftStyle(nowPercent)}>
           <div className="h-full w-px bg-destructive" />
           <span className="absolute -top-2 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
@@ -103,7 +107,7 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-16 min-w-[600px] flex-1 cursor-pointer"
+              className="relative h-16 min-w-[600px] flex-1 cursor-pointer bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)]"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
               {tableReservations.map((r) => (
