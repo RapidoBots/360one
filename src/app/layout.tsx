@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Restaurant Reservation SaaS",
+  title: "360One",
   description: "Multi-tenant restaurant reservation management platform",
 };
 

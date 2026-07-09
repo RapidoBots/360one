@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { Brand } from "@/components/shell/brand";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function SignInPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border p-8 shadow-sm">
+        <Brand className="text-2xl font-bold" />
         <h1 className="text-lg font-semibold">Sign in</h1>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
