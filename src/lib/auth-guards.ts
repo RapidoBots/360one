@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessRestaurant, resolveHomeRoute, type SessionUser } from "@/lib/auth-routes";
 
-async function getSessionUser(): Promise<SessionUser | null> {
+export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
 
@@ -36,6 +36,20 @@ export async function requireRestaurantAccess(slug: string) {
 
   const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
   if (!restaurant || restaurant.status !== "ACTIVE") notFound();
+
+  return { user, restaurant };
+}
+
+// For Server Actions: throws a plain Error instead of calling redirect()/
+// notFound(), since those Next.js functions assume a render context that
+// Server Actions don't reliably provide.
+export async function assertRestaurantMember(slug: string) {
+  const user = await getSessionUser();
+  if (!user) throw new Error("Not authenticated");
+  if (!canAccessRestaurant(user, slug)) throw new Error("Not authorized for this restaurant");
+
+  const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
+  if (!restaurant || restaurant.status !== "ACTIVE") throw new Error("Restaurant not found");
 
   return { user, restaurant };
 }

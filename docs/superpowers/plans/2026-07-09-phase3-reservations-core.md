@@ -662,86 +662,17 @@ export async function createTableAction(
 }
 ```
 
-- [ ] **Step 3: Verify against the seeded database**
+- [ ] **Step 3 (adjusted): Verify**
 
-`scripts/smoke-reservation-actions.ts` (temporary):
-
-```typescript
-import "dotenv/config";
-import { prisma } from "@/lib/prisma";
-import { createReservationAction, updateReservationAction, createTableAction } from "@/app/(dashboard)/r/[slug]/reservations/actions";
-
-async function main() {
-  await createTableAction("blue-fork", { number: "T-SMOKE-2", capacity: 4, area: "" });
-  const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug: "blue-fork" } });
-  const table = await prisma.table.findFirstOrThrow({ where: { restaurantId: restaurant.id, number: "T-SMOKE-2" } });
-
-  const created = await createReservationAction("blue-fork", {
-    guestName: "Smoke Guest",
-    guestEmail: "smoke-guest@example.com",
-    guestPhone: "",
-    partySize: 2,
-    date: "2026-06-02",
-    time: "19:00",
-    durationMinutes: 90,
-    specialRequests: "",
-    tableId: table.id,
-  });
-  console.log("create ok:", created.ok);
-
-  const reservation = await prisma.reservation.findFirstOrThrow({
-    where: { restaurantId: restaurant.id, tableId: table.id },
-  });
-
-  const conflictingCreate = await createReservationAction("blue-fork", {
-    guestName: "Conflict Guest",
-    guestEmail: "",
-    guestPhone: "",
-    partySize: 2,
-    date: "2026-06-02",
-    time: "19:30",
-    durationMinutes: 60,
-    specialRequests: "",
-    tableId: table.id,
-  });
-  console.log("conflict rejected:", conflictingCreate.ok === false);
-
-  const updated = await updateReservationAction("blue-fork", reservation.id, {
-    guestName: "Smoke Guest",
-    guestEmail: "smoke-guest@example.com",
-    guestPhone: "",
-    partySize: 3,
-    date: "2026-06-02",
-    time: "19:00",
-    durationMinutes: 90,
-    specialRequests: "Window seat",
-    tableId: table.id,
-    status: "SEATED",
-  });
-  console.log("update ok:", updated.ok);
-
-  await prisma.reservation.deleteMany({ where: { restaurantId: restaurant.id } });
-  await prisma.table.delete({ where: { id: table.id } });
-}
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
-```
-
-Run: `npx tsx scripts/smoke-reservation-actions.ts`
-Expected: `create ok: true`, `conflict rejected: true`, `update ok: true`.
-
-- [ ] **Step 4: Delete the smoke script**
+> **Amendment (2026-07-10):** The tsx-smoke-script pattern from Tasks 2/3 doesn't work here — `assertRestaurantMember` calls `getSessionUser`, which calls `next/headers`'s `headers()`. That function requires an active Next.js request context (AsyncLocalStorage-backed), which a standalone script can never provide — confirmed via `Error: \`headers\` was called outside a request scope`. This is a hard runtime constraint, not a bundler-config issue like Task 3's `server-only` problem, so there's no workaround short of a real HTTP request. Verify with a type-check only here; full behavioral verification (conflict rejection, guest matching, status updates) happens in Task 10's manual click-through and Task 12's Playwright e2e, both of which run against a real server.
 
 ```bash
-rm scripts/smoke-reservation-actions.ts
+npx tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+Expected: no errors.
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/lib/auth-guards.ts "src/app/(dashboard)/r/[slug]/reservations/actions.ts"
