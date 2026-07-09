@@ -27,7 +27,10 @@ model Restaurant {
   slug      String           @unique
   status    RestaurantStatus @default(ACTIVE)
   createdAt DateTime         @default(now())
-  users     User[]
+  users        User[]
+  tables       Table[]
+  customers    Customer[]
+  reservations Reservation[]
 
   @@map("restaurant")
 }
@@ -94,4 +97,58 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Table {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  number       String
+  capacity     Int
+  area         String?
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([restaurantId, number])
+  @@map("table")
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  name         String
+  email        String?
+  phone        String?
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+
+  @@map("customer")
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id              String            @id @default(cuid())
+  restaurantId    String
+  restaurant      Restaurant        @relation(fields: [restaurantId], references: [id])
+  customerId      String
+  customer        Customer          @relation(fields: [customerId], references: [id])
+  tableId         String?
+  table           Table?            @relation(fields: [tableId], references: [id])
+  partySize       Int
+  startsAt        DateTime
+  durationMinutes Int               @default(90)
+  status          ReservationStatus @default(CONFIRMED)
+  specialRequests String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("reservation")
 }
