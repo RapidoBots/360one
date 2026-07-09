@@ -224,7 +224,7 @@ export function ReservationModal({
 
           {reservation && (
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">Reservation status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as ReservationStatus)}>
                 <SelectTrigger id="status">
                   <SelectValue />

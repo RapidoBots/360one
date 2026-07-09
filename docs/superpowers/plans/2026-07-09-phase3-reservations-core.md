@@ -986,7 +986,7 @@ export function ReservationModal({
 
           {reservation && (
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">Reservation status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as ReservationStatus)}>
                 <SelectTrigger id="status">
                   <SelectValue />
@@ -1411,6 +1411,11 @@ git commit -m "feat: add reservations Timeline view and tables manager dialog"
 ---
 
 ### Task 10: Reservations page — toolbar, view switching, wiring
+
+> **Amendments (2026-07-10), found via manual click-through against a production build:**
+> 1. `createTableAction` (Task 4) crashed uncaught on a duplicate table number (`P2002` unique constraint) instead of returning a friendly `{ok: false, error}` — the modal was left silently stuck open. Wrapped the create call in try/catch, returning `Table "X" already exists.` for that case and re-throwing anything else.
+> 2. The reservation modal's edit-mode "Status" label collided with the toolbar's status-filter `<div role="group" aria-label="Filter by status">` — Playwright's `getByLabel("Status")` substring-matches both, so it errors with "resolved to 2 elements." Renamed the modal's field label to "Reservation status" (Task 6's code and Task 12's e2e test both updated).
+> 3. `getByText("Seated")` (Task 12) is case-insensitive by default, so it also matched the toolbar's uppercase "SEATED" filter chip and the Select's lingering value/listbox markup ("resolved to 3 elements"). Added `{ exact: true }`, which Playwright also makes case-sensitive.
 
 **Files:**
 - Create: `src/app/(dashboard)/r/[slug]/reservations/reservations-calendar.tsx`
@@ -1901,10 +1906,10 @@ test.describe("Phase 3 reservations core", () => {
 
     await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-01");
     await page.getByText("Taylor Guest").click();
-    await page.getByLabel("Status").click();
+    await page.getByLabel("Reservation status").click();
     await page.getByRole("option", { name: "SEATED" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Seated")).toBeVisible();
+    await expect(page.getByText("Seated", { exact: true })).toBeVisible();
 
     await page.goto("/r/blue-fork/customers");
     await expect(page.getByText("Taylor Guest")).toBeVisible();

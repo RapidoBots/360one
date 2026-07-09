@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { assertRestaurantMember } from "@/lib/auth-guards";
-import type { ReservationStatus } from "@/generated/prisma/client";
+import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
 
 export type ReservationInput = {
   guestName: string;
@@ -99,14 +99,21 @@ export async function createTableAction(
   input: { number: string; capacity: number; area: string }
 ): Promise<ReservationActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
-  await prisma.table.create({
-    data: {
-      restaurantId: restaurant.id,
-      number: input.number,
-      capacity: input.capacity,
-      area: input.area || null,
-    },
-  });
+  try {
+    await prisma.table.create({
+      data: {
+        restaurantId: restaurant.id,
+        number: input.number,
+        capacity: input.capacity,
+        area: input.area || null,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: `Table "${input.number}" already exists.` };
+    }
+    throw e;
+  }
   revalidatePath(`/r/${slug}/reservations`);
   return { ok: true };
 }
