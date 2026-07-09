@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createReservationAction, updateReservationAction, type ReservationInput } from "./actions";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
 export type TableOption = { id: string; number: string; capacity: number };
@@ -38,11 +39,13 @@ const DURATION_OPTIONS = [30, 60, 90, 120, 150];
 const STATUS_OPTIONS: ReservationStatus[] = ["CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
 function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return toLocalDateInput(d);
 }
 function toTimeInput(d: Date) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+
+export type ReservationPrefill = { tableId?: string | null; date?: string; time?: string };
 
 export function ReservationModal({
   open,
@@ -50,6 +53,7 @@ export function ReservationModal({
   slug,
   tables,
   reservation,
+  prefill,
   onSaved,
 }: {
   open: boolean;
@@ -57,6 +61,7 @@ export function ReservationModal({
   slug: string;
   tables: TableOption[];
   reservation?: ReservationForEdit;
+  prefill?: ReservationPrefill;
   onSaved: () => void;
 }) {
   const [guestName, setGuestName] = useState("");
@@ -91,14 +96,14 @@ export function ReservationModal({
       setGuestEmail("");
       setGuestPhone("");
       setPartySize(2);
-      setDate(toDateInput(new Date()));
-      setTime("19:00");
+      setDate(prefill?.date ?? toDateInput(new Date()));
+      setTime(prefill?.time ?? "19:00");
       setDurationMinutes(90);
       setSpecialRequests("");
-      setTableId(null);
+      setTableId(prefill?.tableId ?? null);
       setStatus("CONFIRMED");
     }
-  }, [open, reservation]);
+  }, [open, reservation, prefill]);
 
   const availableTables = tables.filter((t) => t.capacity >= partySize);
 
@@ -187,7 +192,7 @@ export function ReservationModal({
                 <Label>Duration</Label>
                 <Select value={String(durationMinutes)} onValueChange={(v) => setDurationMinutes(Number(v))}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>{(value: string) => `${value} min`}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {DURATION_OPTIONS.map((d) => (
@@ -209,7 +214,13 @@ export function ReservationModal({
             <Label htmlFor="tableId">Assigned table</Label>
             <Select value={tableId ?? "none"} onValueChange={(v) => setTableId(v === "none" ? null : v)}>
               <SelectTrigger id="tableId">
-                <SelectValue placeholder="No table assigned" />
+                <SelectValue placeholder="No table assigned">
+                  {(value: string | null) => {
+                    if (!value || value === "none") return "No table assigned";
+                    const t = tables.find((table) => table.id === value);
+                    return t ? `Table ${t.number} (seats ${t.capacity})` : "No table assigned";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No table assigned</SelectItem>

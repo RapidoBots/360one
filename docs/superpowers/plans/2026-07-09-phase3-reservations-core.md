@@ -1883,7 +1883,7 @@ test.describe("Phase 3 reservations core", () => {
     await page.getByLabel("Number").fill("E2E-1");
     await page.getByLabel("Capacity").fill("4");
     await page.getByRole("button", { name: "Add table" }).click();
-    await expect(page.getByText("Table E2E-1")).toBeVisible();
+    await expect(page.getByRole("dialog").getByText("Table E2E-1")).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "New reservation" }).click();

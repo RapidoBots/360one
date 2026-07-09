@@ -12,7 +12,7 @@ export default async function ReservationsPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const view: CalendarView = sp.view === "week" || sp.view === "timeline" ? sp.view : "day";
+  const view: CalendarView = sp.view === "day" || sp.view === "week" ? sp.view : "timeline";
   const date = sp.date ? new Date(`${sp.date}T00:00:00`) : new Date();
   const statusFilter = sp.status ? (sp.status.split(",").filter(Boolean) as ReservationStatus[]) : [];
 

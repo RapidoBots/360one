@@ -18,6 +18,15 @@ const STATUS_LABELS: Record<ReservationStatus, string> = {
   NO_SHOW: "No-show",
 };
 
+// Left-border accent color for the Timeline view's reservation cards.
+export const STATUS_ACCENT: Record<ReservationStatus, string> = {
+  CONFIRMED: "border-l-primary",
+  SEATED: "border-l-emerald-500",
+  COMPLETED: "border-l-muted-foreground",
+  CANCELLED: "border-l-destructive",
+  NO_SHOW: "border-l-amber-500",
+};
+
 export function ReservationBadge({ status }: { status: ReservationStatus }) {
   return (
     <Badge className={cn("font-medium", STATUS_STYLES[status])} variant="outline">

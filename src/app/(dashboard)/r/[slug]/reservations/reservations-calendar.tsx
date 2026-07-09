@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import { DayView, type ReservationListItem } from "./day-view";
 import { WeekView } from "./week-view";
 import { TimelineView } from "./timeline-view";
-import { ReservationModal, type ReservationForEdit, type TableOption } from "./reservation-modal";
+import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
 import { TablesManagerDialog, type TableRow } from "./tables-manager-dialog";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
 export type CalendarView = "day" | "week" | "timeline";
@@ -37,6 +38,7 @@ export function ReservationsCalendar({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tablesOpen, setTablesOpen] = useState(false);
+  const [prefill, setPrefill] = useState<ReservationPrefill | undefined>(undefined);
 
   function updateParams(next: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -47,7 +49,7 @@ export function ReservationsCalendar({
   function shiftDate(days: number) {
     const d = new Date(date);
     d.setDate(d.getDate() + days);
-    updateParams({ date: d.toISOString().slice(0, 10) });
+    updateParams({ date: toLocalDateInput(d) });
   }
 
   const selectedStatuses = (searchParams.get("status") ?? "").split(",").filter(Boolean) as ReservationStatus[];
@@ -90,7 +92,7 @@ export function ReservationsCalendar({
           <Button variant="outline" size="sm" onClick={() => shiftDate(view === "week" ? -7 : -1)}>
             Prev
           </Button>
-          <Button variant="outline" size="sm" onClick={() => updateParams({ date: new Date().toISOString().slice(0, 10) })}>
+          <Button variant="outline" size="sm" onClick={() => updateParams({ date: toLocalDateInput(new Date()) })}>
             Today
           </Button>
           <Button variant="outline" size="sm" onClick={() => shiftDate(view === "week" ? 7 : 1)}>
@@ -129,6 +131,7 @@ export function ReservationsCalendar({
           <Button
             onClick={() => {
               setEditingId(null);
+              setPrefill(undefined);
               setModalOpen(true);
             }}
           >
@@ -150,7 +153,7 @@ export function ReservationsCalendar({
         <WeekView
           reservations={reservations}
           weekStart={date}
-          onDayClick={(d) => updateParams({ view: "day", date: d.toISOString().slice(0, 10) })}
+          onDayClick={(d) => updateParams({ view: "day", date: toLocalDateInput(d) })}
           onReservationClick={(id) => {
             setEditingId(id);
             setModalOpen(true);
@@ -161,8 +164,14 @@ export function ReservationsCalendar({
         <TimelineView
           reservations={reservations}
           tables={tables}
+          date={date}
           onReservationClick={(id) => {
             setEditingId(id);
+            setModalOpen(true);
+          }}
+          onSlotClick={(tableId, time) => {
+            setEditingId(null);
+            setPrefill({ tableId, date: toLocalDateInput(date), time });
             setModalOpen(true);
           }}
         />
@@ -174,6 +183,7 @@ export function ReservationsCalendar({
         slug={slug}
         tables={tableOptions}
         reservation={editingForModal}
+        prefill={prefill}
         onSaved={() => router.refresh()}
       />
       <TablesManagerDialog
