@@ -7,6 +7,7 @@ import type { ReservationListItem } from "./day-view";
 
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 23;
+const SLOT_MINUTES = 30;
 const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const LABEL_COLUMN = "6rem";
 
@@ -71,7 +72,7 @@ export function TimelineView({
     onSlotClick(tableId, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
   }
 
-  const hourCells = hourMarks.slice(0, -1);
+  const slotCells = Array.from({ length: TOTAL_MINUTES / SLOT_MINUTES }, (_, i) => i);
 
   return (
     <div className="relative overflow-x-auto rounded-[5px] border border-border">
@@ -79,11 +80,11 @@ export function TimelineView({
         <div style={{ width: LABEL_COLUMN }} className="shrink-0 p-3">
           Tables
         </div>
-        <div className="relative min-w-[600px] flex-1">
+        <div className="relative min-w-[1350px] flex-1">
           {hourMarks.map((hour) => (
             <span
               key={hour}
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap"
+              className="absolute top-1/2 -translate-y-1/2 pl-1.5 whitespace-nowrap"
               style={trackLeftStyle(minutesToOffsetPercent((hour - DAY_START_HOUR) * 60))}
             >
               {formatHour(hour)}
@@ -109,14 +110,19 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-16 min-w-[600px] flex-1 cursor-pointer"
+              className="relative h-20 min-w-[1350px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
               <div className="absolute inset-0 flex">
-                {hourCells.map((hour) => (
+                {slotCells.map((slot) => (
                   <div
-                    key={hour}
-                    className="h-full flex-1 border-r border-border/60 bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)] last:border-r-0"
+                    key={slot}
+                    className={cn(
+                      "h-full flex-1 border-r bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)] last:border-r-0",
+                      // Odd slots end on the hour (major boundary); even slots end
+                      // on the half-hour (minor boundary) -- a subtler line.
+                      slot % 2 === 1 ? "border-border/60" : "border-border/25"
+                    )}
                   />
                 ))}
               </div>
@@ -130,14 +136,14 @@ export function TimelineView({
                     onReservationClick(r.id);
                   }}
                   className={cn(
-                    "absolute top-1/2 z-10 h-12 -translate-y-1/2 truncate rounded-lg border-l-4 bg-background px-2.5 py-1 text-left shadow-sm hover:shadow-md",
+                    "absolute top-1/2 z-10 h-14 -translate-y-1/2 truncate rounded-[5px] border-l-4 bg-background px-3 py-1.5 text-left shadow-sm hover:shadow-md",
                     STATUS_ACCENT[r.status]
                   )}
                   style={{ left: `${offsetPercent(r.startsAt)}%`, width: `${widthPercent(r.durationMinutes)}%` }}
                 >
-                  <p className="truncate text-xs font-semibold">{r.customer.name}</p>
-                  <p className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">
-                    <Clock className="h-2.5 w-2.5 shrink-0" />
+                  <p className="truncate text-sm font-semibold">{r.customer.name}</p>
+                  <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 shrink-0" />
                     {r.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                   </p>
                 </button>
