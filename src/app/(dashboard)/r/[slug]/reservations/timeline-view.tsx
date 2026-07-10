@@ -85,27 +85,21 @@ export function TimelineView({
         <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
           Tables
         </div>
-        <div className="relative min-w-[1440px] flex-1">
-          {hourMarks.map((hour) => {
-            // The last mark sits exactly at the track's right edge -- extending
-            // its text rightward (like every other label) would overflow past
-            // the track, which inflates the scroll container's width with a
-            // blank sliver that has no grid/texture behind it. Anchor it
-            // leftward instead so it stays within bounds.
-            const isLast = hour === DAY_END_HOUR;
-            return (
-              <span
-                key={hour}
-                className={cn(
-                  "absolute top-3 whitespace-nowrap",
-                  isLast ? "-translate-x-full pr-1.5" : "pl-1.5"
-                )}
-                style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
-              >
-                {formatHour(hour)}
-              </span>
-            );
-          })}
+        {/* overflow-hidden so a label's text never inflates the outer
+            overflow-x-auto container's scrollWidth -- an anchored-right
+            label pushing text left instead (like the old last-mark special
+            case did) just collides with its neighbor instead, so clipping
+            is the simpler, uniform fix for every mark. */}
+        <div className="relative min-w-[1600px] flex-1 overflow-hidden">
+          {hourMarks.map((hour) => (
+            <span
+              key={hour}
+              className="absolute top-3 pl-1.5 whitespace-nowrap"
+              style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
+            >
+              {formatHour(hour)}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -128,7 +122,7 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-20 min-w-[1440px] flex-1 cursor-pointer"
+              className="relative h-20 min-w-[1600px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
               {/* One continuous texture spanning the whole track, rather than
