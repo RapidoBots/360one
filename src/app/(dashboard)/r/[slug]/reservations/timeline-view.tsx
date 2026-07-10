@@ -86,15 +86,26 @@ export function TimelineView({
           Tables
         </div>
         <div className="relative min-w-[1440px] flex-1">
-          {hourMarks.map((hour) => (
-            <span
-              key={hour}
-              className="absolute top-3 pl-1.5 whitespace-nowrap"
-              style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
-            >
-              {formatHour(hour)}
-            </span>
-          ))}
+          {hourMarks.map((hour) => {
+            // The last mark sits exactly at the track's right edge -- extending
+            // its text rightward (like every other label) would overflow past
+            // the track, which inflates the scroll container's width with a
+            // blank sliver that has no grid/texture behind it. Anchor it
+            // leftward instead so it stays within bounds.
+            const isLast = hour === DAY_END_HOUR;
+            return (
+              <span
+                key={hour}
+                className={cn(
+                  "absolute top-3 whitespace-nowrap",
+                  isLast ? "-translate-x-full pr-1.5" : "pl-1.5"
+                )}
+                style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
+              >
+                {formatHour(hour)}
+              </span>
+            );
+          })}
         </div>
       </div>
 
