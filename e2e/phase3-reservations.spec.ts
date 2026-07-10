@@ -1,4 +1,6 @@
+import "dotenv/config";
 import { test, expect } from "@playwright/test";
+import { Client } from "pg";
 
 async function signInAsOwner(page: import("@playwright/test").Page) {
   await page.goto("/sign-in");
@@ -8,7 +10,32 @@ async function signInAsOwner(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/r\/blue-fork\/dashboard/);
 }
 
+const FIXTURE_TABLE_NUMBERS = ["E2E-1", "E2E-2"];
+const FIXTURE_CUSTOMER_NAMES = ["Taylor Guest", "First Guest", "Second Guest"];
+
+// This suite books against fixed dates/table numbers rather than unique
+// per-run values, so it isn't naturally idempotent -- clean up its own
+// fixtures on both ends so repeated runs (or a run that failed mid-way)
+// never collide with leftover data from a previous run.
+async function cleanupFixtures() {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(
+      `DELETE FROM reservation WHERE "customerId" IN (SELECT id FROM customer WHERE name = ANY($1))`,
+      [FIXTURE_CUSTOMER_NAMES]
+    );
+    await client.query(`DELETE FROM customer WHERE name = ANY($1)`, [FIXTURE_CUSTOMER_NAMES]);
+    await client.query(`DELETE FROM "table" WHERE number = ANY($1)`, [FIXTURE_TABLE_NUMBERS]);
+  } finally {
+    await client.end();
+  }
+}
+
 test.describe("Phase 3 reservations core", () => {
+  test.beforeAll(cleanupFixtures);
+  test.afterAll(cleanupFixtures);
+
   test("create a table, book a reservation, see it across all calendar views, edit it, and find the guest in Customers", async ({ page }) => {
     await signInAsOwner(page);
     await page.goto("/r/blue-fork/reservations");
@@ -71,6 +98,7 @@ test.describe("Phase 3 reservations core", () => {
     await page.getByLabel("Assigned table").click();
     await page.getByRole("option", { name: /Table E2E-2/ }).click();
     await page.getByRole("button", { name: "Confirm reservation" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
 
     await page.getByRole("button", { name: "New reservation" }).click();
     await page.getByLabel("Name").fill("Second Guest");

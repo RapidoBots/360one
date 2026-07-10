@@ -96,7 +96,7 @@ export function TimelineView({
       {showNowLine && (
         <div className="pointer-events-none absolute inset-y-0 z-10" style={trackLeftStyle(nowPercent)}>
           <div className="h-full w-px bg-destructive" />
-          <span className="absolute -top-2 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
+          <span className="absolute top-1 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
             {nowLabel}
           </span>
         </div>
