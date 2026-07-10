@@ -5,7 +5,13 @@ import { getDayRange } from "@/lib/reservation-dates";
 
 export async function findOrCreateCustomer(
   restaurantId: string,
-  input: { name: string; email?: string | null; phone?: string | null }
+  input: { name: string; email?: string | null; phone?: string | null },
+  // Set when updating an existing reservation. If the guest info no longer
+  // has a phone or email to match on (e.g. cleared while editing), reuse
+  // this customer instead of creating an orphaned duplicate with no contact
+  // info -- the reservation shouldn't lose its guest history just because a
+  // field got blanked out.
+  fallbackCustomerId?: string
 ) {
   const key = customerMatchKey(input);
   if (key) {
@@ -18,6 +24,8 @@ export async function findOrCreateCustomer(
       }
       return existing;
     }
+  } else if (fallbackCustomerId) {
+    return prisma.customer.update({ where: { id: fallbackCustomerId }, data: { name: input.name } });
   }
 
   return prisma.customer.create({

@@ -62,6 +62,13 @@ export async function updateReservationAction(
   input: ReservationInput
 ): Promise<ReservationActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
+
+  const current = await prisma.reservation.findFirst({
+    where: { id: reservationId, restaurantId: restaurant.id },
+    select: { customerId: true },
+  });
+  if (!current) return { ok: false, error: "Reservation not found." };
+
   const startsAt = new Date(`${input.date}T${input.time}`);
 
   if (input.tableId) {
@@ -69,11 +76,15 @@ export async function updateReservationAction(
     if (conflict) return { ok: false, error: "That table is already booked for an overlapping time." };
   }
 
-  const customer = await findOrCreateCustomer(restaurant.id, {
-    name: input.guestName,
-    email: input.guestEmail || null,
-    phone: input.guestPhone || null,
-  });
+  const customer = await findOrCreateCustomer(
+    restaurant.id,
+    {
+      name: input.guestName,
+      email: input.guestEmail || null,
+      phone: input.guestPhone || null,
+    },
+    current.customerId
+  );
 
   const { count } = await prisma.reservation.updateMany({
     where: { id: reservationId, restaurantId: restaurant.id },
