@@ -5,8 +5,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { RestaurantStatusBadge } from "../restaurant-status-badge";
 import { updateRestaurantAction, setRestaurantStatusAction } from "../actions";
+import { AddStaffDialog } from "./add-staff-dialog";
 import type { Role, RestaurantStatus } from "@/generated/prisma/client";
 
 export type RestaurantWithUsers = {
@@ -24,6 +34,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [addStaffOpen, setAddStaffOpen] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -73,6 +84,42 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
           {saving ? "Saving..." : "Save changes"}
         </Button>
       </form>
+
+      <div className="rounded-[5px] border border-border">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <h2 className="text-base font-semibold">Staff</h2>
+          <Button className="h-9" onClick={() => setAddStaffOpen(true)}>
+            Add staff member
+          </Button>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {restaurant.users.map((u) => (
+              <TableRow key={u.id}>
+                <TableCell className="font-medium">{u.name}</TableCell>
+                <TableCell>{u.email}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{u.role}</Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AddStaffDialog
+        open={addStaffOpen}
+        onOpenChange={setAddStaffOpen}
+        restaurantId={restaurant.id}
+        onAdded={() => router.refresh()}
+      />
     </div>
   );
 }
