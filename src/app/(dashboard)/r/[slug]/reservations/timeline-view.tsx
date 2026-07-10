@@ -76,15 +76,15 @@ export function TimelineView({
 
   return (
     <div className="relative overflow-x-auto rounded-[5px] border border-border">
-      <div className="flex border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-        <div style={{ width: LABEL_COLUMN }} className="shrink-0 p-3">
+      <div className="relative flex h-14 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
+        <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
           Tables
         </div>
         <div className="relative min-w-[1350px] flex-1">
           {hourMarks.map((hour) => (
             <span
               key={hour}
-              className="absolute top-1/2 -translate-y-1/2 pl-1.5 whitespace-nowrap"
+              className="absolute top-3 pl-1.5 whitespace-nowrap"
               style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
             >
               {formatHour(hour)}
@@ -96,7 +96,9 @@ export function TimelineView({
       {showNowLine && (
         <div className="pointer-events-none absolute inset-y-0 z-10" style={trackLeftStyle(nowPercent)}>
           <div className="h-full w-px bg-destructive" />
-          <span className="absolute top-1 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
+          {/* Sits in its own band below the hour labels (top-3..top-6ish) so
+              the dynamic time never overlaps the hardcoded hour text. */}
+          <span className="absolute top-8 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
             {nowLabel}
           </span>
         </div>
