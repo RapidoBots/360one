@@ -62,7 +62,7 @@ test.describe("Phase 1 foundation", () => {
     await page.getByLabel("Password").fill("password1234");
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/r\/blue-fork\/dashboard/);
-    await expect(page.getByRole("heading")).toContainText("The Blue Fork");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("The Blue Fork");
   });
 
   test("sidebar navigation reaches every remaining stub page with no 404s", async ({ page }) => {
