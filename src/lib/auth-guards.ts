@@ -53,3 +53,11 @@ export async function assertRestaurantMember(slug: string) {
 
   return { user, restaurant };
 }
+
+// Same reasoning as assertRestaurantMember: for Server Actions, not Server Components.
+export async function assertSuperAdmin(): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) throw new Error("Not authenticated");
+  if (user.role !== "SUPER_ADMIN") throw new Error("Not authorized");
+  return user;
+}
