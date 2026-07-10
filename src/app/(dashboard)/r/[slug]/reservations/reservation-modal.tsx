@@ -35,7 +35,7 @@ export type ReservationForEdit = {
   customer: { name: string; email: string | null; phone: string | null };
 };
 
-const DURATION_OPTIONS = [30, 60, 90, 120, 150];
+const DURATION_OPTIONS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
 const STATUS_OPTIONS: ReservationStatus[] = ["CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
 function toDateInput(d: Date) {
@@ -150,16 +150,37 @@ export function ReservationModal({
             <h3 className="text-sm font-semibold text-muted-foreground">Guest information</h3>
             <div className="space-y-2">
               <Label htmlFor="guestName">Name</Label>
-              <Input id="guestName" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
+              <Input
+                id="guestName"
+                className="h-11 text-base"
+                placeholder="Guest name"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="guestEmail">Email</Label>
-                <Input id="guestEmail" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} />
+                <Input
+                  id="guestEmail"
+                  type="email"
+                  className="h-11 text-base"
+                  placeholder="guest@example.com"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="guestPhone">Phone</Label>
-                <Input id="guestPhone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} />
+                <Input
+                  id="guestPhone"
+                  type="tel"
+                  className="h-11 text-base"
+                  placeholder="(555) 123-4567"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -169,11 +190,25 @@ export function ReservationModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                <Input
+                  id="date"
+                  type="date"
+                  className="h-11 text-base"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="time">Time</Label>
-                <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+                <Input
+                  id="time"
+                  type="time"
+                  className="h-11 text-base"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  required
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -183,6 +218,8 @@ export function ReservationModal({
                   id="partySize"
                   type="number"
                   min={1}
+                  className="h-11 text-base"
+                  placeholder="Number of guests"
                   value={partySize}
                   onChange={(e) => setPartySize(Number(e.target.value))}
                   required
@@ -191,7 +228,7 @@ export function ReservationModal({
               <div className="space-y-2">
                 <Label>Duration</Label>
                 <Select value={String(durationMinutes)} onValueChange={(v) => setDurationMinutes(Number(v))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 w-full text-base">
                     <SelectValue>{(value: string) => `${value} min`}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -206,14 +243,20 @@ export function ReservationModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="specialRequests">Special requests</Label>
-              <Textarea id="specialRequests" value={specialRequests} onChange={(e) => setSpecialRequests(e.target.value)} />
+              <Textarea
+                id="specialRequests"
+                className="text-base"
+                placeholder="Any allergies, seating preferences, or occasion..."
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="tableId">Assigned table</Label>
             <Select value={tableId ?? "none"} onValueChange={(v) => setTableId(v === "none" ? null : v)}>
-              <SelectTrigger id="tableId">
+              <SelectTrigger id="tableId" className="h-11 w-full text-base">
                 <SelectValue placeholder="No table assigned">
                   {(value: string | null) => {
                     if (!value || value === "none") return "No table assigned";
@@ -237,7 +280,7 @@ export function ReservationModal({
             <div className="space-y-2">
               <Label htmlFor="status">Reservation status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as ReservationStatus)}>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="h-11 w-full text-base">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

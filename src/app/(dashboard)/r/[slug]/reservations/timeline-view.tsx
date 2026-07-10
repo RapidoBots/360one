@@ -5,8 +5,10 @@ import { cn } from "@/lib/utils";
 import { STATUS_ACCENT } from "./reservation-badge";
 import type { ReservationListItem } from "./day-view";
 
-const DAY_START_HOUR = 8;
-const DAY_END_HOUR = 23;
+// ponytail: hardcoded to the full day for now, per-restaurant hours are a
+// Settings-phase feature (Phase 8).
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
 const SLOT_MINUTES = 30;
 const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const LABEL_COLUMN = "6rem";
@@ -20,8 +22,11 @@ function trackLeftStyle(percent: number) {
 }
 
 function formatHour(hour: number) {
-  const period = hour >= 12 ? "PM" : "AM";
-  const h = hour % 12 === 0 ? 12 : hour % 12;
+  // hour can be 24 (the end-of-day boundary mark) -- wrap it back to
+  // midnight for display rather than showing a bogus "24:00".
+  const h24 = hour % 24;
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h}:00 ${period}`;
 }
 
@@ -80,7 +85,7 @@ export function TimelineView({
         <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
           Tables
         </div>
-        <div className="relative min-w-[1350px] flex-1">
+        <div className="relative min-w-[2160px] flex-1">
           {hourMarks.map((hour) => (
             <span
               key={hour}
@@ -112,7 +117,7 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-20 min-w-[1350px] flex-1 cursor-pointer"
+              className="relative h-20 min-w-[2160px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
               <div className="absolute inset-0 flex">
