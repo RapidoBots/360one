@@ -99,7 +99,7 @@ export function AddStaffDialog({
           </div>
           {error && <p className="text-base text-destructive">{error}</p>}
           {/* Distinct from the "Add staff member" trigger button. */}
-          <Button type="submit" className="w-full" disabled={saving}>
+          <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
             {saving ? "Adding..." : "Add staff"}
           </Button>
         </form>

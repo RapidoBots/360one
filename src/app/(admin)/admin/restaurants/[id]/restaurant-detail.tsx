@@ -80,7 +80,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
           <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
         </div>
         {error && <p className="text-base text-destructive">{error}</p>}
-        <Button type="submit" disabled={saving}>
+        <Button type="submit" className="h-11 px-5 text-base" disabled={saving}>
           {saving ? "Saving..." : "Save changes"}
         </Button>
       </form>
@@ -88,7 +88,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
       <div className="rounded-[5px] border border-border">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-base font-semibold">Staff</h2>
-          <Button className="h-9" onClick={() => setAddStaffOpen(true)}>
+          <Button className="h-11 px-5 text-base" onClick={() => setAddStaffOpen(true)}>
             Add staff member
           </Button>
         </div>

@@ -87,7 +87,7 @@ export function TablesManagerDialog({
             <Input id="tableArea" value={area} onChange={(e) => setArea(e.target.value)} />
           </div>
           {error && <p className="col-span-3 text-base text-destructive">{error}</p>}
-          <Button type="submit" className="col-span-3" disabled={saving}>
+          <Button type="submit" className="col-span-3 h-11 text-base" disabled={saving}>
             {saving ? "Adding..." : "Add table"}
           </Button>
         </form>

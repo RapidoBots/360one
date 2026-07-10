@@ -20,7 +20,7 @@ export function TopNav({ title }: { title: string }) {
         <span className="h-5 w-px bg-border" />
         <span className="text-base font-semibold">{title}</span>
       </div>
-      <Button variant="ghost" size="sm" onClick={handleSignOut}>
+      <Button variant="ghost" className="h-11 px-5 text-base" onClick={handleSignOut}>
         Sign out
       </Button>
     </header>
