@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 import { STATUS_ACCENT } from "./reservation-badge";
 import type { ReservationListItem } from "./day-view";
 
-// ponytail: hardcoded to the full day for now, per-restaurant hours are a
+// ponytail: hardcoded hours for now, per-restaurant hours are a
 // Settings-phase feature (Phase 8).
-const DAY_START_HOUR = 0;
-const DAY_END_HOUR = 24;
+const DAY_START_HOUR = 7;
+const DAY_END_HOUR = 23;
 const SLOT_MINUTES = 30;
 const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const LABEL_COLUMN = "6rem";
@@ -85,7 +85,7 @@ export function TimelineView({
         <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
           Tables
         </div>
-        <div className="relative min-w-[2160px] flex-1">
+        <div className="relative min-w-[1440px] flex-1">
           {hourMarks.map((hour) => (
             <span
               key={hour}
@@ -117,15 +117,23 @@ export function TimelineView({
               Table {table.number}
             </div>
             <div
-              className="relative h-20 min-w-[2160px] flex-1 cursor-pointer"
+              className="relative h-20 min-w-[1440px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
+              {/* One continuous texture spanning the whole track, rather than
+                  a separate repeating-gradient per slot cell -- per-cell
+                  gradients each restart their own phase at that cell's edge,
+                  so at odd cell widths/scroll offsets neighboring cells can
+                  look out of sync (some textured, some blank). */}
+              <div
+                className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)]"
+              />
               <div className="absolute inset-0 flex">
                 {slotCells.map((slot) => (
                   <div
                     key={slot}
                     className={cn(
-                      "h-full flex-1 border-r bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)] last:border-r-0",
+                      "h-full flex-1 border-r last:border-r-0",
                       // Odd slots end on the hour (major boundary); even slots end
                       // on the half-hour (minor boundary) -- a subtler line.
                       slot % 2 === 1 ? "border-border/60" : "border-border/25"
