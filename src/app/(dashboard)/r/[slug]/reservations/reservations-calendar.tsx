@@ -11,7 +11,7 @@ import { WeekView } from "./week-view";
 import { TimelineView } from "./timeline-view";
 import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
 import { TablesManagerDialog, type TableRow } from "./tables-manager-dialog";
-import { STATUS_LABELS, STATUS_STYLES } from "./reservation-badge";
+import { STATUS_LABELS, STATUS_SOLID, STATUS_STYLES } from "./reservation-badge";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -106,9 +106,8 @@ export function ReservationsCalendar({
                 type="button"
                 onClick={() => toggleStatus(s)}
                 className={cn(
-                  "rounded-[5px] border px-3.5 py-2 text-sm font-medium transition-opacity",
-                  STATUS_STYLES[s],
-                  active ? "border-current" : "border-transparent opacity-50 hover:opacity-80"
+                  "rounded-[5px] border border-transparent px-3.5 py-2 text-sm font-medium transition-colors",
+                  active ? STATUS_SOLID[s] : cn(STATUS_STYLES[s], "hover:brightness-95")
                 )}
               >
                 {STATUS_LABELS[s]}

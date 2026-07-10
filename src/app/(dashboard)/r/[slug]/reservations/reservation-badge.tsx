@@ -27,6 +27,15 @@ export const STATUS_ACCENT: Record<ReservationStatus, string> = {
   NO_SHOW: "border-l-amber-500",
 };
 
+// Solid fill for the toolbar's status filter chips when actively selected.
+export const STATUS_SOLID: Record<ReservationStatus, string> = {
+  CONFIRMED: "bg-primary text-primary-foreground",
+  SEATED: "bg-emerald-500 text-white",
+  COMPLETED: "bg-muted-foreground text-background",
+  CANCELLED: "bg-destructive text-white",
+  NO_SHOW: "bg-amber-500 text-white",
+};
+
 export function ReservationBadge({ status }: { status: ReservationStatus }) {
   return (
     <Badge className={cn("font-medium", STATUS_STYLES[status])} variant="outline">
