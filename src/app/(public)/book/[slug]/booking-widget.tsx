@@ -38,7 +38,7 @@ export function BookingWidget({ slug, restaurantName }: { slug: string; restaura
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col p-6">
+    <div className="mx-auto flex min-h-screen max-w-3xl flex-col p-6">
       <h1 className="mb-2 text-center text-lg font-semibold">Reserve a table at {restaurantName}</h1>
 
       {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}

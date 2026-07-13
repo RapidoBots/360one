@@ -82,7 +82,7 @@ export function TimeSlotStep({
         ) : groupSlots.length === 0 ? (
           <p className="text-sm text-muted-foreground">No places available</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             {groupSlots.map((s) => {
               const selected = value.time === s;
               return (
@@ -90,7 +90,7 @@ export function TimeSlotStep({
                   key={s}
                   type="button"
                   variant={selected ? "default" : "outline"}
-                  className={cn("h-11 text-sm", selected && "ring-2 ring-primary ring-offset-2")}
+                  className={cn("h-auto px-5 py-3 text-sm", selected && "ring-2 ring-primary ring-offset-2")}
                   onClick={() => onSlotSelect(s)}
                 >
                   {formatSlotLabel(s)}
