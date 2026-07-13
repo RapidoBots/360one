@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDayRange, getWeekRange } from "@/lib/reservation-dates";
+import { sortTablesByNumber } from "@/lib/sort-tables";
 import { ReservationsCalendar, type CalendarView } from "./reservations-calendar";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -39,7 +40,7 @@ export default async function ReservationsPage({
     orderBy: { startsAt: "asc" },
   });
 
-  const tables = await prisma.table.findMany({ where: { restaurantId: restaurant.id }, orderBy: { number: "asc" } });
+  const tables = sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId: restaurant.id } }));
 
   return (
     <ReservationsCalendar

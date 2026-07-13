@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDayRange } from "@/lib/reservation-dates";
+import { sortTablesByNumber } from "@/lib/sort-tables";
 import { FloorPlan } from "./floor-plan";
 
 export default async function FloorManagerPage({
@@ -11,8 +12,8 @@ export default async function FloorManagerPage({
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
   const { start, end } = getDayRange(new Date());
 
-  const [tables, reservations] = await Promise.all([
-    prisma.table.findMany({ where: { restaurantId: restaurant.id }, orderBy: { number: "asc" } }),
+  const [rawTables, reservations] = await Promise.all([
+    prisma.table.findMany({ where: { restaurantId: restaurant.id } }),
     prisma.reservation.findMany({
       where: {
         restaurantId: restaurant.id,
@@ -23,6 +24,8 @@ export default async function FloorManagerPage({
       orderBy: { startsAt: "asc" },
     }),
   ]);
+
+  const tables = sortTablesByNumber(rawTables);
 
   const floorReservations = reservations.map((r) => ({
     id: r.id,

@@ -17,10 +17,6 @@ function minutesToOffsetPercent(minutesSinceStart: number) {
   return Math.max(0, Math.min(100, (minutesSinceStart / TOTAL_MINUTES) * 100));
 }
 
-function trackLeftStyle(percent: number) {
-  return { left: `calc(${LABEL_COLUMN} + (100% - ${LABEL_COLUMN}) * ${percent / 100})` };
-}
-
 function formatHour(hour: number) {
   // hour can be 24 (the end-of-day boundary mark) -- wrap it back to
   // midnight for display rather than showing a bogus "24:00".
@@ -100,19 +96,24 @@ export function TimelineView({
               {formatHour(hour)}
             </span>
           ))}
+          {/* Positioned as a percent of THIS track div (same box the hour
+              labels use), not the outer scroll container -- that div can be
+              wider than the outer container's visible width (it has its own
+              min-width and grows via flex-1), so computing this line's
+              position against the outer container's 100% put it at the
+              wrong pixel offset whenever horizontal scrolling was active. */}
+          {showNowLine && (
+            <div className="pointer-events-none absolute inset-y-0 z-10" style={{ left: `${nowPercent}%` }}>
+              <div className="h-full w-px bg-destructive" />
+              {/* Sits in its own band below the hour labels (top-3..top-6ish) so
+                  the dynamic time never overlaps the hardcoded hour text. */}
+              <span className="absolute top-8 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
+                {nowLabel}
+              </span>
+            </div>
+          )}
         </div>
       </div>
-
-      {showNowLine && (
-        <div className="pointer-events-none absolute inset-y-0 z-10" style={trackLeftStyle(nowPercent)}>
-          <div className="h-full w-px bg-destructive" />
-          {/* Sits in its own band below the hour labels (top-3..top-6ish) so
-              the dynamic time never overlaps the hardcoded hour text. */}
-          <span className="absolute top-8 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
-            {nowLabel}
-          </span>
-        </div>
-      )}
 
       {tables.map((table) => {
         const tableReservations = reservations.filter((r) => r.tableId === table.id);
@@ -146,6 +147,17 @@ export function TimelineView({
                   />
                 ))}
               </div>
+
+              {/* Same track-relative positioning as the header's now-line
+                  segment -- every row shares the identical min-w/flex-1
+                  sizing, so these line up into what reads as one continuous
+                  line down the page. */}
+              {showNowLine && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-10 w-px bg-destructive"
+                  style={{ left: `${nowPercent}%` }}
+                />
+              )}
 
               {tableReservations.map((r) => (
                 <button

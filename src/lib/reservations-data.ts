@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { doesOverlap } from "@/lib/reservation-conflicts";
 import { customerMatchKey, normalizeEmail, normalizePhone } from "@/lib/customer-matching";
 import { getDayRange } from "@/lib/reservation-dates";
+import { sortTablesByNumber } from "@/lib/sort-tables";
 
 export async function findOrCreateCustomer(
   restaurantId: string,
@@ -62,5 +63,5 @@ export async function hasTableConflict(
 }
 
 export async function listTables(restaurantId: string) {
-  return prisma.table.findMany({ where: { restaurantId }, orderBy: { number: "asc" } });
+  return sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId } }));
 }
