@@ -130,7 +130,7 @@ export function PartyDateTimePicker({
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
                   isSelected
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : available
                       ? "text-emerald-600 hover:bg-emerald-500/10"
                       : "text-destructive hover:bg-destructive/10"
@@ -169,12 +169,7 @@ export function PartyDateTimePicker({
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {amSlots.map((s) => (
-                <Button
-                  key={s}
-                  type="button"
-                  className="h-11 bg-emerald-500 text-sm text-white hover:bg-emerald-600"
-                  onClick={() => onSlotSelected(s)}
-                >
+                <Button key={s} type="button" className="h-11 text-sm" onClick={() => onSlotSelected(s)}>
                   {formatSlotLabel(s)}
                 </Button>
               ))}
@@ -190,12 +185,7 @@ export function PartyDateTimePicker({
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {pmSlots.map((s) => (
-                <Button
-                  key={s}
-                  type="button"
-                  className="h-11 bg-emerald-500 text-sm text-white hover:bg-emerald-600"
-                  onClick={() => onSlotSelected(s)}
-                >
+                <Button key={s} type="button" className="h-11 text-sm" onClick={() => onSlotSelected(s)}>
                   {formatSlotLabel(s)}
                 </Button>
               ))}

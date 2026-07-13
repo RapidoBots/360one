@@ -71,6 +71,10 @@ export function TimelineView({
   }
 
   const slotCells = Array.from({ length: TOTAL_MINUTES / SLOT_MINUTES }, (_, i) => i);
+  // Widget bookings (and any reservation without a table yet) can't render
+  // in a per-table row -- surface them in their own row instead of letting
+  // them silently disappear from the default view.
+  const unassignedReservations = reservations.filter((r) => r.tableId === null);
 
   return (
     <div className="relative overflow-x-auto rounded-[5px] border border-border">
@@ -111,6 +115,37 @@ export function TimelineView({
           )}
         </div>
       </div>
+
+      {unassignedReservations.length > 0 && (
+        <div className="flex border-b border-border bg-amber-500/5">
+          <div
+            style={{ width: LABEL_COLUMN }}
+            className="shrink-0 border-r border-border p-3 text-base font-medium text-amber-700"
+          >
+            Unassigned
+          </div>
+          <div className="relative h-20 min-w-[1600px] flex-1">
+            {unassignedReservations.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => onReservationClick(r.id)}
+                className={cn(
+                  "absolute top-1/2 z-10 h-14 -translate-y-1/2 truncate rounded-[5px] border-l-4 bg-background px-3 py-1.5 text-left shadow-sm hover:shadow-md",
+                  STATUS_ACCENT[r.status]
+                )}
+                style={{ left: `${offsetPercent(r.startsAt)}%`, width: `${widthPercent(r.durationMinutes)}%` }}
+              >
+                <p className="truncate text-sm font-semibold">{r.customer.name}</p>
+                <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  {r.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {tables.map((table) => {
         const tableReservations = reservations.filter((r) => r.tableId === table.id);
