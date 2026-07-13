@@ -3,12 +3,9 @@
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_ACCENT } from "./reservation-badge";
+import { DAY_START_HOUR, DAY_END_HOUR } from "@/lib/business-hours";
 import type { ReservationListItem } from "./day-view";
 
-// ponytail: hardcoded hours for now, per-restaurant hours are a
-// Settings-phase feature (Phase 8).
-const DAY_START_HOUR = 7;
-const DAY_END_HOUR = 23;
 const SLOT_MINUTES = 30;
 const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const LABEL_COLUMN = "6rem";
