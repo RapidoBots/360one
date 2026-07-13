@@ -99,6 +99,11 @@ model Verification {
   @@map("verification")
 }
 
+enum TableShape {
+  SQUARE
+  ROUND
+}
+
 model Table {
   id           String        @id @default(cuid())
   restaurantId String
@@ -106,6 +111,9 @@ model Table {
   number       String
   capacity     Int
   area         String?
+  posX         Float?
+  posY         Float?
+  shape        TableShape    @default(SQUARE)
   reservations Reservation[]
   createdAt    DateTime      @default(now())
 

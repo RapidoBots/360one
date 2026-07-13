@@ -1,0 +1,7 @@
+-- CreateEnum
+CREATE TYPE "TableShape" AS ENUM ('SQUARE', 'ROUND');
+
+-- AlterTable
+ALTER TABLE "table" ADD COLUMN     "posX" DOUBLE PRECISION,
+ADD COLUMN     "posY" DOUBLE PRECISION,
+ADD COLUMN     "shape" "TableShape" NOT NULL DEFAULT 'SQUARE';
