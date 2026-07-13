@@ -19,8 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createReservationAction, updateReservationAction, type ReservationInput } from "./actions";
+import { recommendTable } from "@/lib/table-allocation";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
+import type { ReservationListItem } from "./day-view";
 
 export type TableOption = { id: string; number: string; capacity: number };
 
@@ -52,6 +54,7 @@ export function ReservationModal({
   onOpenChange,
   slug,
   tables,
+  reservations,
   reservation,
   prefill,
   onSaved,
@@ -60,6 +63,7 @@ export function ReservationModal({
   onOpenChange: (open: boolean) => void;
   slug: string;
   tables: TableOption[];
+  reservations: ReservationListItem[];
   reservation?: ReservationForEdit;
   prefill?: ReservationPrefill;
   onSaved: () => void;
@@ -73,6 +77,7 @@ export function ReservationModal({
   const [durationMinutes, setDurationMinutes] = useState(90);
   const [specialRequests, setSpecialRequests] = useState("");
   const [tableId, setTableId] = useState<string | null>(null);
+  const [tableTouched, setTableTouched] = useState(false);
   const [status, setStatus] = useState<ReservationStatus>("CONFIRMED");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,6 +95,7 @@ export function ReservationModal({
       setDurationMinutes(reservation.durationMinutes);
       setSpecialRequests(reservation.specialRequests ?? "");
       setTableId(reservation.tableId);
+      setTableTouched(true);
       setStatus(reservation.status);
     } else {
       setGuestName("");
@@ -101,11 +107,22 @@ export function ReservationModal({
       setDurationMinutes(90);
       setSpecialRequests("");
       setTableId(prefill?.tableId ?? null);
+      setTableTouched(!!prefill?.tableId);
       setStatus("CONFIRMED");
     }
   }, [open, reservation, prefill]);
 
   const availableTables = tables.filter((t) => t.capacity >= partySize);
+
+  const recommendedId = !reservation && date
+    ? recommendTable(
+        tables.map((t) => ({ id: t.id, capacity: t.capacity })),
+        reservations,
+        { partySize, startsAt: new Date(`${date}T${time}`), durationMinutes }
+      )
+    : null;
+
+  const effectiveTableId = tableTouched ? tableId : recommendedId;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -121,7 +138,7 @@ export function ReservationModal({
       time,
       durationMinutes,
       specialRequests,
-      tableId,
+      tableId: effectiveTableId,
       status: reservation ? status : undefined,
     };
 
@@ -255,13 +272,21 @@ export function ReservationModal({
 
           <div className="space-y-2">
             <Label htmlFor="tableId">Assigned table</Label>
-            <Select value={tableId ?? "none"} onValueChange={(v) => setTableId(v === "none" ? null : v)}>
+            <Select
+              value={effectiveTableId ?? "none"}
+              onValueChange={(v) => {
+                setTableTouched(true);
+                setTableId(v === "none" ? null : v);
+              }}
+            >
               <SelectTrigger id="tableId" className="h-11 w-full text-base">
                 <SelectValue placeholder="No table assigned">
                   {(value: string | null) => {
                     if (!value || value === "none") return "No table assigned";
                     const t = tables.find((table) => table.id === value);
-                    return t ? `Table ${t.number} (seats ${t.capacity})` : "No table assigned";
+                    if (!t) return "No table assigned";
+                    const recommended = value === recommendedId && !tableTouched ? " — Recommended" : "";
+                    return `Table ${t.number} (seats ${t.capacity})${recommended}`;
                   }}
                 </SelectValue>
               </SelectTrigger>
@@ -270,6 +295,7 @@ export function ReservationModal({
                 {availableTables.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     Table {t.number} (seats {t.capacity})
+                    {t.id === recommendedId ? " — Recommended" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

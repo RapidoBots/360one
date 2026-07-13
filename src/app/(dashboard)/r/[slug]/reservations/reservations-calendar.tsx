@@ -181,6 +181,7 @@ export function ReservationsCalendar({
         onOpenChange={setModalOpen}
         slug={slug}
         tables={tableOptions}
+        reservations={reservations}
         reservation={editingForModal}
         prefill={prefill}
         onSaved={() => router.refresh()}
