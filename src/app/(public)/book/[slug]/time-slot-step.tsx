@@ -120,11 +120,16 @@ export function TimeSlotStep({
 
       <p className="text-sm text-muted-foreground italic">Please select the party size, date and time.</p>
 
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" className="h-9 px-2" onClick={() => onDateChange(addDays(value.date, -7))}>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 shrink-0 px-2"
+          onClick={() => onDateChange(addDays(value.date, -7))}
+        >
           &lt;
         </Button>
-        <div className="flex flex-1 justify-between gap-1">
+        <div className="flex flex-1 justify-between gap-1 overflow-x-auto">
           {weekDates.map((d) => {
             const isSelected = d === value.date;
             const available = weekAvailability[d] ?? true;
@@ -135,7 +140,7 @@ export function TimeSlotStep({
                 type="button"
                 onClick={() => onDateChange(d)}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
+                  "flex shrink-0 flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
                   isSelected
                     ? "bg-primary text-primary-foreground"
                     : available
@@ -156,7 +161,12 @@ export function TimeSlotStep({
             );
           })}
         </div>
-        <Button type="button" variant="ghost" className="h-9 px-2" onClick={() => onDateChange(addDays(value.date, 7))}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 shrink-0 px-2"
+          onClick={() => onDateChange(addDays(value.date, 7))}
+        >
           &gt;
         </Button>
       </div>

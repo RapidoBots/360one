@@ -9,13 +9,13 @@ const STEPS = [
 
 export function StepProgress({ current }: { current: number }) {
   return (
-    <div className="mb-6 flex items-center justify-center gap-3">
+    <div className="mb-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-4 px-2 py-2 sm:gap-x-4 sm:px-4">
       {STEPS.map((step, i) => (
-        <div key={step.number} className="flex items-center gap-3">
-          <div className="flex items-center gap-3">
+        <div key={step.number} className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full text-base font-semibold",
+                "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:size-9 sm:text-base",
                 step.number <= current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               )}
             >

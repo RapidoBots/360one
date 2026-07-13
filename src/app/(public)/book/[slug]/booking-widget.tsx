@@ -38,12 +38,12 @@ export function BookingWidget({ slug, restaurantName }: { slug: string; restaura
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col p-6">
-      <h1 className="mb-2 text-center text-lg font-semibold">Reserve a table at {restaurantName}</h1>
+    <div className="mx-auto flex min-h-screen max-w-3xl flex-col p-4 sm:p-6">
+      <h1 className="mb-4 text-center text-lg font-semibold sm:mb-6">Reserve a table at {restaurantName}</h1>
 
       {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}
 
-      <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
+      <div className="rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
         {step === "GUEST_DATE" && (
           <GuestDateStep
             value={{ partySize: selection.partySize, date: selection.date }}
