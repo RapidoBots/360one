@@ -11,9 +11,12 @@ const STATUS_STYLES: Record<TableFloorStatus, string> = {
 };
 
 function sizeClass(capacity: number) {
-  if (capacity <= 2) return "h-14 w-14";
-  if (capacity <= 4) return "h-20 w-20";
-  return "h-24 w-24";
+  // min-h rather than a fixed h- so a table with a reservation on it (a third
+  // line of text -- the guest name) grows instead of having flexbox silently
+  // shrink that line toward zero height inside a box too small to fit it.
+  if (capacity <= 2) return "min-h-14 w-14";
+  if (capacity <= 4) return "min-h-20 w-20";
+  return "min-h-24 w-24";
 }
 
 export function TableBox({
