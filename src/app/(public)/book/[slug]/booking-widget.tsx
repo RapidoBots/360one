@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { toLocalDateInput } from "@/lib/reservation-dates";
-import { PartyDateTimePicker, type PartyDateTimeSelection } from "./party-date-time-picker";
+import { Brand } from "@/components/shell/brand";
+import { StepProgress } from "./step-progress";
+import { GuestDateStep } from "./guest-date-step";
+import { TimeSlotStep, type TimeSlotSelection } from "./time-slot-step";
 import { ContactForm } from "./contact-form";
 import { SuccessScreen } from "./success-screen";
 
@@ -16,64 +18,54 @@ export function formatTimeLabel(time: string): string {
   return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-type Step = "PICK" | "REVIEW" | "CONTACT" | "SUCCESS";
+type Step = "GUEST_DATE" | "TIME_SLOT" | "CONTACT" | "SUCCESS";
+
+const STEP_NUMBER: Record<Step, number> = { GUEST_DATE: 1, TIME_SLOT: 2, CONTACT: 3, SUCCESS: 3 };
 
 export function BookingWidget({ slug, restaurantName }: { slug: string; restaurantName: string }) {
-  const [step, setStep] = useState<Step>("PICK");
-  const [selection, setSelection] = useState<PartyDateTimeSelection & { time: string | null }>({
+  const [step, setStep] = useState<Step>("GUEST_DATE");
+  const [selection, setSelection] = useState<TimeSlotSelection>({
     partySize: 2,
     date: toLocalDateInput(new Date()),
     time: null,
   });
   const [booking, setBooking] = useState<{ partySize: number; date: string; time: string } | null>(null);
 
-  function handleSlotSelected(time: string) {
-    setSelection((prev) => ({ ...prev, time }));
-    setStep("REVIEW");
-  }
-
   function resetToStart() {
     setBooking(null);
     setSelection({ partySize: 2, date: toLocalDateInput(new Date()), time: null });
-    setStep("PICK");
+    setStep("GUEST_DATE");
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col p-6">
-      <h1 className="mb-6 text-xl font-semibold">Reserve a table at {restaurantName}</h1>
+    <div className="mx-auto flex min-h-screen max-w-lg flex-col p-6">
+      <h1 className="mb-2 text-center text-lg font-semibold">Reserve a table at {restaurantName}</h1>
 
-      <div className="flex-1">
-        {step === "PICK" && (
-          <PartyDateTimePicker
-            slug={slug}
-            value={selection}
+      {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}
+
+      <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
+        {step === "GUEST_DATE" && (
+          <GuestDateStep
+            value={{ partySize: selection.partySize, date: selection.date }}
             onChange={(v) => setSelection((prev) => ({ ...prev, ...v, time: null }))}
-            onSlotSelected={handleSlotSelected}
+            onNext={() => setStep("TIME_SLOT")}
           />
         )}
 
-        {step === "REVIEW" && selection.time && (
-          <div className="space-y-6">
-            <p className="text-lg">
-              Party of <strong>{selection.partySize}</strong> on <strong>{formatDateLabel(selection.date)}</strong> at{" "}
-              <strong>{formatTimeLabel(selection.time)}</strong>.
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" className="h-11 flex-1 text-base" onClick={() => setStep("PICK")}>
-                Change
-              </Button>
-              <Button className="h-11 flex-1 text-base" onClick={() => setStep("CONTACT")}>
-                Continue
-              </Button>
-            </div>
-          </div>
+        {step === "TIME_SLOT" && (
+          <TimeSlotStep
+            slug={slug}
+            value={selection}
+            onDateChange={(date) => setSelection((prev) => ({ ...prev, date, time: null }))}
+            onSlotSelect={(time) => setSelection((prev) => ({ ...prev, time }))}
+            onNext={() => setStep("CONTACT")}
+          />
         )}
 
         {step === "CONTACT" && selection.time && (
           <ContactForm
             slug={slug}
             selection={{ partySize: selection.partySize, date: selection.date, time: selection.time }}
-            onBack={() => setStep("REVIEW")}
             onSuccess={(b) => {
               setBooking(b);
               setStep("SUCCESS");
@@ -82,11 +74,11 @@ export function BookingWidget({ slug, restaurantName }: { slug: string; restaura
         )}
 
         {step === "SUCCESS" && booking && <SuccessScreen booking={booking} onBookAnother={resetToStart} />}
-      </div>
 
-      <p className="pt-8 text-center text-xs text-muted-foreground">
-        Powered by <span className="font-semibold">360One Inc.</span>
-      </p>
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          powered by <Brand className="font-semibold" />
+        </p>
+      </div>
     </div>
   );
 }

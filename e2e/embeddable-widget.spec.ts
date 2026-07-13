@@ -26,18 +26,20 @@ test.describe("Embeddable reservation widget", () => {
     await page.goto("/book/blue-fork");
     await expect(page.getByRole("heading", { name: /Reserve a table at/ })).toBeVisible();
 
-    await page.getByRole("button", { name: /^\d{1,2}:\d{2}/ }).first().click();
+    // Step 1: guests + date only, no slots yet.
+    await expect(page.getByLabel("Number of Guests")).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
 
-    await expect(page.getByText(/Party of \d+ on/)).toBeVisible();
-    await page.getByRole("button", { name: "Change" }).click();
-    await expect(page.getByLabel("Party")).toBeVisible();
+    // Step 2: pick a slot (just highlights it), Next is disabled until one is chosen.
+    await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
     await page.getByRole("button", { name: /^\d{1,2}:\d{2}/ }).first().click();
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Next" }).click();
 
-    await page.getByLabel("Name").fill(FIXTURE_CUSTOMER_NAME);
-    await page.getByLabel("Email").fill("widget-e2e@example.com");
-    await page.getByLabel("Phone").fill("555-000-3333");
-    await page.getByRole("button", { name: "Request reservation" }).click();
+    // Step 3: contact info.
+    await page.getByLabel("Full Name").fill(FIXTURE_CUSTOMER_NAME);
+    await page.getByLabel("Email Address").fill("widget-e2e@example.com");
+    await page.getByLabel("Phone Number").fill("555-000-3333");
+    await page.getByRole("button", { name: "Submit" }).click();
 
     await expect(page.getByText("Request received!")).toBeVisible();
     await expect(page.getByRole("button", { name: "Book another reservation" })).toBeVisible();

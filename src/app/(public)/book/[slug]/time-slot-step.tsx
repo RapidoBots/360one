@@ -1,17 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Users, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getWeekRange, toLocalDateInput } from "@/lib/reservation-dates";
 import { getSlotsForDateAction } from "./actions";
 
-export type PartyDateTimeSelection = { partySize: number; date: string };
+export type TimeSlotSelection = { partySize: number; date: string; time: string | null };
 
-const PARTY_SIZES = Array.from({ length: 10 }, (_, i) => i + 1);
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function addDays(date: string, days: number): string {
@@ -26,16 +23,18 @@ function addDaysToDate(date: Date, days: number): Date {
   return d;
 }
 
-export function PartyDateTimePicker({
+export function TimeSlotStep({
   slug,
   value,
-  onChange,
-  onSlotSelected,
+  onDateChange,
+  onSlotSelect,
+  onNext,
 }: {
   slug: string;
-  value: PartyDateTimeSelection;
-  onChange: (value: PartyDateTimeSelection) => void;
-  onSlotSelected: (time: string) => void;
+  value: TimeSlotSelection;
+  onDateChange: (date: string) => void;
+  onSlotSelect: (time: string) => void;
+  onNext: () => void;
 }) {
   const [slots, setSlots] = useState<string[]>([]);
   const [weekAvailability, setWeekAvailability] = useState<Record<string, boolean>>({});
@@ -74,47 +73,55 @@ export function PartyDateTimePicker({
     return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
+  function renderSlotGroup(label: string, groupSlots: string[]) {
+    return (
+      <div>
+        <p className="mb-2 text-sm font-semibold">{label}</p>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : groupSlots.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No places available</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {groupSlots.map((s) => {
+              const selected = value.time === s;
+              return (
+                <Button
+                  key={s}
+                  type="button"
+                  variant={selected ? "default" : "outline"}
+                  className={cn("h-11 text-sm", selected && "ring-2 ring-primary ring-offset-2")}
+                  onClick={() => onSlotSelect(s)}
+                >
+                  {formatSlotLabel(s)}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="widgetPartySize">Party</Label>
-          <Select value={String(value.partySize)} onValueChange={(v) => onChange({ ...value, partySize: Number(v) })}>
-            <SelectTrigger id="widgetPartySize" className="h-11 w-full text-base">
-              <SelectValue>{(v: string) => v}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {PARTY_SIZES.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="widgetDate">Date</Label>
-          <Input
-            id="widgetDate"
-            type="date"
-            className="h-11 text-base"
-            value={value.date}
-            onChange={(e) => onChange({ ...value, date: e.target.value })}
-          />
-        </div>
+      <p className="text-sm text-muted-foreground">Select your preferred time slot.</p>
+
+      <div className="flex flex-wrap items-center gap-4 rounded-[5px] bg-muted px-4 py-2.5 text-sm font-medium">
+        <span className="flex items-center gap-1.5">
+          <Users className="size-4 text-muted-foreground" />
+          {value.partySize} Guest{value.partySize === 1 ? "" : "s"}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <CalendarIcon className="size-4 text-muted-foreground" />
+          {new Date(`${value.date}T00:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+        </span>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        If you are more than 10 people or if you cannot find availability, please call us.
-      </p>
+      <p className="text-sm text-muted-foreground italic">Please select the party size, date and time.</p>
 
       <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 px-2"
-          onClick={() => onChange({ ...value, date: addDays(value.date, -7) })}
-        >
+        <Button type="button" variant="ghost" className="h-9 px-2" onClick={() => onDateChange(addDays(value.date, -7))}>
           &lt;
         </Button>
         <div className="flex flex-1 justify-between gap-1">
@@ -126,7 +133,7 @@ export function PartyDateTimePicker({
               <button
                 key={d}
                 type="button"
-                onClick={() => onChange({ ...value, date: d })}
+                onClick={() => onDateChange(d)}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
                   isSelected
@@ -149,49 +156,21 @@ export function PartyDateTimePicker({
             );
           })}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 px-2"
-          onClick={() => onChange({ ...value, date: addDays(value.date, 7) })}
-        >
+        <Button type="button" variant="ghost" className="h-9 px-2" onClick={() => onDateChange(addDays(value.date, 7))}>
           &gt;
         </Button>
       </div>
 
       <div className="space-y-4">
-        <div>
-          <p className="mb-2 text-sm font-semibold">AM</p>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : amSlots.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No places available</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {amSlots.map((s) => (
-                <Button key={s} type="button" className="h-11 text-sm" onClick={() => onSlotSelected(s)}>
-                  {formatSlotLabel(s)}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <p className="mb-2 text-sm font-semibold">PM</p>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : pmSlots.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No places available</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {pmSlots.map((s) => (
-                <Button key={s} type="button" className="h-11 text-sm" onClick={() => onSlotSelected(s)}>
-                  {formatSlotLabel(s)}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
+        {renderSlotGroup("AM", amSlots)}
+        {renderSlotGroup("PM", pmSlots)}
+      </div>
+
+      <div className="flex justify-end pt-2">
+        <Button type="button" className="h-11 gap-2 px-5 text-base" onClick={onNext} disabled={!value.time}>
+          Next
+          <ArrowRight className="size-4" />
+        </Button>
       </div>
     </div>
   );
