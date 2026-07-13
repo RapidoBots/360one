@@ -105,6 +105,23 @@ export async function updateReservationAction(
   return { ok: true };
 }
 
+export async function setReservationStatusAction(
+  slug: string,
+  reservationId: string,
+  status: ReservationStatus
+): Promise<ReservationActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  const { count } = await prisma.reservation.updateMany({
+    where: { id: reservationId, restaurantId: restaurant.id },
+    data: { status },
+  });
+  if (count === 0) return { ok: false, error: "Reservation not found." };
+  revalidatePath(`/r/${slug}/reservations`);
+  revalidatePath(`/r/${slug}/customers`);
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
 export async function createTableAction(
   slug: string,
   input: { number: string; capacity: number; area: string }

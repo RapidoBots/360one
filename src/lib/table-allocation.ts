@@ -20,5 +20,6 @@ export function recommendTable(
   });
 
   if (available.length === 0) return null;
-  return [...available].sort((a, b) => a.capacity - b.capacity)[0].id;
+  const sorted = [...available].sort((a, b) => a.capacity - b.capacity);
+  return sorted[0]?.id ?? null;
 }
