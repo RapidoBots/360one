@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getWeekRange, toLocalDateInput } from "@/lib/reservation-dates";
@@ -77,9 +78,9 @@ export function PartyDateTimePicker({
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Party</label>
+          <Label htmlFor="widgetPartySize">Party</Label>
           <Select value={String(value.partySize)} onValueChange={(v) => onChange({ ...value, partySize: Number(v) })}>
-            <SelectTrigger className="h-11 w-full text-base">
+            <SelectTrigger id="widgetPartySize" className="h-11 w-full text-base">
               <SelectValue>{(v: string) => v}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -92,8 +93,9 @@ export function PartyDateTimePicker({
           </Select>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Date</label>
+          <Label htmlFor="widgetDate">Date</Label>
           <Input
+            id="widgetDate"
             type="date"
             className="h-11 text-base"
             value={value.date}
