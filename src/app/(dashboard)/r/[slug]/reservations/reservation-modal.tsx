@@ -38,7 +38,7 @@ export type ReservationForEdit = {
 };
 
 const DURATION_OPTIONS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
-const STATUS_OPTIONS: ReservationStatus[] = ["CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const STATUS_OPTIONS: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
 function toDateInput(d: Date) {
   return toLocalDateInput(d);

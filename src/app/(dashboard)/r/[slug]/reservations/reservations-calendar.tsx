@@ -17,7 +17,7 @@ import type { ReservationStatus } from "@/generated/prisma/client";
 
 export type CalendarView = "day" | "week" | "timeline";
 
-const ALL_STATUSES: ReservationStatus[] = ["CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const ALL_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
 export function ReservationsCalendar({
   slug,
