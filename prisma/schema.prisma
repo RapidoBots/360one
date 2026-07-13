@@ -121,20 +121,28 @@ model Table {
   @@map("table")
 }
 
+enum ContactChannel {
+  EMAIL
+  SMS
+  CALL
+}
+
 model Customer {
-  id           String        @id @default(cuid())
-  restaurantId String
-  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
-  name         String
-  email        String?
-  phone        String?
-  reservations Reservation[]
-  createdAt    DateTime      @default(now())
+  id               String         @id @default(cuid())
+  restaurantId     String
+  restaurant       Restaurant     @relation(fields: [restaurantId], references: [id])
+  name             String
+  email            String?
+  phone            String?
+  preferredContact ContactChannel @default(EMAIL)
+  reservations     Reservation[]
+  createdAt        DateTime       @default(now())
 
   @@map("customer")
 }
 
 enum ReservationStatus {
+  PENDING
   CONFIRMED
   SEATED
   COMPLETED
