@@ -8,11 +8,27 @@ async function cleanupFixtures() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
+    // Only clean up "Walk-in" customers that were actually tied to THIS
+    // test's own fixture tables -- a blanket `DELETE FROM customer WHERE
+    // name = 'Walk-in'` would also hit unrelated walk-in customers created
+    // by other test runs sharing this dev database, and can fail on a
+    // dangling foreign key from a reservation it doesn't own.
+    const { rows } = await client.query(
+      `SELECT "customerId" FROM reservation WHERE "tableId" IN (SELECT id FROM "table" WHERE number = ANY($1))`,
+      [FIXTURE_TABLE_NUMBERS]
+    );
+    const customerIds: string[] = rows.map((r) => r.customerId);
+
     await client.query(
       `DELETE FROM reservation WHERE "tableId" IN (SELECT id FROM "table" WHERE number = ANY($1))`,
       [FIXTURE_TABLE_NUMBERS]
     );
-    await client.query(`DELETE FROM customer WHERE name = 'Walk-in'`);
+    if (customerIds.length > 0) {
+      await client.query(
+        `DELETE FROM customer WHERE id = ANY($1) AND name = 'Walk-in' AND id NOT IN (SELECT "customerId" FROM reservation)`,
+        [customerIds]
+      );
+    }
     await client.query(`DELETE FROM "table" WHERE number = ANY($1)`, [FIXTURE_TABLE_NUMBERS]);
   } finally {
     await client.end();
@@ -65,7 +81,7 @@ test.describe("Phase 4 Floor Manager", () => {
     // Seat a walk-in at FM-1, then free it.
     await page.getByText("Table FM-1", { exact: true }).click();
     await page.getByLabel("Party size").fill("2");
-    await page.getByRole("button", { name: "Seat now" }).click();
+    await page.getByRole("button", { name: "Add walk-in" }).click();
     // "Walk-in" alone is a bad check here -- it case-insensitively substring-
     // matches this same dialog's own title ("Seat walk-in at Table FM-1"),
     // so it can look "visible" even if the dialog never actually closed.

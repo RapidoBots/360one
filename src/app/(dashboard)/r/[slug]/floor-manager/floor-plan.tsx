@@ -19,7 +19,7 @@ export type FloorTable = {
   shape: TableShape;
 };
 
-const CANVAS_WIDTH = 1000;
+const CANVAS_WIDTH = 1600;
 const CANVAS_HEIGHT = 700;
 const TABLE_BOX_SIZE = 96; // matches table-box.tsx's largest size tier (h-24/w-24)
 const DEFAULT_DROP_POSITION = { x: 20, y: 20 };
@@ -156,6 +156,9 @@ export function FloorPlan({
           const pos = positions[table.id]!;
           const shape = shapes[table.id]!;
           const { status, reservation } = getTableStatus(table.id, reservations, now);
+          const dayReservations = reservations
+            .filter((r) => r.tableId === table.id)
+            .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
           return (
             <TableBox
               key={table.id}
@@ -166,6 +169,7 @@ export function FloorPlan({
               posY={pos.y}
               status={status}
               reservation={reservation}
+              dayReservations={dayReservations}
               editMode={editMode}
               onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
               onToggleShape={() => handleToggleShape(table.id)}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { TableShape } from "@/generated/prisma/client";
 
 export type FloorActionResult = { ok: true } | { ok: false; error: string };
@@ -26,10 +27,10 @@ export async function updateTableLayoutAction(
 export async function quickSeatWalkInAction(
   slug: string,
   tableId: string,
-  partySize: number
+  input: { partySize: number; time: string }
 ): Promise<FloorActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
-  const startsAt = new Date();
+  const startsAt = new Date(`${toLocalDateInput(new Date())}T${input.time}`);
 
   const conflict = await hasTableConflict(tableId, startsAt, 90);
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
@@ -41,13 +42,16 @@ export async function quickSeatWalkInAction(
       restaurantId: restaurant.id,
       customerId: customer.id,
       tableId,
-      partySize,
+      partySize: input.partySize,
       startsAt,
       durationMinutes: 90,
-      status: "SEATED",
+      // A slot later today books like a normal reservation; "now or already
+      // past" seats immediately, matching what "walk-in" actually means.
+      status: startsAt.getTime() <= Date.now() ? "SEATED" : "CONFIRMED",
     },
   });
 
   revalidatePath(`/r/${slug}/floor-manager`);
+  revalidatePath(`/r/${slug}/reservations`);
   return { ok: true };
 }
