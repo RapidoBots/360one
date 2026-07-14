@@ -79,6 +79,19 @@ export async function setRestaurantStatusAction(
   return { ok: true };
 }
 
+export async function updateGhlCredentialsAction(
+  restaurantId: string,
+  input: { ghlLocationId: string | null; ghlApiKey: string | null }
+): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { ghlLocationId: input.ghlLocationId, ghlApiKey: input.ghlApiKey },
+  });
+  revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}
+
 export async function addStaffMemberAction(
   restaurantId: string,
   input: { name: string; email: string; password: string; role: Role }
