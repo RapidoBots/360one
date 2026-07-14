@@ -27,6 +27,8 @@ model Restaurant {
   slug      String           @unique
   status    RestaurantStatus @default(ACTIVE)
   createdAt DateTime         @default(now())
+  ghlLocationId String?
+  ghlApiKey     String?
   users        User[]
   tables       Table[]
   customers    Customer[]
