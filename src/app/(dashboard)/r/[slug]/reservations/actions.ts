@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { assertRestaurantMember } from "@/lib/auth-guards";
+import { syncContactToGhl } from "@/lib/ghl-sync";
 import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
 
 export type ReservationInput = {
@@ -50,6 +51,11 @@ export async function createReservationAction(
       specialRequests: input.specialRequests || null,
     },
   });
+
+  await syncContactToGhl(
+    { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
+    { name: customer.name, email: customer.email, phone: customer.phone }
+  );
 
   revalidatePath(`/r/${slug}/reservations`);
   revalidatePath(`/r/${slug}/customers`);

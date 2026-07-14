@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getDayRange } from "@/lib/reservation-dates";
 import { getAvailableSlots } from "@/lib/widget-availability";
 import { findOrCreateCustomer } from "@/lib/reservations-data";
+import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { ContactChannel } from "@/generated/prisma/client";
 
 export async function getSlotsForDateAction(
@@ -99,6 +100,11 @@ export async function createWidgetReservationAction(
       status: "PENDING",
     },
   });
+
+  await syncContactToGhl(
+    { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
+    { name: customer.name, email: customer.email, phone: customer.phone }
+  );
 
   revalidatePath(`/r/${slug}/reservations`);
 

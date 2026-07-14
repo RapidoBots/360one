@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { toLocalDateInput } from "@/lib/reservation-dates";
+import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { TableShape } from "@/generated/prisma/client";
 
 export type FloorActionResult = { ok: true } | { ok: false; error: string };
@@ -50,6 +51,11 @@ export async function quickSeatWalkInAction(
       status: startsAt.getTime() <= Date.now() ? "SEATED" : "CONFIRMED",
     },
   });
+
+  await syncContactToGhl(
+    { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
+    { name: customer.name, email: customer.email, phone: customer.phone }
+  );
 
   revalidatePath(`/r/${slug}/floor-manager`);
   revalidatePath(`/r/${slug}/reservations`);
