@@ -66,18 +66,19 @@ test.describe("Phase 1 foundation", () => {
   });
 
   test("sidebar navigation reaches every remaining stub page with no 404s", async ({ page }) => {
-    // Reservations, Customers, Floor Manager, and Waitlist are excluded here
-    // -- their own phases made them real pages, with their own e2e coverage
-    // (phase3-reservations.spec.ts, phase4-floor-manager.spec.ts,
-    // phase5-waitlist.spec.ts). Settings is still included because the rest
-    // of it beyond the embed snippet is still a genuine stub.
+    // Reservations, Customers, Floor Manager, Waitlist, and Reports are
+    // excluded here -- their own phases made them real pages, with their own
+    // e2e coverage (phase3-reservations.spec.ts, phase4-floor-manager.spec.ts,
+    // phase5-waitlist.spec.ts, phase7-reports.spec.ts). Settings is still
+    // included because the rest of it beyond the embed snippet is still a
+    // genuine stub.
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill("owner@blue-fork.example.com");
     await page.getByLabel("Password").fill("password1234");
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/r\/blue-fork\/dashboard/);
 
-    for (const label of ["Reports", "Notifications", "Settings"]) {
+    for (const label of ["Notifications", "Settings"]) {
       await page.getByRole("link", { name: label }).click();
       await expect(page.getByText("Coming in Phase")).toBeVisible();
     }
