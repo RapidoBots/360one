@@ -31,6 +31,7 @@ model Restaurant {
   tables       Table[]
   customers    Customer[]
   reservations Reservation[]
+  waitlistEntries WaitlistEntry[]
 
   @@map("restaurant")
 }
@@ -136,9 +137,32 @@ model Customer {
   phone            String?
   preferredContact ContactChannel @default(EMAIL)
   reservations     Reservation[]
+  waitlistEntries  WaitlistEntry[]
   createdAt        DateTime       @default(now())
 
   @@map("customer")
+}
+
+enum WaitlistStatus {
+  WAITING
+  SEATED
+  CANCELLED
+  NO_SHOW
+}
+
+model WaitlistEntry {
+  id                String         @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant     @relation(fields: [restaurantId], references: [id])
+  customerId        String
+  customer          Customer       @relation(fields: [customerId], references: [id])
+  partySize         Int
+  quotedWaitMinutes Int?
+  status            WaitlistStatus @default(WAITING)
+  notes             String?
+  joinedAt          DateTime       @default(now())
+
+  @@map("waitlist_entry")
 }
 
 enum ReservationStatus {
