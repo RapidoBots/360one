@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recommendTable } from "@/lib/table-allocation";
+import { recommendTable, listAvailableTables } from "@/lib/table-allocation";
 
 const TABLES = [
   { id: "small", capacity: 2 },
@@ -41,5 +41,30 @@ describe("recommendTable", () => {
 
   it("returns null when the party is larger than every table", () => {
     expect(recommendTable(TABLES, [], { partySize: 20, startsAt: START, durationMinutes: 90 })).toBe(null);
+  });
+});
+
+describe("listAvailableTables", () => {
+  const NOW = new Date("2026-07-14T19:00:00");
+
+  it("returns every fitting table sorted smallest-first", () => {
+    const result = listAvailableTables(TABLES, [], { partySize: 2, now: NOW });
+    expect(result.map((t) => t.id)).toEqual(["small", "medium", "large"]);
+  });
+
+  it("returns an empty list when nothing fits", () => {
+    expect(listAvailableTables(TABLES, [], { partySize: 20, now: NOW })).toEqual([]);
+  });
+
+  it("excludes a table with a conflicting reservation", () => {
+    const reservations = [{ tableId: "small", startsAt: NOW, durationMinutes: 90 }];
+    const result = listAvailableTables(TABLES, reservations, { partySize: 2, now: NOW });
+    expect(result.map((t) => t.id)).toEqual(["medium", "large"]);
+  });
+
+  it("does not exclude a table whose conflicting reservation is on a different table", () => {
+    const reservations = [{ tableId: "large", startsAt: NOW, durationMinutes: 90 }];
+    const result = listAvailableTables(TABLES, reservations, { partySize: 2, now: NOW });
+    expect(result.map((t) => t.id)).toEqual(["small", "medium"]);
   });
 });
