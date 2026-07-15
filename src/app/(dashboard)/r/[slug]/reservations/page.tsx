@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getDayRange, getWeekRange } from "@/lib/reservation-dates";
 import { sortTablesByNumber } from "@/lib/sort-tables";
+import { getHoursForDay } from "@/lib/business-hours";
 import { ReservationsCalendar, type CalendarView } from "./reservations-calendar";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -41,6 +42,8 @@ export default async function ReservationsPage({
   });
 
   const tables = sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId: restaurant.id } }));
+  const businessHours = await prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } });
+  const dayHours = getHoursForDay(businessHours, date.getDay());
 
   return (
     <ReservationsCalendar
@@ -49,6 +52,7 @@ export default async function ReservationsPage({
       date={view === "week" ? start : date}
       reservations={reservations}
       tables={tables}
+      dayHours={dayHours}
     />
   );
 }

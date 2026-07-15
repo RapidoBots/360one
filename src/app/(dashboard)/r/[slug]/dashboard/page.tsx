@@ -1,14 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getDayRange } from "@/lib/reservation-dates";
+import { getHoursForDay } from "@/lib/business-hours";
 import { ReservationBadge } from "../reservations/reservation-badge";
 import { ReservationsByHourChart, type HourBucket } from "./reservations-by-hour-chart";
-
-// ponytail: matches Timeline view's business-hours window (8am-11pm).
-// Duplicated rather than shared since Phase 8 will make this a real,
-// per-restaurant configurable setting -- not worth a shared constant yet.
-const DAY_START_HOUR = 8;
-const DAY_END_HOUR = 23;
 
 export default async function DashboardPage({
   params,
@@ -22,14 +17,17 @@ export default async function DashboardPage({
   const { start, end } = getDayRange(new Date());
   const now = new Date();
 
-  const [totalTables, todaysReservations] = await Promise.all([
+  const [totalTables, todaysReservations, businessHours] = await Promise.all([
     prisma.table.count({ where: { restaurantId: restaurant.id } }),
     prisma.reservation.findMany({
       where: { restaurantId: restaurant.id, startsAt: { gte: start, lt: end } },
       include: { customer: { select: { name: true } }, table: { select: { number: true } } },
       orderBy: { startsAt: "asc" },
     }),
+    prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
   ]);
+
+  const { startHour: dayStartHour, endHour: dayEndHour } = getHoursForDay(businessHours, now.getDay());
 
   const occupiedTableIds = new Set(
     todaysReservations.filter((r) => r.status === "SEATED" && r.tableId).map((r) => r.tableId)
@@ -40,8 +38,8 @@ export default async function DashboardPage({
     .filter((r) => r.status === "CONFIRMED" && r.startsAt >= now)
     .slice(0, 5);
 
-  const hourBuckets: HourBucket[] = Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => {
-    const hour = DAY_START_HOUR + i;
+  const hourBuckets: HourBucket[] = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => {
+    const hour = dayStartHour + i;
     const label = `${hour % 12 === 0 ? 12 : hour % 12}${hour >= 12 ? "p" : "a"}`;
     const count = todaysReservations.filter((r) => r.startsAt.getHours() === hour).length;
     return { hour: label, count };

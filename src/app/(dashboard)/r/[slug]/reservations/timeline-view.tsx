@@ -3,16 +3,10 @@
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_ACCENT } from "./reservation-badge";
-import { DAY_START_HOUR, DAY_END_HOUR } from "@/lib/business-hours";
 import type { ReservationListItem } from "./day-view";
 
 const SLOT_MINUTES = 30;
-const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
 const LABEL_COLUMN = "6rem";
-
-function minutesToOffsetPercent(minutesSinceStart: number) {
-  return Math.max(0, Math.min(100, (minutesSinceStart / TOTAL_MINUTES) * 100));
-}
 
 function formatHour(hour: number) {
   // hour can be 24 (the end-of-day boundary mark) -- wrap it back to
@@ -27,50 +21,61 @@ export function TimelineView({
   reservations,
   tables,
   date,
+  dayHours,
   onReservationClick,
   onSlotClick,
 }: {
   reservations: ReservationListItem[];
   tables: { id: string; number: string }[];
   date: Date;
+  dayHours: { isOpen: boolean; startHour: number; endHour: number };
   onReservationClick: (id: string) => void;
   onSlotClick: (tableId: string, time: string) => void;
 }) {
   if (tables.length === 0) {
     return <p className="py-16 text-center text-base text-muted-foreground">Add a table to see the timeline.</p>;
   }
+  if (!dayHours.isOpen) {
+    return <p className="py-16 text-center text-base text-muted-foreground">Closed on this day.</p>;
+  }
+
+  const { startHour, endHour } = dayHours;
+  const totalMinutes = (endHour - startHour) * 60;
+
+  function minutesToOffsetPercent(minutesSinceStart: number) {
+    return Math.max(0, Math.min(100, (minutesSinceStart / totalMinutes) * 100));
+  }
 
   const now = new Date();
-  const nowMinutes = (now.getHours() - DAY_START_HOUR) * 60 + now.getMinutes();
+  const nowMinutes = (now.getHours() - startHour) * 60 + now.getMinutes();
   // Only show the current-time line when "now" actually falls within the
   // visible hour range for today -- otherwise it has nothing meaningful to
-  // point at and previously just pinned to the left edge, which read as a
-  // stray line rather than "it's currently outside business hours."
-  const showNowLine = date.toDateString() === now.toDateString() && nowMinutes >= 0 && nowMinutes <= TOTAL_MINUTES;
+  // point at.
+  const showNowLine = date.toDateString() === now.toDateString() && nowMinutes >= 0 && nowMinutes <= totalMinutes;
   const nowPercent = minutesToOffsetPercent(nowMinutes);
   const nowLabel = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-  const hourMarks = Array.from({ length: DAY_END_HOUR - DAY_START_HOUR + 1 }, (_, i) => DAY_START_HOUR + i);
+  const hourMarks = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
 
   function offsetPercent(startsAt: Date) {
-    const minutesSinceStart = (startsAt.getHours() - DAY_START_HOUR) * 60 + startsAt.getMinutes();
+    const minutesSinceStart = (startsAt.getHours() - startHour) * 60 + startsAt.getMinutes();
     return minutesToOffsetPercent(minutesSinceStart);
   }
   function widthPercent(durationMinutes: number) {
-    return Math.max(2, (durationMinutes / TOTAL_MINUTES) * 100);
+    return Math.max(2, (durationMinutes / totalMinutes) * 100);
   }
 
   function handleTrackClick(tableId: string, e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const rawMinutes = DAY_START_HOUR * 60 + percent * TOTAL_MINUTES;
+    const rawMinutes = startHour * 60 + percent * totalMinutes;
     const snapped = Math.round(rawMinutes / 30) * 30;
     const hour = Math.floor(snapped / 60);
     const minute = snapped % 60;
     onSlotClick(tableId, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
   }
 
-  const slotCells = Array.from({ length: TOTAL_MINUTES / SLOT_MINUTES }, (_, i) => i);
+  const slotCells = Array.from({ length: totalMinutes / SLOT_MINUTES }, (_, i) => i);
   // Widget bookings (and any reservation without a table yet) can't render
   // in a per-table row -- surface them in their own row instead of letting
   // them silently disappear from the default view.
@@ -82,32 +87,19 @@ export function TimelineView({
         <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
           Tables
         </div>
-        {/* overflow-hidden so a label's text never inflates the outer
-            overflow-x-auto container's scrollWidth -- an anchored-right
-            label pushing text left instead (like the old last-mark special
-            case did) just collides with its neighbor instead, so clipping
-            is the simpler, uniform fix for every mark. */}
         <div className="relative min-w-[1600px] flex-1 overflow-hidden">
           {hourMarks.map((hour) => (
             <span
               key={hour}
               className="absolute top-3 pl-1.5 whitespace-nowrap"
-              style={{ left: `${minutesToOffsetPercent((hour - DAY_START_HOUR) * 60)}%` }}
+              style={{ left: `${minutesToOffsetPercent((hour - startHour) * 60)}%` }}
             >
               {formatHour(hour)}
             </span>
           ))}
-          {/* Positioned as a percent of THIS track div (same box the hour
-              labels use), not the outer scroll container -- that div can be
-              wider than the outer container's visible width (it has its own
-              min-width and grows via flex-1), so computing this line's
-              position against the outer container's 100% put it at the
-              wrong pixel offset whenever horizontal scrolling was active. */}
           {showNowLine && (
             <div className="pointer-events-none absolute inset-y-0 z-10" style={{ left: `${nowPercent}%` }}>
               <div className="h-full w-px bg-destructive" />
-              {/* Sits in its own band below the hour labels (top-3..top-6ish) so
-                  the dynamic time never overlaps the hardcoded hour text. */}
               <span className="absolute top-8 -translate-x-1/2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-destructive-foreground">
                 {nowLabel}
               </span>
@@ -158,11 +150,6 @@ export function TimelineView({
               className="relative h-20 min-w-[1600px] flex-1 cursor-pointer"
               onClick={(e) => handleTrackClick(table.id, e)}
             >
-              {/* One continuous texture spanning the whole track, rather than
-                  a separate repeating-gradient per slot cell -- per-cell
-                  gradients each restart their own phase at that cell's edge,
-                  so at odd cell widths/scroll offsets neighboring cells can
-                  look out of sync (some textured, some blank). */}
               <div
                 className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_1px,transparent_1px,transparent_9px)]"
               />
@@ -172,18 +159,12 @@ export function TimelineView({
                     key={slot}
                     className={cn(
                       "h-full flex-1 border-r last:border-r-0",
-                      // Odd slots end on the hour (major boundary); even slots end
-                      // on the half-hour (minor boundary) -- a subtler line.
                       slot % 2 === 1 ? "border-border/60" : "border-border/25"
                     )}
                   />
                 ))}
               </div>
 
-              {/* Same track-relative positioning as the header's now-line
-                  segment -- every row shares the identical min-w/flex-1
-                  sizing, so these line up into what reads as one continuous
-                  line down the page. */}
               {showNowLine && (
                 <div
                   className="pointer-events-none absolute inset-y-0 z-10 w-px bg-destructive"

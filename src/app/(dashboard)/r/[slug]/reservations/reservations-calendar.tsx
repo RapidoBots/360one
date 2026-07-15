@@ -25,12 +25,14 @@ export function ReservationsCalendar({
   date,
   reservations,
   tables,
+  dayHours,
 }: {
   slug: string;
   view: CalendarView;
   date: Date;
   reservations: ReservationListItem[];
   tables: TableRow[];
+  dayHours: { isOpen: boolean; startHour: number; endHour: number };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -164,6 +166,7 @@ export function ReservationsCalendar({
           reservations={reservations}
           tables={tables}
           date={date}
+          dayHours={dayHours}
           onReservationClick={(id) => {
             setEditingId(id);
             setModalOpen(true);
