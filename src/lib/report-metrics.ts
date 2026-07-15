@@ -1,5 +1,5 @@
 import { toLocalDateInput } from "./reservation-dates";
-import { DAY_START_HOUR, DAY_END_HOUR } from "./business-hours";
+import { getWidestOpenWindow, type DayHours } from "./business-hours";
 import { sortTablesByNumber } from "./sort-tables";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -34,9 +34,10 @@ function formatHourLabel(hour: number): string {
   return `${hour % 12 === 0 ? 12 : hour % 12}${hour >= 12 ? "p" : "a"}`;
 }
 
-export function busiestHourOfDay(reservations: { startsAt: Date }[]): ChartBucket[] {
-  return Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => {
-    const hour = DAY_START_HOUR + i;
+export function busiestHourOfDay(reservations: { startsAt: Date }[], businessHours: DayHours[]): ChartBucket[] {
+  const { startHour, endHour } = getWidestOpenWindow(businessHours);
+  return Array.from({ length: endHour - startHour }, (_, i) => {
+    const hour = startHour + i;
     const value = reservations.filter((r) => r.startsAt.getHours() === hour).length;
     return { label: formatHourLabel(hour), value };
   });

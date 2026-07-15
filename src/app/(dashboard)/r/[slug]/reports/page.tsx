@@ -39,7 +39,7 @@ export default async function ReportsPage({
   const end = new Date(`${endInput}T00:00:00`);
   end.setDate(end.getDate() + 1);
 
-  const [reservations, tables] = await Promise.all([
+  const [reservations, tables, businessHours] = await Promise.all([
     prisma.reservation.findMany({
       where: { restaurantId: restaurant.id, startsAt: { gte: start, lt: end } },
       select: {
@@ -52,6 +52,7 @@ export default async function ReportsPage({
       orderBy: { startsAt: "asc" },
     }),
     prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { id: true, number: true } }),
+    prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
   ]);
 
   const distinctCustomerIds = Array.from(new Set(reservations.map((r) => r.customerId)));
@@ -119,7 +120,7 @@ export default async function ReportsPage({
         </div>
         <div className="rounded-[5px] border border-border p-5">
           <h2 className="mb-2 text-base font-semibold">Busiest hour of day</h2>
-          <ReportBarChart data={busiestHourOfDay(reservations)} />
+          <ReportBarChart data={busiestHourOfDay(reservations, businessHours)} />
         </div>
       </div>
 

@@ -42,17 +42,30 @@ describe("busiestDayOfWeek", () => {
 });
 
 describe("busiestHourOfDay", () => {
-  it("buckets by hour within business hours", () => {
+  it("buckets by hour within the widest configured business-hours window", () => {
     const reservations = [
       { startsAt: new Date(2026, 7, 1, 19, 0) },
       { startsAt: new Date(2026, 7, 1, 19, 30) },
       { startsAt: new Date(2026, 7, 2, 12, 0) },
     ];
-    const buckets = busiestHourOfDay(reservations);
+    const buckets = busiestHourOfDay(reservations, []);
     const at19 = buckets.find((b) => b.label === "7p");
     const at12 = buckets.find((b) => b.label === "12p");
     expect(at19?.value).toBe(2);
     expect(at12?.value).toBe(1);
+  });
+
+  it("widens its bucket range to cover every open day's hours", () => {
+    // Every day explicitly configured (5 closed) so the default 7am-11pm
+    // fallback for unconfigured days doesn't widen the window unexpectedly.
+    const businessHours = Array.from({ length: 7 }, (_, dayOfWeek) => {
+      if (dayOfWeek === 1) return { dayOfWeek, isOpen: true, openTime: "08:00", closeTime: "16:00" };
+      if (dayOfWeek === 6) return { dayOfWeek, isOpen: true, openTime: "10:00", closeTime: "23:00" };
+      return { dayOfWeek, isOpen: false, openTime: null, closeTime: null };
+    });
+    const buckets = busiestHourOfDay([], businessHours);
+    expect(buckets[0]?.label).toBe("8a");
+    expect(buckets[buckets.length - 1]?.label).toBe("10p");
   });
 });
 
