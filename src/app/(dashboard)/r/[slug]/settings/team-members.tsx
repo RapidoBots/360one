@@ -30,12 +30,23 @@ export function TeamMembers({
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(member: TeamMember) {
     setTogglingId(member.id);
-    await setTeamMemberActiveAction(slug, member.id, !member.active);
-    setTogglingId(null);
-    router.refresh();
+    setError(null);
+    try {
+      const result = await setTeamMemberActiveAction(slug, member.id, !member.active);
+      if (!result.ok) setError(result.error);
+    } catch {
+      // The mutation may still have succeeded server-side even if this
+      // fetch itself was aborted (e.g. by the router.refresh() below
+      // racing it) -- refresh regardless so the UI reflects reality
+      // rather than getting stuck on a client-side network hiccup.
+    } finally {
+      setTogglingId(null);
+      router.refresh();
+    }
   }
 
   return (
@@ -83,6 +94,7 @@ export function TeamMembers({
           ))}
         </TableBody>
       </Table>
+      {error && <p className="p-4 text-base text-destructive">{error}</p>}
       <AddTeamMemberDialog
         open={addOpen}
         onOpenChange={setAddOpen}

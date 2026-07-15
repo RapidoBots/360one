@@ -2075,12 +2075,23 @@ export function TeamMembers({
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(member: TeamMember) {
     setTogglingId(member.id);
-    await setTeamMemberActiveAction(slug, member.id, !member.active);
-    setTogglingId(null);
-    router.refresh();
+    setError(null);
+    try {
+      const result = await setTeamMemberActiveAction(slug, member.id, !member.active);
+      if (!result.ok) setError(result.error);
+    } catch {
+      // The mutation may still have succeeded server-side even if this
+      // fetch itself was aborted (e.g. by the router.refresh() below
+      // racing it) -- refresh regardless so the UI reflects reality
+      // rather than getting stuck on a client-side network hiccup.
+    } finally {
+      setTogglingId(null);
+      router.refresh();
+    }
   }
 
   return (
@@ -2128,6 +2139,7 @@ export function TeamMembers({
           ))}
         </TableBody>
       </Table>
+      {error && <p className="p-4 text-base text-destructive">{error}</p>}
       <AddTeamMemberDialog
         open={addOpen}
         onOpenChange={setAddOpen}
@@ -2228,6 +2240,10 @@ async function cleanupFixtures() {
   await client.connect();
   try {
     await client.query(`DELETE FROM "user" WHERE email = ANY($1)`, [[FIXTURE_OWNER_EMAIL, FIXTURE_STAFF_EMAIL]]);
+    await client.query(
+      `DELETE FROM business_hours WHERE "restaurantId" = (SELECT id FROM restaurant WHERE slug = $1)`,
+      [FIXTURE_SLUG]
+    );
     await client.query(`DELETE FROM restaurant WHERE slug = $1`, [FIXTURE_SLUG]);
   } finally {
     await client.end();
@@ -2287,7 +2303,7 @@ test.describe("Phase 8 Settings", () => {
 
   test("Owner adds a staff member who can sign in, then deactivates them so they no longer can", async ({
     page,
-    context,
+    browser,
   }) => {
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill(FIXTURE_OWNER_EMAIL);
@@ -2308,25 +2324,31 @@ test.describe("Phase 8 Settings", () => {
     const ownerRow = page.locator("tr", { hasText: FIXTURE_OWNER_EMAIL });
     await expect(ownerRow.getByRole("button")).toHaveCount(0);
 
-    const staffPage = await context.newPage();
+    // A new page from the SAME context shares its cookie jar with `page` --
+    // signing in there as Staff would silently swap the Owner session on
+    // `page` too, since we need `page` to still be the Owner afterward. A
+    // fully separate browser context keeps the two sessions independent.
+    const staffContext = await browser.newContext();
+    const staffPage = await staffContext.newPage();
     await staffPage.goto("/sign-in");
     await staffPage.getByLabel("Email").fill(FIXTURE_STAFF_EMAIL);
     await staffPage.getByLabel("Password").fill("password1234");
     await staffPage.getByRole("button", { name: "Sign in" }).click();
     await expect(staffPage).toHaveURL(new RegExp(`/r/${FIXTURE_SLUG}/dashboard`));
-    await staffPage.close();
+    await staffContext.close();
 
     const staffRow = page.locator("tr", { hasText: FIXTURE_STAFF_EMAIL });
     await staffRow.getByRole("button", { name: "Deactivate" }).click();
     await expect(staffRow.getByRole("button", { name: "Reactivate" })).toBeVisible();
 
-    const deactivatedPage = await context.newPage();
+    const deactivatedContext = await browser.newContext();
+    const deactivatedPage = await deactivatedContext.newPage();
     await deactivatedPage.goto("/sign-in");
     await deactivatedPage.getByLabel("Email").fill(FIXTURE_STAFF_EMAIL);
     await deactivatedPage.getByLabel("Password").fill("password1234");
     await deactivatedPage.getByRole("button", { name: "Sign in" }).click();
     await expect(deactivatedPage).toHaveURL(/\/sign-in/);
-    await deactivatedPage.close();
+    await deactivatedContext.close();
   });
 });
 ```
