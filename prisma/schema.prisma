@@ -29,13 +29,28 @@ model Restaurant {
   createdAt DateTime         @default(now())
   ghlLocationId String?
   ghlApiKey     String?
+  defaultReservationDurationMinutes Int @default(90)
   users        User[]
   tables       Table[]
   customers    Customer[]
   reservations Reservation[]
   waitlistEntries WaitlistEntry[]
+  businessHours BusinessHours[]
 
   @@map("restaurant")
+}
+
+model BusinessHours {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  dayOfWeek    Int
+  isOpen       Boolean    @default(true)
+  openTime     String?
+  closeTime    String?
+
+  @@unique([restaurantId, dayOfWeek])
+  @@map("business_hours")
 }
 
 // Better Auth owns id/name/email/emailVerified/image/createdAt/updatedAt.
@@ -50,6 +65,7 @@ model User {
   createdAt     DateTime
   updatedAt     DateTime
   role          Role        @default(STAFF)
+  active        Boolean     @default(true)
   restaurantId  String?
   restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
   sessions      Session[]
