@@ -1,8 +1,7 @@
 import { doesOverlap, type TimeRange } from "@/lib/reservation-conflicts";
-import { DAY_START_HOUR, DAY_END_HOUR } from "@/lib/business-hours";
+import { getHoursForDay, type DayHours } from "@/lib/business-hours";
 
 const SLOT_MINUTES = 15;
-const DURATION_MINUTES = 90;
 
 export type AvailabilityTable = { id: string; capacity: number };
 export type AvailabilityReservation = { tableId: string | null } & TimeRange;
@@ -10,16 +9,20 @@ export type AvailabilityReservation = { tableId: string | null } & TimeRange;
 export function getAvailableSlots(
   tables: AvailabilityTable[],
   reservations: AvailabilityReservation[],
-  input: { partySize: number; date: string } // date: YYYY-MM-DD
+  input: { partySize: number; date: string; businessHours: DayHours[]; durationMinutes: number } // date: YYYY-MM-DD
 ): string[] {
   const fitting = tables.filter((t) => t.capacity >= input.partySize);
   if (fitting.length === 0) return [];
 
-  const slots: string[] = [];
-  const dayStart = DAY_START_HOUR * 60;
-  const dayEnd = DAY_END_HOUR * 60;
+  const dayOfWeek = new Date(`${input.date}T00:00:00`).getDay();
+  const { isOpen, startHour, endHour } = getHoursForDay(input.businessHours, dayOfWeek);
+  if (!isOpen) return [];
 
-  for (let minutes = dayStart; minutes + DURATION_MINUTES <= dayEnd; minutes += SLOT_MINUTES) {
+  const slots: string[] = [];
+  const dayStart = startHour * 60;
+  const dayEnd = endHour * 60;
+
+  for (let minutes = dayStart; minutes + input.durationMinutes <= dayEnd; minutes += SLOT_MINUTES) {
     const hour = Math.floor(minutes / 60);
     const minute = minutes % 60;
     const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
@@ -27,7 +30,7 @@ export function getAvailableSlots(
 
     const hasFreeTable = fitting.some((t) => {
       const conflict = reservations.some(
-        (r) => r.tableId === t.id && doesOverlap(r, { startsAt, durationMinutes: DURATION_MINUTES })
+        (r) => r.tableId === t.id && doesOverlap(r, { startsAt, durationMinutes: input.durationMinutes })
       );
       return !conflict;
     });

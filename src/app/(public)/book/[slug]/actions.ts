@@ -4,20 +4,23 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getDayRange } from "@/lib/reservation-dates";
 import { getAvailableSlots } from "@/lib/widget-availability";
+import { getHoursForDay } from "@/lib/business-hours";
 import { findOrCreateCustomer } from "@/lib/reservations-data";
 import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { ContactChannel } from "@/generated/prisma/client";
+
+export type SlotsForDateResult = { slots: string[]; isOpen: boolean };
 
 export async function getSlotsForDateAction(
   slug: string,
   date: string,
   partySize: number
-): Promise<string[]> {
+): Promise<SlotsForDateResult> {
   const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
-  if (!restaurant || restaurant.status !== "ACTIVE") return [];
+  if (!restaurant || restaurant.status !== "ACTIVE") return { slots: [], isOpen: true };
 
   const { start, end } = getDayRange(new Date(`${date}T00:00:00`));
-  const [tables, reservations] = await Promise.all([
+  const [tables, reservations, businessHours] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { id: true, capacity: true } }),
     prisma.reservation.findMany({
       where: {
@@ -27,9 +30,20 @@ export async function getSlotsForDateAction(
       },
       select: { tableId: true, startsAt: true, durationMinutes: true },
     }),
+    prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
   ]);
 
-  return getAvailableSlots(tables, reservations, { partySize, date });
+  const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
+  const isOpen = getHoursForDay(businessHours, dayOfWeek).isOpen;
+
+  const slots = getAvailableSlots(tables, reservations, {
+    partySize,
+    date,
+    businessHours,
+    durationMinutes: restaurant.defaultReservationDurationMinutes,
+  });
+
+  return { slots, isOpen };
 }
 
 export type WidgetActionResult =
@@ -56,7 +70,7 @@ export async function createWidgetReservationAction(
 
   const startsAt = new Date(`${input.date}T${input.time}`);
   const { start, end } = getDayRange(startsAt);
-  const [tables, reservations] = await Promise.all([
+  const [tables, reservations, businessHours] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { id: true, capacity: true } }),
     prisma.reservation.findMany({
       where: {
@@ -66,6 +80,7 @@ export async function createWidgetReservationAction(
       },
       select: { tableId: true, startsAt: true, durationMinutes: true },
     }),
+    prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
   ]);
 
   // Re-check right before writing -- another visitor may have taken this
@@ -73,6 +88,8 @@ export async function createWidgetReservationAction(
   const stillAvailable = getAvailableSlots(tables, reservations, {
     partySize: input.partySize,
     date: input.date,
+    businessHours,
+    durationMinutes: restaurant.defaultReservationDurationMinutes,
   }).includes(input.time);
   if (!stillAvailable) {
     return { ok: false, error: "That time was just booked by someone else -- please pick another." };
@@ -95,7 +112,7 @@ export async function createWidgetReservationAction(
       tableId: null,
       partySize: input.partySize,
       startsAt,
-      durationMinutes: 90,
+      durationMinutes: restaurant.defaultReservationDurationMinutes,
       specialRequests: input.specialRequests || null,
       status: "PENDING",
     },

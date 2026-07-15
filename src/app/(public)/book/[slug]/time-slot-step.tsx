@@ -37,7 +37,8 @@ export function TimeSlotStep({
   onNext: () => void;
 }) {
   const [slots, setSlots] = useState<string[]>([]);
-  const [weekAvailability, setWeekAvailability] = useState<Record<string, boolean>>({});
+  const [selectedDayOpen, setSelectedDayOpen] = useState(true);
+  const [weekAvailability, setWeekAvailability] = useState<Record<string, "available" | "full" | "closed">>({});
   const [loading, setLoading] = useState(true);
 
   const { start: weekStart } = getWeekRange(new Date(`${value.date}T00:00:00`));
@@ -48,15 +49,18 @@ export function TimeSlotStep({
     setLoading(true);
     Promise.all(weekDates.map((d) => getSlotsForDateAction(slug, d, value.partySize))).then((results) => {
       if (cancelled) return;
-      const availability: Record<string, boolean> = {};
+      const availability: Record<string, "available" | "full" | "closed"> = {};
       weekDates.forEach((d, i) => {
-        availability[d] = (results[i]?.length ?? 0) > 0;
+        const result = results[i];
+        if (!result?.isOpen) availability[d] = "closed";
+        else availability[d] = result.slots.length > 0 ? "available" : "full";
       });
       setWeekAvailability(availability);
     });
     getSlotsForDateAction(slug, value.date, value.partySize).then((result) => {
       if (cancelled) return;
-      setSlots(result);
+      setSlots(result.slots);
+      setSelectedDayOpen(result.isOpen);
       setLoading(false);
     });
     return () => {
@@ -132,7 +136,7 @@ export function TimeSlotStep({
         <div className="flex flex-1 justify-between gap-1 overflow-x-auto">
           {weekDates.map((d) => {
             const isSelected = d === value.date;
-            const available = weekAvailability[d] ?? true;
+            const status = weekAvailability[d] ?? "available";
             const day = new Date(`${d}T00:00:00`);
             return (
               <button
@@ -143,9 +147,11 @@ export function TimeSlotStep({
                   "flex shrink-0 flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
                   isSelected
                     ? "bg-primary text-primary-foreground"
-                    : available
+                    : status === "available"
                       ? "text-emerald-600 hover:bg-emerald-500/10"
-                      : "text-destructive hover:bg-destructive/10"
+                      : status === "closed"
+                        ? "text-muted-foreground hover:bg-muted"
+                        : "text-destructive hover:bg-destructive/10"
                 )}
               >
                 <span className="text-xs">{DAY_LABELS[day.getDay()]}</span>
@@ -172,8 +178,14 @@ export function TimeSlotStep({
       </div>
 
       <div className="space-y-4">
-        {renderSlotGroup("AM", amSlots)}
-        {renderSlotGroup("PM", pmSlots)}
+        {!loading && !selectedDayOpen ? (
+          <p className="text-sm text-muted-foreground">We&apos;re closed on this day. Please pick another date.</p>
+        ) : (
+          <>
+            {renderSlotGroup("AM", amSlots)}
+            {renderSlotGroup("PM", pmSlots)}
+          </>
+        )}
       </div>
 
       <div className="flex justify-end pt-2">
