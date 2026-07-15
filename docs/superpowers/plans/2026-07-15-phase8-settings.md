@@ -1445,7 +1445,7 @@ In `src/lib/auth.ts`, add a third field to `user.additionalFields`:
 
 - [ ] **Step 2: Add `id` to `SessionUser`**
 
-Replace the full contents of `src/lib/auth-routes.ts`:
+Replace the full contents of `src/lib/auth-routes.ts`. Note `resolveHomeRoute`/`canAccessRestaurant` take `Pick<SessionUser, "role" | "restaurantSlug">` rather than the full `SessionUser` — neither function reads `id`, and narrowing their parameter type avoids forcing every existing caller (`src/app/page.tsx`, `tests/auth-routes.test.ts`) to start supplying an `id` it doesn't have and doesn't need:
 
 ```ts
 export type SessionUser = {
@@ -1454,13 +1454,13 @@ export type SessionUser = {
   restaurantSlug: string | null;
 };
 
-export function resolveHomeRoute(user: SessionUser): string {
+export function resolveHomeRoute(user: Pick<SessionUser, "role" | "restaurantSlug">): string {
   if (user.role === "SUPER_ADMIN") return "/admin";
   if (!user.restaurantSlug) return "/sign-in";
   return `/r/${user.restaurantSlug}/dashboard`;
 }
 
-export function canAccessRestaurant(user: SessionUser, targetSlug: string): boolean {
+export function canAccessRestaurant(user: Pick<SessionUser, "role" | "restaurantSlug">, targetSlug: string): boolean {
   return user.role === "SUPER_ADMIN" || user.restaurantSlug === targetSlug;
 }
 ```

@@ -8,18 +8,20 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
 
-  const { role, restaurantId } = session.user as typeof session.user & {
+  const { id, role, restaurantId, active } = session.user as typeof session.user & {
     role: SessionUser["role"];
     restaurantId: string | null;
+    active: boolean;
   };
+  if (!active) return null;
 
-  if (!restaurantId) return { role, restaurantSlug: null };
+  if (!restaurantId) return { id, role, restaurantSlug: null };
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
     select: { slug: true },
   });
-  return { role, restaurantSlug: restaurant?.slug ?? null };
+  return { id, role, restaurantSlug: restaurant?.slug ?? null };
 }
 
 export async function requireSuperAdmin(): Promise<SessionUser> {
@@ -51,6 +53,13 @@ export async function assertRestaurantMember(slug: string) {
   const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
   if (!restaurant || restaurant.status !== "ACTIVE") throw new Error("Restaurant not found");
 
+  return { user, restaurant };
+}
+
+// Same reasoning as assertRestaurantMember: for Server Actions, not Server Components.
+export async function assertRestaurantOwner(slug: string) {
+  const { user, restaurant } = await assertRestaurantMember(slug);
+  if (user.role !== "OWNER") throw new Error("Not authorized — Owner access required");
   return { user, restaurant };
 }
 
