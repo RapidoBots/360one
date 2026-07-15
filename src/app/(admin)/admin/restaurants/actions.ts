@@ -2,18 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { assertSuperAdmin } from "@/lib/auth-guards";
+import { createUserAccount } from "@/lib/user-accounts";
 import { Prisma, type Role, type RestaurantStatus } from "@/generated/prisma/client";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
-
-async function createUserAccount(input: { name: string; email: string; password: string }) {
-  const { user } = await auth.api.signUpEmail({
-    body: { name: input.name, email: input.email, password: input.password },
-  });
-  return user;
-}
 
 export async function createRestaurantAction(input: {
   name: string;
