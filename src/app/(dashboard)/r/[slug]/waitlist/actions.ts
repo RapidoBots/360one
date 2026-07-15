@@ -56,7 +56,7 @@ export async function seatFromWaitlistAction(
   if (!entry) return { ok: false, error: "Waitlist entry not found." };
 
   const startsAt = new Date();
-  const conflict = await hasTableConflict(tableId, startsAt, 90);
+  const conflict = await hasTableConflict(tableId, startsAt, restaurant.defaultReservationDurationMinutes);
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
 
   await prisma.reservation.create({
@@ -66,7 +66,7 @@ export async function seatFromWaitlistAction(
       tableId,
       partySize: entry.partySize,
       startsAt,
-      durationMinutes: 90,
+      durationMinutes: restaurant.defaultReservationDurationMinutes,
       status: "SEATED",
     },
   });

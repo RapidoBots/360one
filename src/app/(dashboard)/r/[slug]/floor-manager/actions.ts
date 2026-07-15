@@ -33,7 +33,7 @@ export async function quickSeatWalkInAction(
   const { restaurant } = await assertRestaurantMember(slug);
   const startsAt = new Date(`${toLocalDateInput(new Date())}T${input.time}`);
 
-  const conflict = await hasTableConflict(tableId, startsAt, 90);
+  const conflict = await hasTableConflict(tableId, startsAt, restaurant.defaultReservationDurationMinutes);
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
 
   const customer = await findOrCreateCustomer(restaurant.id, { name: "Walk-in" });
@@ -45,7 +45,7 @@ export async function quickSeatWalkInAction(
       tableId,
       partySize: input.partySize,
       startsAt,
-      durationMinutes: 90,
+      durationMinutes: restaurant.defaultReservationDurationMinutes,
       // A slot later today books like a normal reservation; "now or already
       // past" seats immediately, matching what "walk-in" actually means.
       status: startsAt.getTime() <= Date.now() ? "SEATED" : "CONFIRMED",

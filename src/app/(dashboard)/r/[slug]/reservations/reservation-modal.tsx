@@ -57,6 +57,7 @@ export function ReservationModal({
   reservations,
   reservation,
   prefill,
+  defaultDurationMinutes,
   onSaved,
 }: {
   open: boolean;
@@ -66,6 +67,7 @@ export function ReservationModal({
   reservations: ReservationListItem[];
   reservation?: ReservationForEdit;
   prefill?: ReservationPrefill;
+  defaultDurationMinutes: number;
   onSaved: () => void;
 }) {
   const [guestName, setGuestName] = useState("");
@@ -74,7 +76,7 @@ export function ReservationModal({
   const [partySize, setPartySize] = useState(2);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("19:00");
-  const [durationMinutes, setDurationMinutes] = useState(90);
+  const [durationMinutes, setDurationMinutes] = useState(defaultDurationMinutes);
   const [specialRequests, setSpecialRequests] = useState("");
   const [tableId, setTableId] = useState<string | null>(null);
   const [tableTouched, setTableTouched] = useState(false);
@@ -104,7 +106,7 @@ export function ReservationModal({
       setPartySize(2);
       setDate(prefill?.date ?? toDateInput(new Date()));
       setTime(prefill?.time ?? "19:00");
-      setDurationMinutes(90);
+      setDurationMinutes(defaultDurationMinutes);
       setSpecialRequests("");
       setTableId(prefill?.tableId ?? null);
       setTableTouched(!!prefill?.tableId);

@@ -26,6 +26,7 @@ export function ReservationsCalendar({
   reservations,
   tables,
   dayHours,
+  defaultDurationMinutes,
 }: {
   slug: string;
   view: CalendarView;
@@ -33,6 +34,7 @@ export function ReservationsCalendar({
   reservations: ReservationListItem[];
   tables: TableRow[];
   dayHours: { isOpen: boolean; startHour: number; endHour: number };
+  defaultDurationMinutes: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -187,6 +189,7 @@ export function ReservationsCalendar({
         reservations={reservations}
         reservation={editingForModal}
         prefill={prefill}
+        defaultDurationMinutes={defaultDurationMinutes}
         onSaved={() => router.refresh()}
       />
       <TablesManagerDialog

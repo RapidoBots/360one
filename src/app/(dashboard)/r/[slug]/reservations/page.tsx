@@ -53,6 +53,7 @@ export default async function ReservationsPage({
       reservations={reservations}
       tables={tables}
       dayHours={dayHours}
+      defaultDurationMinutes={restaurant.defaultReservationDurationMinutes}
     />
   );
 }
