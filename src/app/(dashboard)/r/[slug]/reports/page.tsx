@@ -14,6 +14,8 @@ import {
   topRepeatGuests,
 } from "@/lib/report-metrics";
 import { ReportBarChart } from "./report-bar-chart";
+import { ReportAreaChart } from "./report-area-chart";
+import { StatusBreakdownChart } from "./status-breakdown-chart";
 import { ExportCsvButton } from "./export-csv-button";
 
 export default async function ReportsPage({
@@ -110,7 +112,7 @@ export default async function ReportsPage({
 
       <div className="rounded-[5px] border border-border p-5">
         <h2 className="mb-2 text-base font-semibold">Reservations per day</h2>
-        <ReportBarChart data={reservationsPerDay(reservations, { start, end })} />
+        <ReportAreaChart data={reservationsPerDay(reservations, { start, end })} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -120,7 +122,7 @@ export default async function ReportsPage({
         </div>
         <div className="rounded-[5px] border border-border p-5">
           <h2 className="mb-2 text-base font-semibold">Busiest hour of day</h2>
-          <ReportBarChart data={busiestHourOfDay(reservations, businessHours)} />
+          <ReportAreaChart data={busiestHourOfDay(reservations, businessHours)} />
         </div>
       </div>
 
@@ -131,7 +133,7 @@ export default async function ReportsPage({
 
       <div className="rounded-[5px] border border-border p-5">
         <h2 className="mb-2 text-base font-semibold">Status breakdown</h2>
-        <ReportBarChart data={rates.statusBreakdown} />
+        <StatusBreakdownChart data={rates.statusBreakdown} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
