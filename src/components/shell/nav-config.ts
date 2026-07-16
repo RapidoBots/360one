@@ -5,7 +5,6 @@ export type NavIconName =
   | "Map"
   | "Users"
   | "BarChart3"
-  | "Bell"
   | "Settings"
   | "Building2"
   | "CreditCard";
@@ -21,7 +20,6 @@ export function restaurantNavItems(slug: string): NavItem[] {
     { label: "Floor Manager", href: `${base}/floor-manager`, icon: "Map" },
     { label: "Customers", href: `${base}/customers`, icon: "Users" },
     { label: "Reports", href: `${base}/reports`, icon: "BarChart3" },
-    { label: "Notifications", href: `${base}/notifications`, icon: "Bell" },
     { label: "Settings", href: `${base}/settings`, icon: "Settings" },
   ];
 }
