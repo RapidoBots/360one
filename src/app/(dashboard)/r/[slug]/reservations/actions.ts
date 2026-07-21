@@ -54,7 +54,14 @@ export async function createReservationAction(
 
   await syncContactToGhl(
     { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
-    { name: customer.name, email: customer.email, phone: customer.phone }
+    {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      startsAt,
+      partySize: input.partySize,
+      restaurantName: restaurant.name,
+    }
   );
 
   revalidatePath(`/r/${slug}/reservations`);

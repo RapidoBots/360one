@@ -73,7 +73,14 @@ export async function seatFromWaitlistAction(
 
   await syncContactToGhl(
     { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
-    { name: entry.customer.name, email: entry.customer.email, phone: entry.customer.phone }
+    {
+      name: entry.customer.name,
+      email: entry.customer.email,
+      phone: entry.customer.phone,
+      startsAt,
+      partySize: entry.partySize,
+      restaurantName: restaurant.name,
+    }
   );
 
   await prisma.waitlistEntry.update({
