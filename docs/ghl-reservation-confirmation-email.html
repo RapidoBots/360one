@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>Reservation Confirmed</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  /* Progressive enhancement only -- every element below also carries an
+     inline style, since many email clients (Outlook desktop, some webmail)
+     strip <style> blocks entirely. This block just makes things nicer where
+     it's honored (Gmail, Apple Mail, most mobile clients). */
+  body, table, td { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+
+  @media only screen and (max-width: 600px) {
+    .email-container { width: 100% !important; }
+    .email-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    .email-header-padding { padding: 28px 20px !important; }
+    .detail-label, .detail-value { display: block !important; width: 100% !important; text-align: left !important; padding: 4px 0 !important; }
+  }
+</style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Preheader (hidden preview text in inbox list) -->
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+    Your table is booked -- see your reservation details inside.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f5;">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 600px; max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+
+          <!-- Header: restaurant name as the "brand" -->
+          <tr>
+            <td class="email-header-padding" align="center" style="background-color: #0243c4; padding: 36px 32px;">
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 22px; line-height: 28px; font-weight: bold; color: #ffffff;">
+                {{contact.restaurant_name}}
+              </p>
+              <p style="margin: 6px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 18px; font-weight: normal; color: #d6e0fb; text-transform: uppercase; letter-spacing: 1px;">
+                Reservation Confirmed
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="email-padding" style="padding: 36px 40px 8px;">
+              <p style="margin: 0 0 4px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #171717;">
+                Hi {{contact.name}},
+              </p>
+              <p style="margin: 0 0 24px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #171717;">
+                Your table is booked! Here are your reservation details:
+              </p>
+            </td>
+          </tr>
+
+          <!-- Details card -->
+          <tr>
+            <td class="email-padding" style="padding: 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; border-radius: 10px;">
+                <tr>
+                  <td style="padding: 24px 28px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td class="detail-label" width="35%" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #737373; vertical-align: top;">
+                          Date
+                        </td>
+                        <td class="detail-value" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: bold; color: #171717; text-align: right;">
+                          {{contact.date}}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2" style="border-top: 1px solid #e5e5e5; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td class="detail-label" width="35%" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #737373; vertical-align: top;">
+                          Time
+                        </td>
+                        <td class="detail-value" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: bold; color: #171717; text-align: right;">
+                          {{contact.time}}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2" style="border-top: 1px solid #e5e5e5; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td class="detail-label" width="35%" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #737373; vertical-align: top;">
+                          Party size
+                        </td>
+                        <td class="detail-value" style="padding: 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: bold; color: #171717; text-align: right;">
+                          {{contact.party_size}} guests
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Closing note -->
+          <tr>
+            <td class="email-padding" style="padding: 24px 40px 8px;">
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 22px; color: #171717;">
+                We look forward to seeing you! If you need to make any changes to your reservation, just reply to this email or give us a call.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Spacer -->
+          <tr>
+            <td style="padding: 20px 40px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-top: 1px solid #e5e5e5; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer: platform attribution -->
+          <tr>
+            <td align="center" style="padding: 20px 40px 32px;">
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 18px; color: #a3a3a3;">
+                Powered by
+                <span style="color: #0243c4; font-weight: bold;">360</span><span style="color: #171717; font-weight: bold;">one</span>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
