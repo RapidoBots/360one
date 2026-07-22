@@ -1,0 +1,67 @@
+import { prisma } from "@/lib/prisma";
+import { doesOverlap } from "@/lib/reservation-conflicts";
+import { customerMatchKey, normalizeEmail, normalizePhone } from "@/lib/customer-matching";
+import { getDayRange } from "@/lib/reservation-dates";
+import { sortTablesByNumber } from "@/lib/sort-tables";
+
+export async function findOrCreateCustomer(
+  restaurantId: string,
+  input: { name: string; email?: string | null; phone?: string | null },
+  // Set when updating an existing reservation. If the guest info no longer
+  // has a phone or email to match on (e.g. cleared while editing), reuse
+  // this customer instead of creating an orphaned duplicate with no contact
+  // info -- the reservation shouldn't lose its guest history just because a
+  // field got blanked out.
+  fallbackCustomerId?: string
+) {
+  const key = customerMatchKey(input);
+  if (key) {
+    const existing = await prisma.customer.findFirst({
+      where: { restaurantId, [key.field]: key.value },
+    });
+    if (existing) {
+      if (existing.name !== input.name) {
+        return prisma.customer.update({ where: { id: existing.id }, data: { name: input.name } });
+      }
+      return existing;
+    }
+  } else if (fallbackCustomerId) {
+    return prisma.customer.update({ where: { id: fallbackCustomerId }, data: { name: input.name } });
+  }
+
+  return prisma.customer.create({
+    data: {
+      restaurantId,
+      name: input.name,
+      email: input.email ? normalizeEmail(input.email) : null,
+      phone: input.phone ? normalizePhone(input.phone) : null,
+    },
+  });
+}
+
+// ponytail: bounds the conflict search to the reservation's own calendar day.
+// A reservation starting near midnight with a long duration could miss a
+// conflict just after midnight — acceptable until Phase 8 models real
+// business hours.
+export async function hasTableConflict(
+  tableId: string,
+  startsAt: Date,
+  durationMinutes: number,
+  excludeReservationId?: string
+): Promise<boolean> {
+  const { start, end } = getDayRange(startsAt);
+  const candidates = await prisma.reservation.findMany({
+    where: {
+      tableId,
+      id: excludeReservationId ? { not: excludeReservationId } : undefined,
+      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      startsAt: { gte: start, lt: end },
+    },
+    select: { startsAt: true, durationMinutes: true },
+  });
+  return candidates.some((c) => doesOverlap({ startsAt, durationMinutes }, c));
+}
+
+export async function listTables(restaurantId: string) {
+  return sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId } }));
+}

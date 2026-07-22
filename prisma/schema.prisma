@@ -1,0 +1,212 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  STAFF
+}
+
+enum RestaurantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Restaurant {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique
+  status    RestaurantStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  ghlLocationId String?
+  ghlApiKey     String?
+  defaultReservationDurationMinutes Int @default(90)
+  users        User[]
+  tables       Table[]
+  customers    Customer[]
+  reservations Reservation[]
+  waitlistEntries WaitlistEntry[]
+  businessHours BusinessHours[]
+
+  @@map("restaurant")
+}
+
+model BusinessHours {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  dayOfWeek    Int
+  isOpen       Boolean    @default(true)
+  openTime     String?
+  closeTime    String?
+
+  @@unique([restaurantId, dayOfWeek])
+  @@map("business_hours")
+}
+
+// Better Auth owns id/name/email/emailVerified/image/createdAt/updatedAt.
+// role/restaurantId are our domain extensions, exposed via Better Auth's
+// user.additionalFields config in src/lib/auth.ts.
+model User {
+  id            String      @id
+  name          String
+  email         String      @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  role          Role        @default(STAFF)
+  active        Boolean     @default(true)
+  restaurantId  String?
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+enum TableShape {
+  SQUARE
+  ROUND
+}
+
+model Table {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  number       String
+  capacity     Int
+  area         String?
+  posX         Float?
+  posY         Float?
+  shape        TableShape    @default(SQUARE)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([restaurantId, number])
+  @@map("table")
+}
+
+enum ContactChannel {
+  EMAIL
+  SMS
+  CALL
+}
+
+model Customer {
+  id               String         @id @default(cuid())
+  restaurantId     String
+  restaurant       Restaurant     @relation(fields: [restaurantId], references: [id])
+  name             String
+  email            String?
+  phone            String?
+  preferredContact ContactChannel @default(EMAIL)
+  reservations     Reservation[]
+  waitlistEntries  WaitlistEntry[]
+  createdAt        DateTime       @default(now())
+
+  @@map("customer")
+}
+
+enum WaitlistStatus {
+  WAITING
+  SEATED
+  CANCELLED
+  NO_SHOW
+}
+
+model WaitlistEntry {
+  id                String         @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant     @relation(fields: [restaurantId], references: [id])
+  customerId        String
+  customer          Customer       @relation(fields: [customerId], references: [id])
+  partySize         Int
+  quotedWaitMinutes Int?
+  status            WaitlistStatus @default(WAITING)
+  notes             String?
+  joinedAt          DateTime       @default(now())
+
+  @@map("waitlist_entry")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id              String            @id @default(cuid())
+  restaurantId    String
+  restaurant      Restaurant        @relation(fields: [restaurantId], references: [id])
+  customerId      String
+  customer        Customer          @relation(fields: [customerId], references: [id])
+  tableId         String?
+  table           Table?            @relation(fields: [tableId], references: [id])
+  partySize       Int
+  startsAt        DateTime
+  durationMinutes Int               @default(90)
+  status          ReservationStatus @default(CONFIRMED)
+  specialRequests String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("reservation")
+}
