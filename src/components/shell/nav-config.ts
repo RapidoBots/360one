@@ -27,5 +27,6 @@ export function restaurantNavItems(slug: string): NavItem[] {
 export const adminNavItems: NavItem[] = [
   { label: "Restaurants", href: "/admin/restaurants", icon: "Building2" },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: "CreditCard" },
+  { label: "Super Admins", href: "/admin/super-admins", icon: "Users" },
   { label: "Settings", href: "/admin/settings", icon: "Settings" },
 ];

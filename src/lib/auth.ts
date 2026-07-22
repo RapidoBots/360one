@@ -18,6 +18,14 @@ export const auth = betterAuth({
     },
   },
   user: {
+    changeEmail: {
+      enabled: true,
+      // This app has no email-verification flow (no sendVerificationEmail
+      // configured), so every user's emailVerified is always false --
+      // apply the change immediately rather than requiring a step we
+      // never implemented.
+      updateEmailWithoutVerification: true,
+    },
     additionalFields: {
       role: {
         type: "string",
