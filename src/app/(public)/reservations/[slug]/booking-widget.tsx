@@ -58,6 +58,7 @@ export function BookingWidget({ slug, restaurantName }: { slug: string; restaura
             value={selection}
             onDateChange={(date) => setSelection((prev) => ({ ...prev, date, time: null }))}
             onSlotSelect={(time) => setSelection((prev) => ({ ...prev, time }))}
+            onBack={() => setStep("GUEST_DATE")}
             onNext={() => setStep("CONTACT")}
           />
         )}
@@ -66,6 +67,7 @@ export function BookingWidget({ slug, restaurantName }: { slug: string; restaura
           <ContactForm
             slug={slug}
             selection={{ partySize: selection.partySize, date: selection.date, time: selection.time }}
+            onBack={() => setStep("TIME_SLOT")}
             onSuccess={(b) => {
               setBooking(b);
               setStep("SUCCESS");

@@ -23,7 +23,7 @@ test.describe("Embeddable reservation widget", () => {
   test.afterAll(cleanupFixtures);
 
   test("books through all 3 steps, lands as Pending, and staff can confirm it", async ({ page }) => {
-    await page.goto("/book/blue-fork");
+    await page.goto("/reservations/blue-fork");
     await expect(page.getByRole("heading", { name: /Reserve a table at/ })).toBeVisible();
 
     // Step 1: guests + date only, no slots yet.
@@ -69,6 +69,6 @@ test.describe("Embeddable reservation widget", () => {
     await expect(page).toHaveURL(/\/r\/blue-fork\/dashboard/);
 
     await page.goto("/r/blue-fork/settings");
-    await expect(page.getByText("/book/blue-fork")).toBeVisible();
+    await expect(page.getByText("/reservations/blue-fork")).toBeVisible();
   });
 });

@@ -12,7 +12,7 @@ export function EmbedSnippet({ slug }: { slug: string }) {
   }, []);
 
   const snippet = origin
-    ? `<iframe src="${origin}/book/${slug}" width="100%" height="800" style="border:0"></iframe>`
+    ? `<iframe src="${origin}/reservations/${slug}" width="100%" height="800" style="border:0"></iframe>`
     : "";
 
   async function handleCopy() {

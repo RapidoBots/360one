@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Mail, Phone, MessageCircle } from "lucide-react";
+import { User, Mail, Phone, MessageCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,10 +20,12 @@ const CHANNEL_LABELS: Record<ContactChannel, string> = {
 export function ContactForm({
   slug,
   selection,
+  onBack,
   onSuccess,
 }: {
   slug: string;
   selection: { partySize: number; date: string; time: string };
+  onBack: () => void;
   onSuccess: (booking: { partySize: number; date: string; time: string }) => void;
 }) {
   const [name, setName] = useState("");
@@ -137,7 +139,11 @@ export function ContactForm({
 
       {error && <p className="text-base text-destructive">{error}</p>}
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-between pt-2">
+        <Button type="button" variant="outline" className="h-11 gap-2 px-5 text-base" onClick={onBack}>
+          <ArrowLeft className="size-4" />
+          Back
+        </Button>
         <Button type="submit" className="h-11 px-6 text-base" disabled={saving}>
           {saving ? "Submitting..." : "Submit"}
         </Button>

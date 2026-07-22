@@ -64,7 +64,7 @@ test.describe("Phase 8 Settings", () => {
     await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
 
     // Widget: today should now show as closed (Step 1 defaults to today's date).
-    await page.goto(`/book/${FIXTURE_SLUG}`);
+    await page.goto(`/reservations/${FIXTURE_SLUG}`);
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByText("We're closed on this day")).toBeVisible();
 

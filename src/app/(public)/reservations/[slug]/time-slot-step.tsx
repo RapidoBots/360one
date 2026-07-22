@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getWeekRange, toLocalDateInput } from "@/lib/reservation-dates";
@@ -28,12 +28,14 @@ export function TimeSlotStep({
   value,
   onDateChange,
   onSlotSelect,
+  onBack,
   onNext,
 }: {
   slug: string;
   value: TimeSlotSelection;
   onDateChange: (date: string) => void;
   onSlotSelect: (time: string) => void;
+  onBack: () => void;
   onNext: () => void;
 }) {
   const [slots, setSlots] = useState<string[]>([]);
@@ -188,7 +190,11 @@ export function TimeSlotStep({
         )}
       </div>
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-between pt-2">
+        <Button type="button" variant="outline" className="h-11 gap-2 px-5 text-base" onClick={onBack}>
+          <ArrowLeft className="size-4" />
+          Back
+        </Button>
         <Button type="button" className="h-11 gap-2 px-5 text-base" onClick={onNext} disabled={!value.time}>
           Next
           <ArrowRight className="size-4" />
