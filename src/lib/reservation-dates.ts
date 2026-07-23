@@ -1,3 +1,8 @@
+// All day/week math below uses Date's local-timezone methods (setHours,
+// getDay, etc.), which resolve to the `TZ` env var the Node process was
+// started with -- see .env.example. Every restaurant is currently assumed
+// to be in that one timezone; a multi-timezone restaurant base would need
+// per-restaurant timezone-aware date handling instead.
 export function getDayRange(date: Date): { start: Date; end: Date } {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
