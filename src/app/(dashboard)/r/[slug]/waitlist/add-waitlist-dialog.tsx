@@ -64,7 +64,7 @@ export function AddWaitlistDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add to waitlist</DialogTitle>
+          <DialogTitle>Add to Waiting Area</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -140,7 +140,7 @@ export function AddWaitlistDialog({
             />
           </div>
           {error && <p className="text-base text-destructive">{error}</p>}
-          {/* Distinct from the page's "Add to waitlist" trigger button --
+          {/* Distinct from the page's "Add to Waiting Area" trigger button --
               see Global Constraints. */}
           <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
             {saving ? "Adding..." : "Add"}

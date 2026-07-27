@@ -65,9 +65,9 @@ export function WaitlistView({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Waitlist</h1>
+        <h1 className="text-2xl font-semibold">Waiting Area</h1>
         <Button className="h-11 px-5 text-base" onClick={() => setAddOpen(true)}>
-          Add to waitlist
+          Add to Waiting Area
         </Button>
       </div>
 

@@ -16,7 +16,7 @@ export function restaurantNavItems(slug: string): NavItem[] {
   return [
     { label: "Dashboard", href: `${base}/dashboard`, icon: "LayoutDashboard" },
     { label: "Reservations", href: `${base}/reservations`, icon: "CalendarClock" },
-    { label: "Waitlist", href: `${base}/waitlist`, icon: "ListOrdered" },
+    { label: "Waiting Area", href: `${base}/waitlist`, icon: "ListOrdered" },
     { label: "Floor Manager", href: `${base}/floor-manager`, icon: "Map" },
     { label: "Customers", href: `${base}/customers`, icon: "Users" },
     { label: "Reports", href: `${base}/reports`, icon: "BarChart3" },
