@@ -32,9 +32,13 @@ model Restaurant {
   defaultReservationDurationMinutes Int @default(90)
   timezone      String @default("America/Toronto")
   logoUrl       String?
+  bannerUrl     String?
   mapsEmbedUrl  String?
+  address       String?
   phone         String?
   notes         String?
+  facebookUrl   String?
+  instagramUrl  String?
   users        User[]
   tables       Table[]
   customers    Customer[]

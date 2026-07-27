@@ -17,7 +17,15 @@ export type ProfileActionResult =
 
 export async function updateRestaurantProfileAction(
   slug: string,
-  input: { timezone: string; mapsEmbedUrl: string; phone: string; notes: string }
+  input: {
+    timezone: string;
+    mapsEmbedUrl: string;
+    address: string;
+    phone: string;
+    notes: string;
+    facebookUrl: string;
+    instagramUrl: string;
+  }
 ): Promise<ProfileActionResult> {
   const { restaurant } = await assertRestaurantOwner(slug);
 
@@ -40,8 +48,11 @@ export async function updateRestaurantProfileAction(
     data: {
       timezone: input.timezone,
       mapsEmbedUrl: input.mapsEmbedUrl || null,
+      address: input.address || null,
       phone: input.phone || null,
       notes: input.notes || null,
+      facebookUrl: input.facebookUrl || null,
+      instagramUrl: input.instagramUrl || null,
     },
   });
 
@@ -50,13 +61,14 @@ export async function updateRestaurantProfileAction(
   return { ok: true };
 }
 
-export async function uploadRestaurantLogoAction(
+async function uploadRestaurantImage(
   slug: string,
-  formData: FormData
+  formData: FormData,
+  input: { column: "logoUrl" | "bannerUrl"; pathPrefix: string }
 ): Promise<ProfileActionResult> {
   const { restaurant } = await assertRestaurantOwner(slug);
 
-  const file = formData.get("logo");
+  const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "No file selected." };
   }
@@ -67,16 +79,30 @@ export async function uploadRestaurantLogoAction(
     return { ok: false, error: "Image must be smaller than 5MB." };
   }
 
-  const blob = await put(`restaurant-logos/${restaurant.id}-${Date.now()}`, file, {
+  const blob = await put(`${input.pathPrefix}/${restaurant.id}-${Date.now()}`, file, {
     access: "public",
     addRandomSuffix: false,
   });
 
-  await prisma.restaurant.update({ where: { id: restaurant.id }, data: { logoUrl: blob.url } });
+  await prisma.restaurant.update({ where: { id: restaurant.id }, data: { [input.column]: blob.url } });
 
   revalidatePath(`/r/${slug}/settings`);
   revalidatePath(`/reservations/${slug}`);
   return { ok: true };
+}
+
+export async function uploadRestaurantLogoAction(slug: string, formData: FormData): Promise<ProfileActionResult> {
+  return uploadRestaurantImage(slug, formData, {
+    column: "logoUrl",
+    pathPrefix: "restaurant-logos",
+  });
+}
+
+export async function uploadRestaurantBannerAction(slug: string, formData: FormData): Promise<ProfileActionResult> {
+  return uploadRestaurantImage(slug, formData, {
+    column: "bannerUrl",
+    pathPrefix: "restaurant-banners",
+  });
 }
 
 export type BusinessHoursInput = {

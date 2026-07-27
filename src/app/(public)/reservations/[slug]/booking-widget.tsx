@@ -37,17 +37,25 @@ export function BookingWidget({
   restaurantName,
   timeZone,
   logoUrl,
+  bannerUrl,
   mapsEmbedUrl,
+  address,
   phone,
   notes,
+  facebookUrl,
+  instagramUrl,
 }: {
   slug: string;
   restaurantName: string;
   timeZone: string;
   logoUrl: string | null;
+  bannerUrl: string | null;
   mapsEmbedUrl: string | null;
+  address: string | null;
   phone: string | null;
   notes: string | null;
+  facebookUrl: string | null;
+  instagramUrl: string | null;
 }) {
   const [step, setStep] = useState<Step>("GUEST_DATE");
   const [selection, setSelection] = useState<TimeSlotSelection>({
@@ -66,10 +74,17 @@ export function BookingWidget({
   const hasInfoPanel = Boolean(phone || mapsEmbedUrl || notes);
   const showInfoPanel = step === "TIME_SLOT" && hasInfoPanel;
 
+  const mapsSearchUrl = address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
+
   const infoPanel = (
     <div className="space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
       {phone && (
-        <Button variant="outline" className="h-11 w-full gap-2 text-base" render={<a href={`tel:${phone}`} />}>
+        <Button
+          className="h-11 w-full gap-2 bg-blue-600 text-base text-white hover:bg-blue-700"
+          render={<a href={`tel:${phone}`} />}
+        >
           <Phone className="size-4" />
           Call Now
         </Button>
@@ -84,11 +99,55 @@ export function BookingWidget({
           title={`${restaurantName} location`}
         />
       )}
+      {address && mapsSearchUrl && (
+        <a
+          href={mapsSearchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-sm text-primary underline-offset-4 hover:underline"
+        >
+          {address}
+        </a>
+      )}
+      {(facebookUrl || instagramUrl) && (
+        <div className="flex flex-col gap-1.5 text-sm">
+          {facebookUrl && (
+            <a
+              href={facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Our Facebook page
+            </a>
+          )}
+          {instagramUrl && (
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Our Instagram profile
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 
   return (
     <div className={`mx-auto flex min-h-screen flex-col p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}>
+      {bannerUrl && (
+        <Image
+          src={bannerUrl}
+          alt={`${restaurantName} banner`}
+          width={1200}
+          height={300}
+          className="mb-4 h-32 w-full rounded-lg object-cover sm:h-48"
+          unoptimized
+        />
+      )}
       {logoUrl && (
         <Image
           src={logoUrl}

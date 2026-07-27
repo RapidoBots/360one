@@ -28,9 +28,13 @@ export default async function BookingWidgetPage({
       restaurantName={restaurant.name}
       timeZone={restaurant.timezone}
       logoUrl={restaurant.logoUrl}
+      bannerUrl={restaurant.bannerUrl}
       mapsEmbedUrl={restaurant.mapsEmbedUrl}
+      address={restaurant.address}
       phone={restaurant.phone}
       notes={restaurant.notes}
+      facebookUrl={restaurant.facebookUrl}
+      instagramUrl={restaurant.instagramUrl}
     />
   );
 }

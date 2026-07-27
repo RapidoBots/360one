@@ -30,9 +30,13 @@ export default async function RestaurantSettingsPage({
         slug={slug}
         timezone={restaurant.timezone}
         logoUrl={restaurant.logoUrl}
+        bannerUrl={restaurant.bannerUrl}
         mapsEmbedUrl={restaurant.mapsEmbedUrl}
+        address={restaurant.address}
         phone={restaurant.phone}
         notes={restaurant.notes}
+        facebookUrl={restaurant.facebookUrl}
+        instagramUrl={restaurant.instagramUrl}
       />
       <EmbedSnippet slug={slug} />
       <BusinessHoursForm
