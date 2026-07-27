@@ -71,7 +71,7 @@ export function BookingWidget({
     setStep("GUEST_DATE");
   }
 
-  const hasInfoPanel = Boolean(phone || mapsEmbedUrl || notes);
+  const hasInfoPanel = Boolean(bannerUrl || phone || mapsEmbedUrl || notes);
   const showInfoPanel = step === "TIME_SLOT" && hasInfoPanel;
 
   const mapsSearchUrl = address
@@ -80,6 +80,11 @@ export function BookingWidget({
 
   const infoPanel = (
     <div className="space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
+      {bannerUrl && (
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[5px]">
+          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
+        </div>
+      )}
       {phone && (
         <Button
           className="h-11 w-full gap-2 bg-blue-600 text-base text-white hover:bg-blue-700"
@@ -138,16 +143,6 @@ export function BookingWidget({
 
   return (
     <div className={`mx-auto flex min-h-screen flex-col p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}>
-      {bannerUrl && (
-        <Image
-          src={bannerUrl}
-          alt={`${restaurantName} banner`}
-          width={1200}
-          height={300}
-          className="mb-4 h-32 w-full rounded-lg object-cover sm:h-48"
-          unoptimized
-        />
-      )}
       {logoUrl && (
         <Image
           src={logoUrl}
