@@ -63,8 +63,32 @@ export function BookingWidget({
     setStep("GUEST_DATE");
   }
 
+  const hasInfoPanel = Boolean(phone || mapsEmbedUrl || notes);
+  const showInfoPanel = step === "TIME_SLOT" && hasInfoPanel;
+
+  const infoPanel = (
+    <div className="space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
+      {phone && (
+        <Button variant="outline" className="h-11 w-full gap-2 text-base" render={<a href={`tel:${phone}`} />}>
+          <Phone className="size-4" />
+          Call Now
+        </Button>
+      )}
+      {notes && <p className="text-sm text-muted-foreground">{notes}</p>}
+      {mapsEmbedUrl && (
+        <iframe
+          src={mapsEmbedUrl}
+          className="h-64 w-full rounded-[5px] border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title={`${restaurantName} location`}
+        />
+      )}
+    </div>
+  );
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col p-4 sm:p-6">
+    <div className={`mx-auto flex min-h-screen flex-col p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}>
       {logoUrl && (
         <Image
           src={logoUrl}
@@ -79,72 +103,51 @@ export function BookingWidget({
 
       {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}
 
-      <div className="rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
-        {step === "GUEST_DATE" && (
-          <GuestDateStep
-            value={{ partySize: selection.partySize, date: selection.date }}
-            onChange={(v) => setSelection((prev) => ({ ...prev, ...v, time: null }))}
-            onNext={() => setStep("TIME_SLOT")}
-          />
-        )}
-
-        {step === "TIME_SLOT" && (
-          <TimeSlotStep
-            slug={slug}
-            value={selection}
-            timeZone={timeZone}
-            onDateChange={(date) => setSelection((prev) => ({ ...prev, date, time: null }))}
-            onSlotSelect={(time) => setSelection((prev) => ({ ...prev, time }))}
-            onBack={() => setStep("GUEST_DATE")}
-            onNext={() => setStep("CONTACT")}
-          />
-        )}
-
-        {step === "CONTACT" && selection.time && (
-          <ContactForm
-            slug={slug}
-            selection={{ partySize: selection.partySize, date: selection.date, time: selection.time }}
-            onBack={() => setStep("TIME_SLOT")}
-            onSuccess={(b) => {
-              setBooking(b);
-              setStep("SUCCESS");
-            }}
-          />
-        )}
-
-        {step === "SUCCESS" && booking && (
-          <SuccessScreen booking={booking} timeZone={timeZone} onBookAnother={resetToStart} />
-        )}
-
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          powered by <Brand className="font-semibold" />
-        </p>
-      </div>
-
-      {(phone || mapsEmbedUrl || notes) && (
-        <div className="mt-4 space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
-          {phone && (
-            <Button
-              variant="outline"
-              className="h-11 w-full gap-2 text-base"
-              render={<a href={`tel:${phone}`} />}
-            >
-              <Phone className="size-4" />
-              Call Now
-            </Button>
-          )}
-          {notes && <p className="text-sm text-muted-foreground">{notes}</p>}
-          {mapsEmbedUrl && (
-            <iframe
-              src={mapsEmbedUrl}
-              className="h-64 w-full rounded-[5px] border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title={`${restaurantName} location`}
+      <div className={showInfoPanel ? "grid gap-4 lg:grid-cols-[1fr_320px]" : undefined}>
+        <div className="rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
+          {step === "GUEST_DATE" && (
+            <GuestDateStep
+              value={{ partySize: selection.partySize, date: selection.date }}
+              onChange={(v) => setSelection((prev) => ({ ...prev, ...v, time: null }))}
+              onNext={() => setStep("TIME_SLOT")}
             />
           )}
+
+          {step === "TIME_SLOT" && (
+            <TimeSlotStep
+              slug={slug}
+              value={selection}
+              timeZone={timeZone}
+              onDateChange={(date) => setSelection((prev) => ({ ...prev, date, time: null }))}
+              onSlotSelect={(time) => setSelection((prev) => ({ ...prev, time }))}
+              onBack={() => setStep("GUEST_DATE")}
+              onNext={() => setStep("CONTACT")}
+            />
+          )}
+
+          {step === "CONTACT" && selection.time && (
+            <ContactForm
+              slug={slug}
+              selection={{ partySize: selection.partySize, date: selection.date, time: selection.time }}
+              onBack={() => setStep("TIME_SLOT")}
+              onSuccess={(b) => {
+                setBooking(b);
+                setStep("SUCCESS");
+              }}
+            />
+          )}
+
+          {step === "SUCCESS" && booking && (
+            <SuccessScreen booking={booking} timeZone={timeZone} onBookAnother={resetToStart} />
+          )}
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            powered by <Brand className="font-semibold" />
+          </p>
         </div>
-      )}
+
+        {showInfoPanel && infoPanel}
+      </div>
     </div>
   );
 }
