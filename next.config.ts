@@ -12,6 +12,14 @@ const NO_FRAME_HEADERS = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
+  experimental: {
+    serverActions: {
+      // Default is 1MB -- the logo upload action allows up to 5MB, so
+      // without this every upload over 1MB was rejected before ever
+      // reaching that check.
+      bodySizeLimit: "6mb",
+    },
+  },
   async headers() {
     return [
       { source: "/", headers: NO_FRAME_HEADERS },

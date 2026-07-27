@@ -44,18 +44,23 @@ export function RestaurantProfileForm({
     setSaving(true);
     setError(null);
     setSaved(false);
-    const result = await updateRestaurantProfileAction(slug, {
-      timezone: tz,
-      mapsEmbedUrl: maps,
-      phone: phoneValue,
-      notes: notesValue,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await updateRestaurantProfileAction(slug, {
+        timezone: tz,
+        mapsEmbedUrl: maps,
+        phone: phoneValue,
+        notes: notesValue,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setSaved(true);
+    } catch {
+      setError("Could not save -- please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaved(true);
   }
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -63,18 +68,23 @@ export function RestaurantProfileForm({
     if (!file) return;
     setUploading(true);
     setUploadError(null);
-    const formData = new FormData();
-    formData.set("logo", file);
-    const result = await uploadRestaurantLogoAction(slug, formData);
-    setUploading(false);
-    if (!result.ok) {
-      setUploadError(result.error);
-      return;
+    try {
+      const formData = new FormData();
+      formData.set("logo", file);
+      const result = await uploadRestaurantLogoAction(slug, formData);
+      if (!result.ok) {
+        setUploadError(result.error);
+        return;
+      }
+      // The action doesn't return the new URL, so read back the object URL
+      // for an instant preview -- the real URL lands on the next server render.
+      setCurrentLogoUrl(URL.createObjectURL(file));
+    } catch {
+      setUploadError("Upload failed -- please try a smaller image or try again.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    // The action doesn't return the new URL, so read back the object URL
-    // for an instant preview -- the real URL lands on the next server render.
-    setCurrentLogoUrl(URL.createObjectURL(file));
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   return (
