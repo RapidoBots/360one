@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth-guards";
 import { EmbedSnippet } from "./embed-snippet";
 import { BusinessHoursForm } from "./business-hours-form";
 import { TeamMembers } from "./team-members";
+import { RestaurantProfileForm } from "./restaurant-profile-form";
 
 export default async function RestaurantSettingsPage({
   params,
@@ -25,6 +26,14 @@ export default async function RestaurantSettingsPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+      <RestaurantProfileForm
+        slug={slug}
+        timezone={restaurant.timezone}
+        logoUrl={restaurant.logoUrl}
+        mapsEmbedUrl={restaurant.mapsEmbedUrl}
+        phone={restaurant.phone}
+        notes={restaurant.notes}
+      />
       <EmbedSnippet slug={slug} />
       <BusinessHoursForm
         slug={slug}

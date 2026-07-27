@@ -7,9 +7,11 @@ import { formatDateLabel, formatTimeLabel } from "./booking-widget";
 
 export function SuccessScreen({
   booking,
+  timeZone,
   onBookAnother,
 }: {
   booking: { partySize: number; date: string; time: string };
+  timeZone: string;
   onBookAnother: () => void;
 }) {
   return (
@@ -24,7 +26,7 @@ export function SuccessScreen({
       <h2 className="text-lg font-semibold">Request received!</h2>
       <p className="max-w-sm text-base text-muted-foreground">
         We&apos;ve received your request for {booking.partySize}{" "}
-        {booking.partySize === 1 ? "guest" : "guests"} on {formatDateLabel(booking.date)} at{" "}
+        {booking.partySize === 1 ? "guest" : "guests"} on {formatDateLabel(booking.date, timeZone)} at{" "}
         {formatTimeLabel(booking.time)} -- we&apos;ll be in touch to confirm.
       </p>
       <Button variant="outline" className="h-11 px-5 text-base" onClick={onBookAnother}>

@@ -22,5 +22,15 @@ export default async function BookingWidgetPage({
     );
   }
 
-  return <BookingWidget slug={slug} restaurantName={restaurant.name} />;
+  return (
+    <BookingWidget
+      slug={slug}
+      restaurantName={restaurant.name}
+      timeZone={restaurant.timezone}
+      logoUrl={restaurant.logoUrl}
+      mapsEmbedUrl={restaurant.mapsEmbedUrl}
+      phone={restaurant.phone}
+      notes={restaurant.notes}
+    />
+  );
 }
