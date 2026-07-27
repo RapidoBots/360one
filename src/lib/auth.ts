@@ -13,8 +13,9 @@ export const auth = betterAuth({
     customRules: {
       // Better Auth's built-in default is 3 requests / 10s, which real
       // staff members (and this app's own test suite) can hit under
-      // normal multi-tab/retry use. Loosened, not disabled.
-      "/sign-in/email": { window: 60, max: 20 },
+      // normal multi-tab/retry use. Loosened, not disabled -- raised again
+      // as the e2e suite grew past ~20 total sign-ins per full run.
+      "/sign-in/email": { window: 60, max: 60 },
     },
   },
   user: {
