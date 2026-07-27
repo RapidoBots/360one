@@ -27,6 +27,7 @@ export function ReservationsCalendar({
   tables,
   dayHours,
   defaultDurationMinutes,
+  timeZone,
 }: {
   slug: string;
   view: CalendarView;
@@ -35,6 +36,7 @@ export function ReservationsCalendar({
   tables: TableRow[];
   dayHours: { isOpen: boolean; startHour: number; endHour: number };
   defaultDurationMinutes: number;
+  timeZone: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -95,7 +97,7 @@ export function ReservationsCalendar({
 
         <Input
           type="date"
-          value={searchParams.get("date") ?? toLocalDateInput(date)}
+          value={searchParams.get("date") ?? toLocalDateInput(date, timeZone)}
           onChange={(e) => updateParams({ date: e.target.value })}
           className="h-11 w-44 text-base"
           aria-label="Jump to day"
@@ -156,7 +158,7 @@ export function ReservationsCalendar({
         <WeekView
           reservations={reservations}
           weekStart={date}
-          onDayClick={(d) => updateParams({ view: "day", date: toLocalDateInput(d) })}
+          onDayClick={(d) => updateParams({ view: "day", date: toLocalDateInput(d, timeZone) })}
           onReservationClick={(id) => {
             setEditingId(id);
             setModalOpen(true);
@@ -175,7 +177,7 @@ export function ReservationsCalendar({
           }}
           onSlotClick={(tableId, time) => {
             setEditingId(null);
-            setPrefill({ tableId, date: toLocalDateInput(date), time });
+            setPrefill({ tableId, date: toLocalDateInput(date, timeZone), time });
             setModalOpen(true);
           }}
         />
@@ -190,6 +192,7 @@ export function ReservationsCalendar({
         reservation={editingForModal}
         prefill={prefill}
         defaultDurationMinutes={defaultDurationMinutes}
+        timeZone={timeZone}
         onSaved={() => router.refresh()}
       />
       <TablesManagerDialog

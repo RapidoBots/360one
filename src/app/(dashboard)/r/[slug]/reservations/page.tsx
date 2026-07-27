@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getDayRange, getWeekRange } from "@/lib/reservation-dates";
+import { getDayRange, getWeekRange, getZonedDayOfWeek, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { sortTablesByNumber } from "@/lib/sort-tables";
 import { getHoursForDay } from "@/lib/business-hours";
 import { ReservationsCalendar, type CalendarView } from "./reservations-calendar";
@@ -15,11 +15,15 @@ export default async function ReservationsPage({
   const { slug } = await params;
   const sp = await searchParams;
   const view: CalendarView = sp.view === "day" || sp.view === "week" ? sp.view : "timeline";
-  const date = sp.date ? new Date(`${sp.date}T00:00:00`) : new Date();
   const statusFilter = sp.status ? (sp.status.split(",").filter(Boolean) as ReservationStatus[]) : [];
 
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
-  const { start, end } = view === "week" ? getWeekRange(date) : getDayRange(date);
+  // Anchored at noon so a date param is unambiguously within the intended
+  // calendar day once viewed in the restaurant's timezone.
+  const date = sp.date ? zonedDateTimeToUtc(sp.date, "12:00", restaurant.timezone) : new Date();
+  const { start, end } = view === "week"
+    ? getWeekRange(date, restaurant.timezone)
+    : getDayRange(date, restaurant.timezone);
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -43,7 +47,7 @@ export default async function ReservationsPage({
 
   const tables = sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId: restaurant.id } }));
   const businessHours = await prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } });
-  const dayHours = getHoursForDay(businessHours, date.getDay());
+  const dayHours = getHoursForDay(businessHours, getZonedDayOfWeek(date, restaurant.timezone));
 
   return (
     <ReservationsCalendar
@@ -54,6 +58,7 @@ export default async function ReservationsPage({
       tables={tables}
       dayHours={dayHours}
       defaultDurationMinutes={restaurant.defaultReservationDurationMinutes}
+      timeZone={restaurant.timezone}
     />
   );
 }

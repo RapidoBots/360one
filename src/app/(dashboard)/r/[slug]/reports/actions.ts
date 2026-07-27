@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { buildReservationsCsv } from "@/lib/report-metrics";
-import { toLocalDateInput } from "@/lib/reservation-dates";
+import { getDayRange, toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 
 export type ReportsActionResult = { ok: true; csv: string } | { ok: false; error: string };
 
@@ -13,9 +13,10 @@ export async function exportReservationsCsvAction(
 ): Promise<ReportsActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
 
-  const start = new Date(`${input.start}T00:00:00`);
-  const end = new Date(`${input.end}T00:00:00`);
-  end.setDate(end.getDate() + 1); // end date is inclusive
+  // Anchored at noon so it's unambiguously within the intended calendar day
+  // once viewed in the restaurant's timezone.
+  const { start } = getDayRange(zonedDateTimeToUtc(input.start, "12:00", restaurant.timezone), restaurant.timezone);
+  const { end } = getDayRange(zonedDateTimeToUtc(input.end, "12:00", restaurant.timezone), restaurant.timezone); // end date is inclusive
 
   const reservations = await prisma.reservation.findMany({
     where: { restaurantId: restaurant.id, startsAt: { gte: start, lt: end } },
@@ -25,8 +26,8 @@ export async function exportReservationsCsvAction(
 
   const csv = buildReservationsCsv(
     reservations.map((r) => ({
-      date: toLocalDateInput(r.startsAt),
-      time: r.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      date: toLocalDateInput(r.startsAt, restaurant.timezone),
+      time: r.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: restaurant.timezone }),
       guestName: r.customer.name,
       partySize: r.partySize,
       table: r.table?.number ?? "",

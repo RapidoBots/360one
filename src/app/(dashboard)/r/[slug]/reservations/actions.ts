@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
+import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { syncContactToGhl } from "@/lib/ghl-sync";
 import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
@@ -27,10 +28,10 @@ export async function createReservationAction(
   input: ReservationInput
 ): Promise<ReservationActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
-  const startsAt = new Date(`${input.date}T${input.time}`);
+  const startsAt = zonedDateTimeToUtc(input.date, input.time, restaurant.timezone);
 
   if (input.tableId) {
-    const conflict = await hasTableConflict(input.tableId, startsAt, input.durationMinutes);
+    const conflict = await hasTableConflict(input.tableId, startsAt, input.durationMinutes, restaurant.timezone);
     if (conflict) return { ok: false, error: "That table is already booked for an overlapping time." };
   }
 
@@ -61,6 +62,7 @@ export async function createReservationAction(
       startsAt,
       partySize: input.partySize,
       restaurantName: restaurant.name,
+      timeZone: restaurant.timezone,
     }
   );
 
@@ -82,10 +84,16 @@ export async function updateReservationAction(
   });
   if (!current) return { ok: false, error: "Reservation not found." };
 
-  const startsAt = new Date(`${input.date}T${input.time}`);
+  const startsAt = zonedDateTimeToUtc(input.date, input.time, restaurant.timezone);
 
   if (input.tableId) {
-    const conflict = await hasTableConflict(input.tableId, startsAt, input.durationMinutes, reservationId);
+    const conflict = await hasTableConflict(
+      input.tableId,
+      startsAt,
+      input.durationMinutes,
+      restaurant.timezone,
+      reservationId
+    );
     if (conflict) return { ok: false, error: "That table is already booked for an overlapping time." };
   }
 

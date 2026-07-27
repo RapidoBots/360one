@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { createReservationAction, updateReservationAction, type ReservationInput } from "./actions";
 import { recommendTable } from "@/lib/table-allocation";
-import { toLocalDateInput } from "@/lib/reservation-dates";
+import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 import type { ReservationListItem } from "./day-view";
 
@@ -40,8 +40,8 @@ export type ReservationForEdit = {
 const DURATION_OPTIONS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
 const STATUS_OPTIONS: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
-function toDateInput(d: Date) {
-  return toLocalDateInput(d);
+function toDateInput(d: Date, timeZone: string) {
+  return toLocalDateInput(d, timeZone);
 }
 function toTimeInput(d: Date) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -58,6 +58,7 @@ export function ReservationModal({
   reservation,
   prefill,
   defaultDurationMinutes,
+  timeZone,
   onSaved,
 }: {
   open: boolean;
@@ -68,6 +69,7 @@ export function ReservationModal({
   reservation?: ReservationForEdit;
   prefill?: ReservationPrefill;
   defaultDurationMinutes: number;
+  timeZone: string;
   onSaved: () => void;
 }) {
   const [guestName, setGuestName] = useState("");
@@ -92,7 +94,7 @@ export function ReservationModal({
       setGuestEmail(reservation.customer.email ?? "");
       setGuestPhone(reservation.customer.phone ?? "");
       setPartySize(reservation.partySize);
-      setDate(toDateInput(reservation.startsAt));
+      setDate(toDateInput(reservation.startsAt, timeZone));
       setTime(toTimeInput(reservation.startsAt));
       setDurationMinutes(reservation.durationMinutes);
       setSpecialRequests(reservation.specialRequests ?? "");
@@ -104,7 +106,7 @@ export function ReservationModal({
       setGuestEmail("");
       setGuestPhone("");
       setPartySize(2);
-      setDate(prefill?.date ?? toDateInput(new Date()));
+      setDate(prefill?.date ?? toDateInput(new Date(), timeZone));
       setTime(prefill?.time ?? "19:00");
       setDurationMinutes(defaultDurationMinutes);
       setSpecialRequests("");
@@ -120,7 +122,7 @@ export function ReservationModal({
     ? recommendTable(
         tables.map((t) => ({ id: t.id, capacity: t.capacity })),
         reservations,
-        { partySize, startsAt: new Date(`${date}T${time}`), durationMinutes }
+        { partySize, startsAt: zonedDateTimeToUtc(date, time, timeZone), durationMinutes }
       )
     : null;
 

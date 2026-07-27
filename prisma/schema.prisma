@@ -30,6 +30,11 @@ model Restaurant {
   ghlLocationId String?
   ghlApiKey     String?
   defaultReservationDurationMinutes Int @default(90)
+  timezone      String @default("America/Toronto")
+  logoUrl       String?
+  mapsEmbedUrl  String?
+  phone         String?
+  notes         String?
   users        User[]
   tables       Table[]
   customers    Customer[]

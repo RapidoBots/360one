@@ -47,9 +47,10 @@ export async function hasTableConflict(
   tableId: string,
   startsAt: Date,
   durationMinutes: number,
+  timeZone: string,
   excludeReservationId?: string
 ): Promise<boolean> {
-  const { start, end } = getDayRange(startsAt);
+  const { start, end } = getDayRange(startsAt, timeZone);
   const candidates = await prisma.reservation.findMany({
     where: {
       tableId,

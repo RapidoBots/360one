@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { toLocalDateInput } from "@/lib/reservation-dates";
+import { toLocalDateInput, getDayRange, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +34,13 @@ export default async function ReportsPage({
   const defaultStart = new Date(today);
   defaultStart.setDate(defaultStart.getDate() - 30);
 
-  const startInput = sp.start || toLocalDateInput(defaultStart);
-  const endInput = sp.end || toLocalDateInput(today);
+  const startInput = sp.start || toLocalDateInput(defaultStart, restaurant.timezone);
+  const endInput = sp.end || toLocalDateInput(today, restaurant.timezone);
 
-  const start = new Date(`${startInput}T00:00:00`);
-  const end = new Date(`${endInput}T00:00:00`);
-  end.setDate(end.getDate() + 1);
+  // Anchored at noon so it's unambiguously within the intended calendar day
+  // once viewed in the restaurant's timezone.
+  const { start } = getDayRange(zonedDateTimeToUtc(startInput, "12:00", restaurant.timezone), restaurant.timezone);
+  const { end } = getDayRange(zonedDateTimeToUtc(endInput, "12:00", restaurant.timezone), restaurant.timezone); // end date is inclusive
 
   const [reservations, tables, businessHours] = await Promise.all([
     prisma.reservation.findMany({
@@ -112,17 +113,17 @@ export default async function ReportsPage({
 
       <div className="rounded-[5px] border border-border p-5">
         <h2 className="mb-2 text-base font-semibold">Reservations per day</h2>
-        <ReportAreaChart data={reservationsPerDay(reservations, { start, end })} />
+        <ReportAreaChart data={reservationsPerDay(reservations, { start, end }, restaurant.timezone)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-[5px] border border-border p-5">
           <h2 className="mb-2 text-base font-semibold">Busiest day of week</h2>
-          <ReportBarChart data={busiestDayOfWeek(reservations)} />
+          <ReportBarChart data={busiestDayOfWeek(reservations, restaurant.timezone)} />
         </div>
         <div className="rounded-[5px] border border-border p-5">
           <h2 className="mb-2 text-base font-semibold">Busiest hour of day</h2>
-          <ReportAreaChart data={busiestHourOfDay(reservations, businessHours)} />
+          <ReportAreaChart data={busiestHourOfDay(reservations, businessHours, restaurant.timezone)} />
         </div>
       </div>
 

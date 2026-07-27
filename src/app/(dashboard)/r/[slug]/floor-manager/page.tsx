@@ -10,7 +10,7 @@ export default async function FloorManagerPage({
 }) {
   const { slug } = await params;
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
-  const { start, end } = getDayRange(new Date());
+  const { start, end } = getDayRange(new Date(), restaurant.timezone);
 
   const [rawTables, reservations] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id } }),
@@ -37,5 +37,7 @@ export default async function FloorManagerPage({
     customerName: r.customer.name,
   }));
 
-  return <FloorPlan slug={slug} tables={tables} reservations={floorReservations} />;
+  return (
+    <FloorPlan slug={slug} tables={tables} reservations={floorReservations} timeZone={restaurant.timezone} />
+  );
 }

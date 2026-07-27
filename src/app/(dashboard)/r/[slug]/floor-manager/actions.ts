@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
-import { toLocalDateInput } from "@/lib/reservation-dates";
+import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { TableShape } from "@/generated/prisma/client";
 
@@ -31,9 +31,14 @@ export async function quickSeatWalkInAction(
   input: { partySize: number; time: string }
 ): Promise<FloorActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
-  const startsAt = new Date(`${toLocalDateInput(new Date())}T${input.time}`);
+  const startsAt = zonedDateTimeToUtc(toLocalDateInput(new Date(), restaurant.timezone), input.time, restaurant.timezone);
 
-  const conflict = await hasTableConflict(tableId, startsAt, restaurant.defaultReservationDurationMinutes);
+  const conflict = await hasTableConflict(
+    tableId,
+    startsAt,
+    restaurant.defaultReservationDurationMinutes,
+    restaurant.timezone
+  );
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
 
   const customer = await findOrCreateCustomer(restaurant.id, { name: "Walk-in" });
@@ -61,6 +66,7 @@ export async function quickSeatWalkInAction(
       startsAt,
       partySize: input.partySize,
       restaurantName: restaurant.name,
+      timeZone: restaurant.timezone,
     }
   );
 

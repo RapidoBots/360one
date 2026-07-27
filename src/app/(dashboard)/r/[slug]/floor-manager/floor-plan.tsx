@@ -34,10 +34,12 @@ export function FloorPlan({
   slug,
   tables,
   reservations,
+  timeZone,
 }: {
   slug: string;
   tables: FloorTable[];
   reservations: TableStatusReservation[];
+  timeZone: string;
 }) {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -209,6 +211,7 @@ export function FloorPlan({
         slug={slug}
         tableId={quickSeat?.id ?? null}
         tableNumber={quickSeat?.number ?? ""}
+        timeZone={timeZone}
         onSeated={() => router.refresh()}
       />
       <SeatedInfoDialog

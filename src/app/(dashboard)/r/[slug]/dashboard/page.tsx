@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getDayRange } from "@/lib/reservation-dates";
+import { getDayRange, getZonedDayOfWeek, getZonedHour } from "@/lib/reservation-dates";
 import { getHoursForDay } from "@/lib/business-hours";
 import { ReservationBadge } from "../reservations/reservation-badge";
 import { ReservationsByHourChart, type HourBucket } from "./reservations-by-hour-chart";
@@ -14,7 +14,7 @@ export default async function DashboardPage({
   const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
   if (!restaurant) notFound();
 
-  const { start, end } = getDayRange(new Date());
+  const { start, end } = getDayRange(new Date(), restaurant.timezone);
   const now = new Date();
 
   const [totalTables, todaysReservations, businessHours] = await Promise.all([
@@ -27,7 +27,10 @@ export default async function DashboardPage({
     prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
   ]);
 
-  const { startHour: dayStartHour, endHour: dayEndHour } = getHoursForDay(businessHours, now.getDay());
+  const { startHour: dayStartHour, endHour: dayEndHour } = getHoursForDay(
+    businessHours,
+    getZonedDayOfWeek(now, restaurant.timezone)
+  );
 
   const occupiedTableIds = new Set(
     todaysReservations.filter((r) => r.status === "SEATED" && r.tableId).map((r) => r.tableId)
@@ -41,7 +44,7 @@ export default async function DashboardPage({
   const hourBuckets: HourBucket[] = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => {
     const hour = dayStartHour + i;
     const label = `${hour % 12 === 0 ? 12 : hour % 12}${hour >= 12 ? "p" : "a"}`;
-    const count = todaysReservations.filter((r) => r.startsAt.getHours() === hour).length;
+    const count = todaysReservations.filter((r) => getZonedHour(r.startsAt, restaurant.timezone) === hour).length;
     return { hour: label, count };
   });
 
@@ -82,7 +85,11 @@ export default async function DashboardPage({
               <li key={r.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="flex items-center gap-4">
                   <span className="w-16 shrink-0 font-mono text-base">
-                    {r.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {r.startsAt.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: restaurant.timezone,
+                    })}
                   </span>
                   <div>
                     <p className="font-medium">{r.customer.name}</p>

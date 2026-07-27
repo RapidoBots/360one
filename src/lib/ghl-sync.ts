@@ -6,14 +6,15 @@ export type GhlGuest = {
   startsAt: Date;
   partySize: number;
   restaurantName: string;
+  timeZone: string;
 };
 
-function formatReservationDate(startsAt: Date): string {
-  return startsAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+function formatReservationDate(startsAt: Date, timeZone: string): string {
+  return startsAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone });
 }
 
-function formatReservationTime(startsAt: Date): string {
-  return startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function formatReservationTime(startsAt: Date, timeZone: string): string {
+  return startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone });
 }
 
 export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown> {
@@ -25,8 +26,8 @@ export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown>
     // restaurant's GHL sub-account for their automation's merge tags
     // (e.g. {{contact.date}}) to pick these values up.
     customFields: [
-      { key: "date", field_value: formatReservationDate(guest.startsAt) },
-      { key: "time", field_value: formatReservationTime(guest.startsAt) },
+      { key: "date", field_value: formatReservationDate(guest.startsAt, guest.timeZone) },
+      { key: "time", field_value: formatReservationTime(guest.startsAt, guest.timeZone) },
       { key: "party_size", field_value: String(guest.partySize) },
       { key: "restaurant_name", field_value: guest.restaurantName },
     ],

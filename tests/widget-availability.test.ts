@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getAvailableSlots } from "@/lib/widget-availability";
+import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
+
+const TZ = "America/Toronto";
 
 const TABLES = [
   { id: "small", capacity: 2 },
@@ -16,6 +19,7 @@ describe("getAvailableSlots", () => {
       date: "2026-07-13",
       businessHours: NO_HOURS_CONFIGURED,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots[0]).toBe("07:00");
     expect(slots).toContain("07:15");
@@ -25,13 +29,14 @@ describe("getAvailableSlots", () => {
 
   it("excludes a slot once every fitting table is booked", () => {
     const reservations = [
-      { tableId: "small", startsAt: new Date("2026-07-13T19:00:00"), durationMinutes: 90 },
+      { tableId: "small", startsAt: zonedDateTimeToUtc("2026-07-13", "19:00", TZ), durationMinutes: 90 },
     ];
     const slots = getAvailableSlots([TABLES[0]!], reservations, {
       partySize: 2,
       date: "2026-07-13",
       businessHours: NO_HOURS_CONFIGURED,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots).not.toContain("19:00");
     expect(slots).not.toContain("19:30"); // still overlaps the 90-minute booking
@@ -40,13 +45,14 @@ describe("getAvailableSlots", () => {
 
   it("does not exclude a slot when the conflicting reservation is on a different table", () => {
     const reservations = [
-      { tableId: "small", startsAt: new Date("2026-07-13T19:00:00"), durationMinutes: 90 },
+      { tableId: "small", startsAt: zonedDateTimeToUtc("2026-07-13", "19:00", TZ), durationMinutes: 90 },
     ];
     const slots = getAvailableSlots(TABLES, reservations, {
       partySize: 2,
       date: "2026-07-13",
       businessHours: NO_HOURS_CONFIGURED,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots).toContain("19:00"); // "large" table is still free
   });
@@ -57,6 +63,7 @@ describe("getAvailableSlots", () => {
       date: "2026-07-13",
       businessHours: NO_HOURS_CONFIGURED,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots).toEqual([]);
   });
@@ -69,6 +76,7 @@ describe("getAvailableSlots", () => {
       date: "2026-07-13",
       businessHours,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots).toEqual([]);
   });
@@ -80,6 +88,7 @@ describe("getAvailableSlots", () => {
       date: "2026-07-13",
       businessHours,
       durationMinutes: 90,
+      timeZone: TZ,
     });
     expect(slots[0]).toBe("17:00");
     expect(slots[slots.length - 1]).toBe("19:30");
@@ -91,6 +100,7 @@ describe("getAvailableSlots", () => {
       date: "2026-07-13",
       businessHours: NO_HOURS_CONFIGURED,
       durationMinutes: 120,
+      timeZone: TZ,
     });
     expect(slots[slots.length - 1]).toBe("21:00");
   });

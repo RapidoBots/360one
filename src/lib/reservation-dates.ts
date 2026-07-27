@@ -1,33 +1,62 @@
-// All day/week math below uses Date's local-timezone methods (setHours,
-// getDay, etc.), which resolve to the `TZ` env var the Node process was
-// started with -- see .env.example. Every restaurant is currently assumed
-// to be in that one timezone; a multi-timezone restaurant base would need
-// per-restaurant timezone-aware date handling instead.
-export function getDayRange(date: Date): { start: Date; end: Date } {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
+
+// Every function here takes an explicit IANA `timeZone` (Restaurant.timezone)
+// rather than relying on the process's own local time -- Vercel always runs
+// in UTC, which silently disagreed with restaurants/customers in any other
+// zone (a widget booking made late at night could land on what the server
+// considered a different calendar day, vanishing from the dashboard's
+// default view). toZonedTime/fromZonedTime resolve the correct UTC offset
+// for `timeZone` via Intl, independent of the process's own timezone.
+
+export function getDayRange(date: Date, timeZone: string): { start: Date; end: Date } {
+  const zoned = toZonedTime(date, timeZone);
+  zoned.setHours(0, 0, 0, 0);
+  const start = fromZonedTime(zoned, timeZone);
+  const zonedEnd = new Date(zoned);
+  zonedEnd.setDate(zonedEnd.getDate() + 1);
+  const end = fromZonedTime(zonedEnd, timeZone);
   return { start, end };
 }
 
-export function getWeekRange(date: Date): { start: Date; end: Date } {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const day = start.getDay(); // 0 = Sunday ... 6 = Saturday
+export function getWeekRange(date: Date, timeZone: string): { start: Date; end: Date } {
+  const zoned = toZonedTime(date, timeZone);
+  zoned.setHours(0, 0, 0, 0);
+  const day = zoned.getDay(); // 0 = Sunday ... 6 = Saturday
   const diffToMonday = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diffToMonday);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
+  zoned.setDate(zoned.getDate() + diffToMonday);
+  const start = fromZonedTime(zoned, timeZone);
+  const zonedEnd = new Date(zoned);
+  zonedEnd.setDate(zonedEnd.getDate() + 7);
+  const end = fromZonedTime(zonedEnd, timeZone);
   return { start, end };
 }
 
-// `date.toISOString().slice(0, 10)` converts to UTC first, which silently
-// shifts to the wrong calendar day near local midnight whenever the local
-// timezone offset is non-zero. This reads the LOCAL date components instead.
-export function toLocalDateInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+// Replaces `date.toISOString().slice(0, 10)`, which converts to UTC first
+// and silently shifts to the wrong calendar day near midnight in `timeZone`.
+export function toLocalDateInput(date: Date, timeZone: string): string {
+  const zoned = toZonedTime(date, timeZone);
+  const year = zoned.getFullYear();
+  const month = String(zoned.getMonth() + 1).padStart(2, "0");
+  const day = String(zoned.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+// Returns the day-of-week (0 = Sunday ... 6 = Saturday) that `date` falls on
+// as observed in `timeZone` -- for business-hours lookups against a stored
+// (UTC) startsAt.
+export function getZonedDayOfWeek(date: Date, timeZone: string): number {
+  return toZonedTime(date, timeZone).getDay();
+}
+
+// Replaces `new Date(`${date}T${time}`)`, which parsed the wall-clock string
+// using the process's own local timezone instead of the restaurant's.
+export function zonedDateTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Date {
+  return fromZonedTime(`${dateStr}T${timeStr}`, timeZone);
+}
+
+// Returns the hour-of-day (0-23) that `date` falls on as observed in
+// `timeZone` -- for hour-bucketed charts (Dashboard, Reports) against a
+// stored (UTC) startsAt.
+export function getZonedHour(date: Date, timeZone: string): number {
+  return toZonedTime(date, timeZone).getHours();
 }

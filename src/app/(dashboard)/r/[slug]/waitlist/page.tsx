@@ -10,7 +10,7 @@ export default async function WaitlistPage({
 }) {
   const { slug } = await params;
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
-  const { start, end } = getDayRange(new Date());
+  const { start, end } = getDayRange(new Date(), restaurant.timezone);
 
   const [waiting, todayHistory, rawTables, reservations] = await Promise.all([
     prisma.waitlistEntry.findMany({

@@ -5,9 +5,10 @@ const RESERVATION_GUEST = {
   name: "Taylor Guest",
   email: "taylor@example.com",
   phone: "555-000-1111",
-  startsAt: new Date(2026, 7, 1, 19, 0), // August 1, 2026, 7:00 PM
+  startsAt: new Date("2026-08-01T23:00:00Z"), // 7:00 PM in America/Toronto (EDT, UTC-4)
   partySize: 4,
   restaurantName: "The Blue Fork",
+  timeZone: "America/Toronto",
 };
 
 describe("buildGhlContactPayload", () => {

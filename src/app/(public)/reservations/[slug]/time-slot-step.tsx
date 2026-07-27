@@ -4,23 +4,26 @@ import { useEffect, useState } from "react";
 import { Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getWeekRange, toLocalDateInput } from "@/lib/reservation-dates";
+import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { getSlotsForDateAction } from "./actions";
 
 export type TimeSlotSelection = { partySize: number; date: string; time: string | null };
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+// Pure Y-M-D calendar arithmetic, anchored in UTC throughout so it never
+// touches a real timezone (adding N days to a calendar date doesn't need one).
 function addDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toLocalDateInput(d);
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
-function addDaysToDate(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
+function mondayOfWeek(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  const day = d.getUTCDay(); // 0 = Sunday ... 6 = Saturday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  return addDays(date, diffToMonday);
 }
 
 export function TimeSlotStep({
@@ -30,6 +33,7 @@ export function TimeSlotStep({
   onSlotSelect,
   onBack,
   onNext,
+  timeZone,
 }: {
   slug: string;
   value: TimeSlotSelection;
@@ -37,14 +41,15 @@ export function TimeSlotStep({
   onSlotSelect: (time: string) => void;
   onBack: () => void;
   onNext: () => void;
+  timeZone: string;
 }) {
   const [slots, setSlots] = useState<string[]>([]);
   const [selectedDayOpen, setSelectedDayOpen] = useState(true);
   const [weekAvailability, setWeekAvailability] = useState<Record<string, "available" | "full" | "closed">>({});
   const [loading, setLoading] = useState(true);
 
-  const { start: weekStart } = getWeekRange(new Date(`${value.date}T00:00:00`));
-  const weekDates = Array.from({ length: 7 }, (_, i) => toLocalDateInput(addDaysToDate(weekStart, i)));
+  const weekStart = mondayOfWeek(value.date);
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   useEffect(() => {
     let cancelled = false;
@@ -120,7 +125,12 @@ export function TimeSlotStep({
         </span>
         <span className="flex items-center gap-1.5">
           <CalendarIcon className="size-4 text-muted-foreground" />
-          {new Date(`${value.date}T00:00:00`).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+          {zonedDateTimeToUtc(value.date, "12:00", timeZone).toLocaleDateString([], {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+            timeZone,
+          })}
         </span>
       </div>
 

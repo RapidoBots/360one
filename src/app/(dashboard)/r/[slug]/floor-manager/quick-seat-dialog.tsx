@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toZonedTime } from "date-fns-tz";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { quickSeatWalkInAction } from "./actions";
 
-function currentTimeInput() {
-  const now = new Date();
+// The server interprets this value as a wall-clock time in the restaurant's
+// own timezone (see zonedDateTimeToUtc in quickSeatWalkInAction) -- reading
+// the browser's own local clock here would drift by the offset between the
+// visitor's timezone and the restaurant's whenever they differ.
+function currentTimeInput(timeZone: string) {
+  const now = toZonedTime(new Date(), timeZone);
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
@@ -18,6 +23,7 @@ export function QuickSeatDialog({
   slug,
   tableId,
   tableNumber,
+  timeZone,
   onSeated,
 }: {
   open: boolean;
@@ -25,19 +31,20 @@ export function QuickSeatDialog({
   slug: string;
   tableId: string | null;
   tableNumber: string;
+  timeZone: string;
   onSeated: () => void;
 }) {
   const [partySize, setPartySize] = useState(2);
-  const [time, setTime] = useState(currentTimeInput);
+  const [time, setTime] = useState(() => currentTimeInput(timeZone));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setPartySize(2);
-    setTime(currentTimeInput());
+    setTime(currentTimeInput(timeZone));
     setError(null);
-  }, [open]);
+  }, [open, timeZone]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

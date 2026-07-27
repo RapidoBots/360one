@@ -9,19 +9,22 @@ import {
   topRepeatGuests,
   buildReservationsCsv,
 } from "@/lib/report-metrics";
+import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
+
+const TZ = "America/Toronto";
 
 describe("reservationsPerDay", () => {
-  it("buckets reservations by local calendar day across the range", () => {
+  it("buckets reservations by calendar day (in the given timezone) across the range", () => {
     const range = {
-      start: new Date(2026, 7, 1, 0, 0),
-      end: new Date(2026, 7, 4, 0, 0), // Aug 1, 2, 3 (3 days)
+      start: zonedDateTimeToUtc("2026-08-01", "00:00", TZ),
+      end: zonedDateTimeToUtc("2026-08-04", "00:00", TZ), // Aug 1, 2, 3 (3 days)
     };
     const reservations = [
-      { startsAt: new Date(2026, 7, 1, 10, 0) },
-      { startsAt: new Date(2026, 7, 1, 19, 0) },
-      { startsAt: new Date(2026, 7, 3, 12, 0) },
+      { startsAt: zonedDateTimeToUtc("2026-08-01", "10:00", TZ) },
+      { startsAt: zonedDateTimeToUtc("2026-08-01", "19:00", TZ) },
+      { startsAt: zonedDateTimeToUtc("2026-08-03", "12:00", TZ) },
     ];
-    const buckets = reservationsPerDay(reservations, range);
+    const buckets = reservationsPerDay(reservations, range, TZ);
     expect(buckets).toHaveLength(3);
     expect(buckets.map((b) => b.value)).toEqual([2, 0, 1]);
   });
@@ -30,11 +33,11 @@ describe("reservationsPerDay", () => {
 describe("busiestDayOfWeek", () => {
   it("buckets into Mon..Sun order regardless of input order", () => {
     const reservations = [
-      { startsAt: new Date(2026, 7, 3) }, // Monday
-      { startsAt: new Date(2026, 7, 3) }, // Monday
-      { startsAt: new Date(2026, 7, 9) }, // Sunday
+      { startsAt: zonedDateTimeToUtc("2026-08-03", "12:00", TZ) }, // Monday
+      { startsAt: zonedDateTimeToUtc("2026-08-03", "18:00", TZ) }, // Monday
+      { startsAt: zonedDateTimeToUtc("2026-08-09", "12:00", TZ) }, // Sunday
     ];
-    const buckets = busiestDayOfWeek(reservations);
+    const buckets = busiestDayOfWeek(reservations, TZ);
     expect(buckets.map((b) => b.label)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
     expect(buckets[0]).toEqual({ label: "Mon", value: 2 });
     expect(buckets[6]).toEqual({ label: "Sun", value: 1 });
@@ -44,11 +47,11 @@ describe("busiestDayOfWeek", () => {
 describe("busiestHourOfDay", () => {
   it("buckets by hour within the widest configured business-hours window", () => {
     const reservations = [
-      { startsAt: new Date(2026, 7, 1, 19, 0) },
-      { startsAt: new Date(2026, 7, 1, 19, 30) },
-      { startsAt: new Date(2026, 7, 2, 12, 0) },
+      { startsAt: zonedDateTimeToUtc("2026-08-01", "19:00", TZ) },
+      { startsAt: zonedDateTimeToUtc("2026-08-01", "19:30", TZ) },
+      { startsAt: zonedDateTimeToUtc("2026-08-02", "12:00", TZ) },
     ];
-    const buckets = busiestHourOfDay(reservations, []);
+    const buckets = busiestHourOfDay(reservations, [], TZ);
     const at19 = buckets.find((b) => b.label === "7p");
     const at12 = buckets.find((b) => b.label === "12p");
     expect(at19?.value).toBe(2);
@@ -63,7 +66,7 @@ describe("busiestHourOfDay", () => {
       if (dayOfWeek === 6) return { dayOfWeek, isOpen: true, openTime: "10:00", closeTime: "23:00" };
       return { dayOfWeek, isOpen: false, openTime: null, closeTime: null };
     });
-    const buckets = busiestHourOfDay([], businessHours);
+    const buckets = busiestHourOfDay([], businessHours, TZ);
     expect(buckets[0]?.label).toBe("8a");
     expect(buckets[buckets.length - 1]?.label).toBe("10p");
   });

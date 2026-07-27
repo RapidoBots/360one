@@ -1,4 +1,4 @@
-import { toLocalDateInput } from "./reservation-dates";
+import { toLocalDateInput, getZonedDayOfWeek, getZonedHour, getDayRange } from "./reservation-dates";
 import { getWidestOpenWindow, type DayHours } from "./business-hours";
 import { sortTablesByNumber } from "./sort-tables";
 import type { ReservationStatus } from "@/generated/prisma/client";
@@ -7,16 +7,19 @@ export type ChartBucket = { label: string; value: number };
 
 export function reservationsPerDay(
   reservations: { startsAt: Date }[],
-  range: { start: Date; end: Date }
+  range: { start: Date; end: Date },
+  timeZone: string
 ): ChartBucket[] {
   const buckets: ChartBucket[] = [];
-  const cursor = new Date(range.start);
+  let cursor = range.start;
   while (cursor < range.end) {
-    const dayKey = toLocalDateInput(cursor);
-    const value = reservations.filter((r) => toLocalDateInput(r.startsAt) === dayKey).length;
-    const label = cursor.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayKey = toLocalDateInput(cursor, timeZone);
+    const value = reservations.filter((r) => toLocalDateInput(r.startsAt, timeZone) === dayKey).length;
+    const label = cursor.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone });
     buckets.push({ label, value });
-    cursor.setDate(cursor.getDate() + 1);
+    // Re-derives the next zoned midnight via Intl each time, rather than a
+    // naive +24h, so a DST transition day doesn't drift the bucket by an hour.
+    cursor = getDayRange(cursor, timeZone).end;
   }
   return buckets;
 }
@@ -24,9 +27,9 @@ export function reservationsPerDay(
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
 
-export function busiestDayOfWeek(reservations: { startsAt: Date }[]): ChartBucket[] {
+export function busiestDayOfWeek(reservations: { startsAt: Date }[], timeZone: string): ChartBucket[] {
   const counts = new Array(7).fill(0);
-  for (const r of reservations) counts[r.startsAt.getDay()]++;
+  for (const r of reservations) counts[getZonedDayOfWeek(r.startsAt, timeZone)]++;
   return WEEKDAY_ORDER.map((day) => ({ label: WEEKDAY_LABELS[day]!, value: counts[day] }));
 }
 
@@ -34,11 +37,15 @@ function formatHourLabel(hour: number): string {
   return `${hour % 12 === 0 ? 12 : hour % 12}${hour >= 12 ? "p" : "a"}`;
 }
 
-export function busiestHourOfDay(reservations: { startsAt: Date }[], businessHours: DayHours[]): ChartBucket[] {
+export function busiestHourOfDay(
+  reservations: { startsAt: Date }[],
+  businessHours: DayHours[],
+  timeZone: string
+): ChartBucket[] {
   const { startHour, endHour } = getWidestOpenWindow(businessHours);
   return Array.from({ length: endHour - startHour }, (_, i) => {
     const hour = startHour + i;
-    const value = reservations.filter((r) => r.startsAt.getHours() === hour).length;
+    const value = reservations.filter((r) => getZonedHour(r.startsAt, timeZone) === hour).length;
     return { label: formatHourLabel(hour), value };
   });
 }
