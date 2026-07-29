@@ -93,15 +93,19 @@ export function TimeSlotStep({
         ) : groupSlots.length === 0 ? (
           <p className="text-sm text-muted-foreground">No places available</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
             {groupSlots.map((s) => {
               const selected = value.time === s;
               return (
                 <Button
                   key={s}
                   type="button"
-                  variant={selected ? "default" : "outline"}
-                  className={cn("h-auto px-5 py-3 text-sm", selected && "ring-2 ring-primary ring-offset-2")}
+                  className={cn(
+                    "h-auto whitespace-normal px-2 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
+                    selected
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
+                      : "bg-primary/90 text-primary-foreground hover:bg-primary"
+                  )}
                   onClick={() => onSlotSelect(s)}
                 >
                   {formatSlotLabel(s)}
@@ -156,25 +160,18 @@ export function TimeSlotStep({
                 type="button"
                 onClick={() => onDateChange(d)}
                 className={cn(
-                  "flex shrink-0 flex-col items-center gap-1 rounded-[5px] px-2 py-1.5 text-sm",
+                  "flex shrink-0 flex-col items-center gap-0.5 rounded-[5px] border px-2.5 py-1.5 text-sm",
                   isSelected
-                    ? "bg-primary text-primary-foreground"
+                    ? "border-primary bg-primary text-primary-foreground"
                     : status === "available"
-                      ? "text-emerald-600 hover:bg-emerald-500/10"
+                      ? "border-emerald-600/40 text-emerald-600 hover:bg-emerald-500/10"
                       : status === "closed"
-                        ? "text-muted-foreground hover:bg-muted"
-                        : "text-destructive hover:bg-destructive/10"
+                        ? "border-border text-muted-foreground hover:bg-muted"
+                        : "border-destructive/40 text-destructive hover:bg-destructive/10"
                 )}
               >
                 <span className="text-xs">{DAY_LABELS[day.getDay()]}</span>
-                <span
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-full font-semibold",
-                    isSelected && "bg-white/20"
-                  )}
-                >
-                  {day.getDate()}
-                </span>
+                <span className="font-semibold">{day.getDate()}</span>
               </button>
             );
           })}
