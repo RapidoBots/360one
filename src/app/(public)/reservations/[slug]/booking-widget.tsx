@@ -6,8 +6,35 @@ import { Phone } from "lucide-react";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { Brand } from "@/components/shell/brand";
 import { Button } from "@/components/ui/button";
-import { StepProgress } from "./step-progress";
 import { GuestDateStep } from "./guest-date-step";
+
+// lucide-react dropped brand/logo icons -- minimal inline glyphs instead of a new dependency.
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M22 12a10 10 0 1 0-11.5 9.87v-6.98H7.98V12h2.52V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.23.2 2.23.2v2.45h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.98A10 10 0 0 0 22 12z" />
+    </svg>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
 import { TimeSlotStep, type TimeSlotSelection } from "./time-slot-step";
 import { ContactForm } from "./contact-form";
 import { SuccessScreen } from "./success-screen";
@@ -29,8 +56,6 @@ export function formatTimeLabel(time: string): string {
 }
 
 type Step = "GUEST_DATE" | "TIME_SLOT" | "CONTACT" | "SUCCESS";
-
-const STEP_NUMBER: Record<Step, number> = { GUEST_DATE: 1, TIME_SLOT: 2, CONTACT: 3, SUCCESS: 3 };
 
 export function BookingWidget({
   slug,
@@ -81,11 +106,9 @@ export function BookingWidget({
   const infoPanel = (
     <div className="min-w-0 space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
       {bannerUrl && (
-        // Landscape on mobile (matches Libro's mobile layout, avoids a
-        // portrait crop dominating a full-width screen); portrait only once
-        // the sidebar itself is narrow, at the same lg: breakpoint the
-        // two-column layout kicks in.
-        <div className="relative aspect-video w-full overflow-hidden rounded-[5px] lg:aspect-[3/4]">
+        // Shown here (portrait) only on desktop -- on mobile the banner
+        // already renders full-width above everything else, landscape.
+        <div className="relative hidden aspect-[3/4] w-full overflow-hidden rounded-[5px] lg:block">
           <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
         </div>
       )}
@@ -125,8 +148,9 @@ export function BookingWidget({
               href={facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline-offset-4 hover:underline"
+              className="flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
             >
+              <FacebookIcon className="size-4" />
               Our Facebook page
             </a>
           )}
@@ -135,8 +159,9 @@ export function BookingWidget({
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline-offset-4 hover:underline"
+              className="flex items-center gap-1.5 text-primary underline-offset-4 hover:underline"
             >
+              <InstagramIcon className="size-4" />
               Our Instagram profile
             </a>
           )}
@@ -149,19 +174,24 @@ export function BookingWidget({
     <div
       className={`mx-auto flex min-h-screen w-full flex-col overflow-x-hidden p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}
     >
+      {bannerUrl && (
+        // Full-width landscape hero at the very top on mobile only -- on
+        // desktop the banner instead renders portrait inside the sidebar.
+        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-[5px] lg:hidden">
+          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
+        </div>
+      )}
       {logoUrl && (
         <Image
           src={logoUrl}
           alt={restaurantName}
           width={64}
           height={64}
-          className="mx-auto mb-3 size-16 rounded-[5px] object-cover"
+          className="mx-auto mb-3 size-16 rounded-[5px] object-contain"
           unoptimized
         />
       )}
-      <h1 className="mb-4 text-center text-lg font-semibold sm:mb-6">Reserve a table at {restaurantName}</h1>
-
-      {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}
+      <h1 className="mb-4 text-center text-xl font-bold sm:mb-6">{restaurantName}</h1>
 
       <div className={showInfoPanel ? "grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]" : undefined}>
         <div className="min-w-0 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">

@@ -24,7 +24,7 @@ test.describe("Embeddable reservation widget", () => {
 
   test("books through all 3 steps, lands as Pending, and staff can confirm it", async ({ page }) => {
     await page.goto("/reservations/blue-fork");
-    await expect(page.getByRole("heading", { name: /Reserve a table at/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The Blue Fork" })).toBeVisible();
 
     // Step 1: guests + date only, no slots yet.
     await expect(page.getByLabel("Number of Guests")).toBeVisible();
