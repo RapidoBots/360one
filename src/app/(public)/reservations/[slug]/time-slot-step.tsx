@@ -145,7 +145,7 @@ export function TimeSlotStep({
         >
           &lt;
         </Button>
-        <div className="flex flex-1 justify-between gap-1 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 justify-between gap-1 overflow-x-auto">
           {weekDates.map((d) => {
             const isSelected = d === value.date;
             const status = weekAvailability[d] ?? "available";
