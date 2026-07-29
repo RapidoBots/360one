@@ -5,6 +5,7 @@ import { Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
+import type { SlotAvailability } from "@/lib/widget-availability";
 import { getSlotsForDateAction } from "./actions";
 
 export type TimeSlotSelection = { partySize: number; date: string; time: string | null };
@@ -43,7 +44,7 @@ export function TimeSlotStep({
   onNext: () => void;
   timeZone: string;
 }) {
-  const [slots, setSlots] = useState<string[]>([]);
+  const [slots, setSlots] = useState<SlotAvailability[]>([]);
   const [selectedDayOpen, setSelectedDayOpen] = useState(true);
   const [weekAvailability, setWeekAvailability] = useState<Record<string, "available" | "full" | "closed">>({});
   const [loading, setLoading] = useState(true);
@@ -60,7 +61,7 @@ export function TimeSlotStep({
       weekDates.forEach((d, i) => {
         const result = results[i];
         if (!result?.isOpen) availability[d] = "closed";
-        else availability[d] = result.slots.length > 0 ? "available" : "full";
+        else availability[d] = result.slots.some((s) => s.available) ? "available" : "full";
       });
       setWeekAvailability(availability);
     });
@@ -76,15 +77,15 @@ export function TimeSlotStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.date, value.partySize]);
 
-  const amSlots = slots.filter((s) => Number(s.split(":")[0]) < 12);
-  const pmSlots = slots.filter((s) => Number(s.split(":")[0]) >= 12);
+  const amSlots = slots.filter((s) => Number(s.time.split(":")[0]) < 12);
+  const pmSlots = slots.filter((s) => Number(s.time.split(":")[0]) >= 12);
 
   function formatSlotLabel(time: string): string {
     const [h, m] = time.split(":").map(Number);
     return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
-  function renderSlotGroup(label: string, groupSlots: string[]) {
+  function renderSlotGroup(label: string, groupSlots: SlotAvailability[]) {
     return (
       <div>
         <p className="mb-2 text-sm font-semibold">{label}</p>
@@ -95,20 +96,23 @@ export function TimeSlotStep({
         ) : (
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
             {groupSlots.map((s) => {
-              const selected = value.time === s;
+              const selected = value.time === s.time;
               return (
                 <Button
-                  key={s}
+                  key={s.time}
                   type="button"
+                  disabled={!s.available}
                   className={cn(
                     "h-auto whitespace-normal px-2 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
-                    selected
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
-                      : "bg-primary/90 text-primary-foreground hover:bg-primary"
+                    !s.available
+                      ? "bg-muted text-muted-foreground line-through opacity-60 hover:bg-muted"
+                      : selected
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
+                        : "bg-primary/90 text-primary-foreground hover:bg-primary"
                   )}
-                  onClick={() => onSlotSelect(s)}
+                  onClick={() => s.available && onSlotSelect(s.time)}
                 >
-                  {formatSlotLabel(s)}
+                  {formatSlotLabel(s.time)}
                 </Button>
               );
             })}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth-guards";
 import { EmbedSnippet } from "./embed-snippet";
 import { BusinessHoursForm } from "./business-hours-form";
+import { AvailabilityForm } from "./availability-form";
 import { TeamMembers } from "./team-members";
 import { RestaurantProfileForm } from "./restaurant-profile-form";
 
@@ -44,6 +45,7 @@ export default async function RestaurantSettingsPage({
         businessHours={restaurant.businessHours}
         defaultReservationDurationMinutes={restaurant.defaultReservationDurationMinutes}
       />
+      <AvailabilityForm slug={slug} timezone={restaurant.timezone} />
       <TeamMembers slug={slug} members={restaurant.users} currentUserId={sessionUser?.id ?? ""} />
     </div>
   );

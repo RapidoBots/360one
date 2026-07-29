@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAvailableSlots } from "@/lib/widget-availability";
+import { getAllSlotsForDay, getAvailableSlots, getSlotTimesForDay } from "@/lib/widget-availability";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 
 const TZ = "America/Toronto";
@@ -103,5 +103,56 @@ describe("getAvailableSlots", () => {
       timeZone: TZ,
     });
     expect(slots[slots.length - 1]).toBe("21:00");
+  });
+
+  it("excludes an owner-blocked slot even when a table is free", () => {
+    const slots = getAvailableSlots(TABLES, [], {
+      partySize: 2,
+      date: "2026-07-13",
+      businessHours: NO_HOURS_CONFIGURED,
+      durationMinutes: 90,
+      timeZone: TZ,
+      blockedTimes: ["19:00"],
+    });
+    expect(slots).not.toContain("19:00");
+    expect(slots).toContain("18:45");
+    expect(slots).toContain("19:15");
+  });
+});
+
+describe("getSlotTimesForDay", () => {
+  it("lists every slot time within business hours regardless of tables or bookings", () => {
+    const businessHours = [{ dayOfWeek: 1, isOpen: true, openTime: "17:00", closeTime: "21:00" }];
+    const times = getSlotTimesForDay(businessHours, "2026-07-13", 90);
+    expect(times[0]).toBe("17:00");
+    expect(times[times.length - 1]).toBe("19:30");
+  });
+
+  it("returns an empty list when the restaurant is closed that day", () => {
+    const businessHours = [{ dayOfWeek: 1, isOpen: false, openTime: null, closeTime: null }];
+    expect(getSlotTimesForDay(businessHours, "2026-07-13", 90)).toEqual([]);
+  });
+});
+
+describe("getAllSlotsForDay", () => {
+  it("tags every business-hours slot as available or not instead of omitting unavailable ones", () => {
+    const reservations = [
+      { tableId: "small", startsAt: zonedDateTimeToUtc("2026-07-13", "19:00", TZ), durationMinutes: 90 },
+    ];
+    const businessHours = [{ dayOfWeek: 1, isOpen: true, openTime: "17:00", closeTime: "21:00" }];
+    const slots = getAllSlotsForDay([TABLES[0]!], reservations, {
+      partySize: 2,
+      date: "2026-07-13",
+      businessHours,
+      durationMinutes: 90,
+      timeZone: TZ,
+      blockedTimes: ["17:30"],
+    });
+
+    // Full slot count is preserved -- nothing is dropped from the list.
+    expect(slots).toHaveLength(getSlotTimesForDay(businessHours, "2026-07-13", 90).length);
+    expect(slots.find((s) => s.time === "17:00")).toEqual({ time: "17:00", available: true });
+    expect(slots.find((s) => s.time === "17:30")).toEqual({ time: "17:30", available: false }); // owner-blocked
+    expect(slots.find((s) => s.time === "19:00")).toEqual({ time: "19:00", available: false }); // fully booked
   });
 });

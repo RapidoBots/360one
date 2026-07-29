@@ -6,47 +6,76 @@ const SLOT_MINUTES = 15;
 
 export type AvailabilityTable = { id: string; capacity: number };
 export type AvailabilityReservation = { tableId: string | null } & TimeRange;
+export type SlotAvailability = { time: string; available: boolean };
 
-export function getAvailableSlots(
+function enumerateSlotTimes(startHour: number, endHour: number, durationMinutes: number): string[] {
+  const times: string[] = [];
+  const dayStart = startHour * 60;
+  const dayEnd = endHour * 60;
+  for (let minutes = dayStart; minutes + durationMinutes <= dayEnd; minutes += SLOT_MINUTES) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    times.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+  }
+  return times;
+}
+
+// Every slot time within business hours for a date, independent of tables,
+// reservations, or party size -- used by the owner's slot-blocking UI, which
+// needs to offer every time regardless of whether anyone could book it.
+export function getSlotTimesForDay(businessHours: DayHours[], date: string, durationMinutes: number): string[] {
+  // A fixed Y-M-D string's day-of-week is the same regardless of timezone.
+  const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const { isOpen, startHour, endHour } = getHoursForDay(businessHours, dayOfWeek);
+  if (!isOpen) return [];
+  return enumerateSlotTimes(startHour, endHour, durationMinutes);
+}
+
+// Every slot time within business hours, each tagged with whether a
+// customer could actually book it (a free table exists and the owner
+// hasn't blocked that time) -- used by the widget so it can grey out
+// unavailable slots instead of just omitting them.
+export function getAllSlotsForDay(
   tables: AvailabilityTable[],
   reservations: AvailabilityReservation[],
   input: {
     partySize: number;
-    date: string; // YYYY-MM-DD
+    date: string;
     businessHours: DayHours[];
     durationMinutes: number;
     timeZone: string;
+    blockedTimes?: string[];
   }
-): string[] {
+): SlotAvailability[] {
+  const times = getSlotTimesForDay(input.businessHours, input.date, input.durationMinutes);
   const fitting = tables.filter((t) => t.capacity >= input.partySize);
-  if (fitting.length === 0) return [];
+  const blocked = new Set(input.blockedTimes ?? []);
 
-  // A fixed Y-M-D string's day-of-week is the same regardless of timezone --
-  // parsed and read as UTC here purely to make that independence explicit,
-  // not because it needs to match the restaurant's zone.
-  const dayOfWeek = new Date(`${input.date}T00:00:00Z`).getUTCDay();
-  const { isOpen, startHour, endHour } = getHoursForDay(input.businessHours, dayOfWeek);
-  if (!isOpen) return [];
-
-  const slots: string[] = [];
-  const dayStart = startHour * 60;
-  const dayEnd = endHour * 60;
-
-  for (let minutes = dayStart; minutes + input.durationMinutes <= dayEnd; minutes += SLOT_MINUTES) {
-    const hour = Math.floor(minutes / 60);
-    const minute = minutes % 60;
-    const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  return times.map((time) => {
     const startsAt = zonedDateTimeToUtc(input.date, time, input.timeZone);
-
     const hasFreeTable = fitting.some((t) => {
       const conflict = reservations.some(
         (r) => r.tableId === t.id && doesOverlap(r, { startsAt, durationMinutes: input.durationMinutes })
       );
       return !conflict;
     });
+    return { time, available: hasFreeTable && !blocked.has(time) };
+  });
+}
 
-    if (hasFreeTable) slots.push(time);
+export function getAvailableSlots(
+  tables: AvailabilityTable[],
+  reservations: AvailabilityReservation[],
+  input: {
+    partySize: number;
+    date: string;
+    businessHours: DayHours[];
+    durationMinutes: number;
+    timeZone: string;
+    blockedTimes?: string[];
   }
-
-  return slots;
+): string[] {
+  return getAllSlotsForDay(tables, reservations, input)
+    .filter((s) => s.available)
+    .map((s) => s.time);
 }

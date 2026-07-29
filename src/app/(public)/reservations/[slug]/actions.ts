@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getDayRange, zonedDateTimeToUtc } from "@/lib/reservation-dates";
-import { getAvailableSlots } from "@/lib/widget-availability";
+import { getAllSlotsForDay, getAvailableSlots, type SlotAvailability } from "@/lib/widget-availability";
 import { getHoursForDay } from "@/lib/business-hours";
 import { findOrCreateCustomer } from "@/lib/reservations-data";
 import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { ContactChannel } from "@/generated/prisma/client";
 
-export type SlotsForDateResult = { slots: string[]; isOpen: boolean };
+export type SlotsForDateResult = { slots: SlotAvailability[]; isOpen: boolean };
 
 export async function getSlotsForDateAction(
   slug: string,
@@ -23,7 +23,7 @@ export async function getSlotsForDateAction(
   // once viewed in the restaurant's timezone -- midnight UTC could fall on
   // the previous day for a zone west of UTC.
   const { start, end } = getDayRange(zonedDateTimeToUtc(date, "12:00", restaurant.timezone), restaurant.timezone);
-  const [tables, reservations, businessHours] = await Promise.all([
+  const [tables, reservations, businessHours, closedDate, blockedSlots] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { id: true, capacity: true } }),
     prisma.reservation.findMany({
       where: {
@@ -34,18 +34,22 @@ export async function getSlotsForDateAction(
       select: { tableId: true, startsAt: true, durationMinutes: true },
     }),
     prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
+    prisma.closedDate.findUnique({ where: { restaurantId_date: { restaurantId: restaurant.id, date } } }),
+    prisma.blockedSlot.findMany({ where: { restaurantId: restaurant.id, date }, select: { time: true } }),
   ]);
 
   // A fixed Y-M-D string's day-of-week is the same regardless of timezone.
   const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
-  const isOpen = getHoursForDay(businessHours, dayOfWeek).isOpen;
+  const isOpen = getHoursForDay(businessHours, dayOfWeek).isOpen && !closedDate;
+  if (!isOpen) return { slots: [], isOpen: false };
 
-  const slots = getAvailableSlots(tables, reservations, {
+  const slots = getAllSlotsForDay(tables, reservations, {
     partySize,
     date,
     businessHours,
     durationMinutes: restaurant.defaultReservationDurationMinutes,
     timeZone: restaurant.timezone,
+    blockedTimes: blockedSlots.map((b) => b.time),
   });
 
   return { slots, isOpen };
@@ -75,7 +79,7 @@ export async function createWidgetReservationAction(
 
   const startsAt = zonedDateTimeToUtc(input.date, input.time, restaurant.timezone);
   const { start, end } = getDayRange(startsAt, restaurant.timezone);
-  const [tables, reservations, businessHours] = await Promise.all([
+  const [tables, reservations, businessHours, closedDate, blockedSlots] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { id: true, capacity: true } }),
     prisma.reservation.findMany({
       where: {
@@ -86,17 +90,24 @@ export async function createWidgetReservationAction(
       select: { tableId: true, startsAt: true, durationMinutes: true },
     }),
     prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } }),
+    prisma.closedDate.findUnique({
+      where: { restaurantId_date: { restaurantId: restaurant.id, date: input.date } },
+    }),
+    prisma.blockedSlot.findMany({ where: { restaurantId: restaurant.id, date: input.date }, select: { time: true } }),
   ]);
 
   // Re-check right before writing -- another visitor may have taken this
-  // slot between this visitor loading the page and submitting.
-  const stillAvailable = getAvailableSlots(tables, reservations, {
-    partySize: input.partySize,
-    date: input.date,
-    businessHours,
-    durationMinutes: restaurant.defaultReservationDurationMinutes,
-    timeZone: restaurant.timezone,
-  }).includes(input.time);
+  // slot, or the owner may have blocked it, between page load and submit.
+  const stillAvailable =
+    !closedDate &&
+    getAvailableSlots(tables, reservations, {
+      partySize: input.partySize,
+      date: input.date,
+      businessHours,
+      durationMinutes: restaurant.defaultReservationDurationMinutes,
+      timeZone: restaurant.timezone,
+      blockedTimes: blockedSlots.map((b) => b.time),
+    }).includes(input.time);
   if (!stillAvailable) {
     return { ok: false, error: "That time was just booked by someone else -- please pick another." };
   }

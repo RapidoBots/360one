@@ -45,6 +45,8 @@ model Restaurant {
   reservations Reservation[]
   waitlistEntries WaitlistEntry[]
   businessHours BusinessHours[]
+  closedDates   ClosedDate[]
+  blockedSlots  BlockedSlot[]
 
   @@map("restaurant")
 }
@@ -60,6 +62,34 @@ model BusinessHours {
 
   @@unique([restaurantId, dayOfWeek])
   @@map("business_hours")
+}
+
+// A specific calendar date (restaurant-local, "YYYY-MM-DD") that's fully
+// closed to reservations -- a one-off override on top of the recurring
+// weekly BusinessHours (holidays, private events, etc).
+model ClosedDate {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  date         String
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, date])
+  @@map("closed_date")
+}
+
+// A specific "HH:MM" time disabled on a specific date, without closing the
+// whole day.
+model BlockedSlot {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  date         String
+  time         String
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, date, time])
+  @@map("blocked_slot")
 }
 
 // Better Auth owns id/name/email/emailVerified/image/createdAt/updatedAt.
