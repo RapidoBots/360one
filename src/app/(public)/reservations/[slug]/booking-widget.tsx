@@ -79,9 +79,13 @@ export function BookingWidget({
     : null;
 
   const infoPanel = (
-    <div className="space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
+    <div className="min-w-0 space-y-4 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6 lg:h-fit">
       {bannerUrl && (
-        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[5px]">
+        // Landscape on mobile (matches Libro's mobile layout, avoids a
+        // portrait crop dominating a full-width screen); portrait only once
+        // the sidebar itself is narrow, at the same lg: breakpoint the
+        // two-column layout kicks in.
+        <div className="relative aspect-video w-full overflow-hidden rounded-[5px] lg:aspect-[3/4]">
           <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
         </div>
       )}
@@ -142,7 +146,9 @@ export function BookingWidget({
   );
 
   return (
-    <div className={`mx-auto flex min-h-screen flex-col p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}>
+    <div
+      className={`mx-auto flex min-h-screen w-full flex-col overflow-x-hidden p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}
+    >
       {logoUrl && (
         <Image
           src={logoUrl}
@@ -157,8 +163,8 @@ export function BookingWidget({
 
       {step !== "SUCCESS" && <StepProgress current={STEP_NUMBER[step]} />}
 
-      <div className={showInfoPanel ? "grid gap-4 lg:grid-cols-[1fr_320px]" : undefined}>
-        <div className="rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
+      <div className={showInfoPanel ? "grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]" : undefined}>
+        <div className="min-w-0 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
           {step === "GUEST_DATE" && (
             <GuestDateStep
               value={{ partySize: selection.partySize, date: selection.date }}

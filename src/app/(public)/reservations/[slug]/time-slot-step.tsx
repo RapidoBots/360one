@@ -93,7 +93,7 @@ export function TimeSlotStep({
         ) : groupSlots.length === 0 ? (
           <p className="text-sm text-muted-foreground">No places available</p>
         ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
             {groupSlots.map((s) => {
               const selected = value.time === s;
               return (
