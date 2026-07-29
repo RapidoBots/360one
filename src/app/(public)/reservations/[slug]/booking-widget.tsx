@@ -97,7 +97,7 @@ export function BookingWidget({
   }
 
   const hasInfoPanel = Boolean(bannerUrl || phone || mapsEmbedUrl || notes);
-  const showInfoPanel = step === "TIME_SLOT" && hasInfoPanel;
+  const showInfoPanel = (step === "TIME_SLOT" || step === "CONTACT") && hasInfoPanel;
 
   const mapsSearchUrl = address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
@@ -174,7 +174,7 @@ export function BookingWidget({
     <div
       className={`mx-auto flex min-h-screen w-full flex-col overflow-x-hidden p-4 sm:p-6 ${showInfoPanel ? "max-w-5xl" : "max-w-3xl"}`}
     >
-      {bannerUrl && (
+      {bannerUrl && showInfoPanel && (
         // Full-width landscape hero at the very top on mobile only -- on
         // desktop the banner instead renders portrait inside the sidebar.
         <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-[5px] lg:hidden">
