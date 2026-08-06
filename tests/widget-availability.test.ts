@@ -121,6 +121,13 @@ describe("getAvailableSlots", () => {
 });
 
 describe("getSlotTimesForDay", () => {
+  it("honors a half-hour business-hours boundary instead of rounding to the nearest hour", () => {
+    const businessHours = [{ dayOfWeek: 1, isOpen: true, openTime: "16:30", closeTime: "19:30" }];
+    const times = getSlotTimesForDay(businessHours, "2026-07-13", 90);
+    expect(times[0]).toBe("16:30");
+    expect(times[times.length - 1]).toBe("18:00");
+  });
+
   it("lists every slot time within business hours regardless of tables or bookings", () => {
     const businessHours = [{ dayOfWeek: 1, isOpen: true, openTime: "17:00", closeTime: "21:00" }];
     const times = getSlotTimesForDay(businessHours, "2026-07-13", 90);

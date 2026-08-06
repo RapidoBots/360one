@@ -123,8 +123,19 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Client requirement: every word, everywhere, starts with a capital
+       letter. Excludes inputs/textareas (capitalizing text while someone is
+       actively typing an email/password would visually fight what they
+       typed) and code/pre (embed snippets must stay copy-paste exact). */
+    text-transform: capitalize;
   }
   html {
     @apply font-sans;
+  }
+  input,
+  textarea,
+  code,
+  pre {
+    text-transform: none;
   }
 }

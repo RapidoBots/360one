@@ -8,11 +8,9 @@ export type AvailabilityTable = { id: string; capacity: number };
 export type AvailabilityReservation = { tableId: string | null } & TimeRange;
 export type SlotAvailability = { time: string; available: boolean };
 
-function enumerateSlotTimes(startHour: number, endHour: number, durationMinutes: number): string[] {
+function enumerateSlotTimes(startMinutes: number, endMinutes: number, durationMinutes: number): string[] {
   const times: string[] = [];
-  const dayStart = startHour * 60;
-  const dayEnd = endHour * 60;
-  for (let minutes = dayStart; minutes + durationMinutes <= dayEnd; minutes += SLOT_MINUTES) {
+  for (let minutes = startMinutes; minutes + durationMinutes <= endMinutes; minutes += SLOT_MINUTES) {
     const hour = Math.floor(minutes / 60);
     const minute = minutes % 60;
     times.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
@@ -26,9 +24,9 @@ function enumerateSlotTimes(startHour: number, endHour: number, durationMinutes:
 export function getSlotTimesForDay(businessHours: DayHours[], date: string, durationMinutes: number): string[] {
   // A fixed Y-M-D string's day-of-week is the same regardless of timezone.
   const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
-  const { isOpen, startHour, endHour } = getHoursForDay(businessHours, dayOfWeek);
+  const { isOpen, startMinutes, endMinutes } = getHoursForDay(businessHours, dayOfWeek);
   if (!isOpen) return [];
-  return enumerateSlotTimes(startHour, endHour, durationMinutes);
+  return enumerateSlotTimes(startMinutes, endMinutes, durationMinutes);
 }
 
 // Every slot time within business hours, each tagged with whether a

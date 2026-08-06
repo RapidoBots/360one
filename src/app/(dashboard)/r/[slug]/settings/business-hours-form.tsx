@@ -15,22 +15,33 @@ import { getHoursForDay, type DayHours } from "@/lib/business-hours";
 import { updateBusinessSettingsAction, type BusinessHoursInput } from "./actions";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${String(h).padStart(2, "0")}:${m}`;
+});
 
-function formatHourOption(value: string): string {
-  const hour = Number(value.split(":")[0]);
+function formatTimeOption(value: string): string {
+  const [hourStr, minuteStr] = value.split(":");
+  const hour = Number(hourStr);
   const period = hour >= 12 ? "PM" : "AM";
   const h = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h}:00 ${period}`;
+  return `${h}:${minuteStr} ${period}`;
+}
+
+function minutesToTime(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function toRow(businessHours: DayHours[], dayOfWeek: number): BusinessHoursInput {
-  const { isOpen, startHour, endHour } = getHoursForDay(businessHours, dayOfWeek);
+  const { isOpen, startMinutes, endMinutes } = getHoursForDay(businessHours, dayOfWeek);
   return {
     dayOfWeek,
     isOpen,
-    openTime: isOpen ? `${String(startHour).padStart(2, "0")}:00` : null,
-    closeTime: isOpen ? `${String(endHour).padStart(2, "0")}:00` : null,
+    openTime: isOpen ? minutesToTime(startMinutes) : null,
+    closeTime: isOpen ? minutesToTime(endMinutes) : null,
   };
 }
 
@@ -103,12 +114,12 @@ export function BusinessHoursForm({
               disabled={!row.isOpen}
             >
               <SelectTrigger className="h-10 w-full text-base" aria-label={`${DAY_NAMES[row.dayOfWeek]} opens`}>
-                <SelectValue>{(value: string) => formatHourOption(value)}</SelectValue>
+                <SelectValue>{(value: string) => formatTimeOption(value)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {HOUR_OPTIONS.map((h) => (
-                  <SelectItem key={h} value={h}>
-                    {formatHourOption(h)}
+                {TIME_OPTIONS.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {formatTimeOption(t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -119,12 +130,12 @@ export function BusinessHoursForm({
               disabled={!row.isOpen}
             >
               <SelectTrigger className="h-10 w-full text-base" aria-label={`${DAY_NAMES[row.dayOfWeek]} closes`}>
-                <SelectValue>{(value: string) => formatHourOption(value)}</SelectValue>
+                <SelectValue>{(value: string) => formatTimeOption(value)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {HOUR_OPTIONS.map((h) => (
-                  <SelectItem key={h} value={h}>
-                    {formatHourOption(h)}
+                {TIME_OPTIONS.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {formatTimeOption(t)}
                   </SelectItem>
                 ))}
               </SelectContent>

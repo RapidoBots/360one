@@ -13,7 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AddTeamMemberDialog } from "./add-team-member-dialog";
-import { setTeamMemberActiveAction } from "./actions";
+import { EditTeamMemberDialog } from "./edit-team-member-dialog";
+import { deleteTeamMemberAction, setTeamMemberActiveAction } from "./actions";
 import type { Role } from "@/generated/prisma/client";
 
 export type TeamMember = { id: string; name: string; email: string; role: Role; active: boolean };
@@ -29,8 +30,23 @@ export function TeamMembers({
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete(member: TeamMember) {
+    if (!window.confirm(`Delete ${member.name}? This permanently removes their account.`)) return;
+    setDeletingId(member.id);
+    setError(null);
+    try {
+      const result = await deleteTeamMemberAction(slug, member.id);
+      if (!result.ok) setError(result.error);
+    } finally {
+      setDeletingId(null);
+      router.refresh();
+    }
+  }
 
   async function handleToggle(member: TeamMember) {
     setTogglingId(member.id);
@@ -79,16 +95,31 @@ export function TeamMembers({
                 <Badge variant="outline">{m.active ? "Active" : "Inactive"}</Badge>
               </TableCell>
               <TableCell>
-                {m.id !== currentUserId && (
-                  <Button
-                    variant="outline"
-                    className="h-9"
-                    onClick={() => handleToggle(m)}
-                    disabled={togglingId === m.id}
-                  >
-                    {m.active ? "Deactivate" : "Reactivate"}
+                <div className="flex gap-2">
+                  <Button variant="outline" className="h-9" onClick={() => setEditingMember(m)}>
+                    Edit
                   </Button>
-                )}
+                  {m.id !== currentUserId && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="h-9"
+                        onClick={() => handleToggle(m)}
+                        disabled={togglingId === m.id}
+                      >
+                        {m.active ? "Deactivate" : "Reactivate"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-9 text-destructive"
+                        onClick={() => handleDelete(m)}
+                        disabled={deletingId === m.id}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -100,6 +131,13 @@ export function TeamMembers({
         onOpenChange={setAddOpen}
         slug={slug}
         onAdded={() => router.refresh()}
+      />
+      <EditTeamMemberDialog
+        open={editingMember !== null}
+        onOpenChange={(open) => !open && setEditingMember(null)}
+        slug={slug}
+        member={editingMember}
+        onSaved={() => router.refresh()}
       />
     </div>
   );

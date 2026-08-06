@@ -15,16 +15,21 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const { error: signInError } = await authClient.signIn.email({ email, password });
-    if (signInError) {
-      setError(signInError.message ?? "Sign in failed");
-      return;
+    try {
+      const { error: signInError } = await authClient.signIn.email({ email, password });
+      if (signInError) {
+        setError(signInError.message ?? "Sign in failed");
+        return;
+      }
+      router.push("/");
+    } catch {
+      setError("Could not reach the server -- please check your connection and try again.");
     }
-    router.push("/");
   }
 
   return (
@@ -34,7 +39,7 @@ export default function SignInPage() {
         <h1 className="text-lg font-semibold">Sign in</h1>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" className="h-11" placeholder="you@restaurant.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input id="email" type="email" className="h-9" placeholder="you@restaurant.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
@@ -42,7 +47,7 @@ export default function SignInPage() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              className="h-11 pr-10"
+              className="h-9 pr-10"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -57,6 +62,18 @@ export default function SignInPage() {
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword((v) => !v)}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            Forgot password?
+          </button>
+          {showForgotPassword && (
+            <p className="text-sm text-muted-foreground">
+              Contact your restaurant owner or Super Admin to reset your password for you.
+            </p>
+          )}
         </div>
         {error && <p className="text-base text-destructive">{error}</p>}
         <Button type="submit" className="h-12 w-full text-base">Sign in</Button>

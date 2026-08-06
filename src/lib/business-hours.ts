@@ -1,24 +1,44 @@
 export type DayHours = { dayOfWeek: number; isOpen: boolean; openTime: string | null; closeTime: string | null };
 
-// ponytail: whole-hour precision only -- the Settings UI offers an
-// on-the-hour picker, since every hour-bucketing consumer (Timeline,
-// Reports, Dashboard) already only renders whole-hour marks and finer
-// precision would be discarded downstream anyway.
 const DEFAULT_OPEN_HOUR = 7;
 const DEFAULT_CLOSE_HOUR = 23;
 
-function parseHour(time: string): number {
-  return Number(time.split(":")[0]);
+function parseMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h! * 60 + (m || 0);
 }
 
+// startHour/endHour are floor/ceil-rounded to the whole hour -- Timeline,
+// Reports, and the Dashboard only render whole-hour axis marks, so a chart
+// window only needs to fully contain the real (possibly half-hour) range.
+// startMinutes/endMinutes carry the exact value for anything that actually
+// books against it (slot generation).
 export function getHoursForDay(
   hours: DayHours[],
   dayOfWeek: number
-): { isOpen: boolean; startHour: number; endHour: number } {
+): { isOpen: boolean; startHour: number; endHour: number; startMinutes: number; endMinutes: number } {
   const day = hours.find((h) => h.dayOfWeek === dayOfWeek);
-  if (!day) return { isOpen: true, startHour: DEFAULT_OPEN_HOUR, endHour: DEFAULT_CLOSE_HOUR };
-  if (!day.isOpen || !day.openTime || !day.closeTime) return { isOpen: false, startHour: 0, endHour: 0 };
-  return { isOpen: true, startHour: parseHour(day.openTime), endHour: parseHour(day.closeTime) };
+  if (!day) {
+    return {
+      isOpen: true,
+      startHour: DEFAULT_OPEN_HOUR,
+      endHour: DEFAULT_CLOSE_HOUR,
+      startMinutes: DEFAULT_OPEN_HOUR * 60,
+      endMinutes: DEFAULT_CLOSE_HOUR * 60,
+    };
+  }
+  if (!day.isOpen || !day.openTime || !day.closeTime) {
+    return { isOpen: false, startHour: 0, endHour: 0, startMinutes: 0, endMinutes: 0 };
+  }
+  const startMinutes = parseMinutes(day.openTime);
+  const endMinutes = parseMinutes(day.closeTime);
+  return {
+    isOpen: true,
+    startHour: Math.floor(startMinutes / 60),
+    endHour: Math.ceil(endMinutes / 60),
+    startMinutes,
+    endMinutes,
+  };
 }
 
 export function getWidestOpenWindow(hours: DayHours[]): { startHour: number; endHour: number } {

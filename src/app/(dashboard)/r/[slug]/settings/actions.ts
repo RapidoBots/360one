@@ -175,3 +175,33 @@ export async function setTeamMemberActiveAction(
   revalidatePath(`/r/${slug}/settings`);
   return { ok: true };
 }
+
+export async function updateTeamMemberAction(
+  slug: string,
+  userId: string,
+  input: { name: string; email: string; role: Role }
+): Promise<SettingsActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  try {
+    const { count } = await prisma.user.updateMany({
+      where: { id: userId, restaurantId: restaurant.id },
+      data: { name: input.name, email: input.email, role: input.role },
+    });
+    if (count === 0) return { ok: false, error: "Team member not found." };
+  } catch {
+    return { ok: false, error: `Could not update — "${input.email}" may already be in use.` };
+  }
+  revalidatePath(`/r/${slug}/settings`);
+  return { ok: true };
+}
+
+export async function deleteTeamMemberAction(slug: string, userId: string): Promise<SettingsActionResult> {
+  const { user, restaurant } = await assertRestaurantOwner(slug);
+  if (userId === user.id) {
+    return { ok: false, error: "You can't delete your own account." };
+  }
+  const { count } = await prisma.user.deleteMany({ where: { id: userId, restaurantId: restaurant.id } });
+  if (count === 0) return { ok: false, error: "Team member not found." };
+  revalidatePath(`/r/${slug}/settings`);
+  return { ok: true };
+}

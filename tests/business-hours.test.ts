@@ -4,7 +4,7 @@ import { getHoursForDay, getWidestOpenWindow, type DayHours } from "@/lib/busine
 describe("getHoursForDay", () => {
   it("defaults to open 7am-11pm when no row exists for that day", () => {
     const result = getHoursForDay([], 1);
-    expect(result).toEqual({ isOpen: true, startHour: 7, endHour: 23 });
+    expect(result).toEqual({ isOpen: true, startHour: 7, endHour: 23, startMinutes: 420, endMinutes: 1380 });
   });
 
   it("returns closed when the day's row says isOpen: false", () => {
@@ -16,7 +16,7 @@ describe("getHoursForDay", () => {
   it("returns a custom configured window for an open day", () => {
     const hours: DayHours[] = [{ dayOfWeek: 1, isOpen: true, openTime: "09:00", closeTime: "17:00" }];
     const result = getHoursForDay(hours, 1);
-    expect(result).toEqual({ isOpen: true, startHour: 9, endHour: 17 });
+    expect(result).toEqual({ isOpen: true, startHour: 9, endHour: 17, startMinutes: 540, endMinutes: 1020 });
   });
 
   it("only looks at the requested day, ignoring rows for other days", () => {
@@ -25,7 +25,24 @@ describe("getHoursForDay", () => {
       { dayOfWeek: 2, isOpen: false, openTime: null, closeTime: null },
     ];
     expect(getHoursForDay(hours, 2).isOpen).toBe(false);
-    expect(getHoursForDay(hours, 3)).toEqual({ isOpen: true, startHour: 7, endHour: 23 });
+    expect(getHoursForDay(hours, 3)).toEqual({
+      isOpen: true,
+      startHour: 7,
+      endHour: 23,
+      startMinutes: 420,
+      endMinutes: 1380,
+    });
+  });
+
+  it("preserves exact half-hour precision instead of rounding to the nearest hour", () => {
+    const hours: DayHours[] = [{ dayOfWeek: 1, isOpen: true, openTime: "16:30", closeTime: "21:15" }];
+    const result = getHoursForDay(hours, 1);
+    // Minutes are exact; hour/hour are floor/ceil-rounded outward so an
+    // hour-bucketed chart axis still fully contains the real window.
+    expect(result.startMinutes).toBe(16 * 60 + 30);
+    expect(result.endMinutes).toBe(21 * 60 + 15);
+    expect(result.startHour).toBe(16);
+    expect(result.endHour).toBe(22);
   });
 });
 

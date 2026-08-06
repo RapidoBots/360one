@@ -93,9 +93,11 @@ test.describe("Phase 8 Settings", () => {
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect(page.getByText(FIXTURE_STAFF_EMAIL)).toBeVisible();
 
-    // Owner's own row has no deactivate/reactivate control (no self-deactivation).
+    // Owner's own row can still be edited, but has no deactivate/delete
+    // control (no self-deactivation, no self-delete).
     const ownerRow = page.locator("tr", { hasText: FIXTURE_OWNER_EMAIL });
-    await expect(ownerRow.getByRole("button")).toHaveCount(0);
+    await expect(ownerRow.getByRole("button")).toHaveCount(1);
+    await expect(ownerRow.getByRole("button", { name: "Edit" })).toBeVisible();
 
     // A new page from the SAME context shares its cookie jar with `page` --
     // signing in there as Staff would silently swap the Owner session on

@@ -185,9 +185,9 @@ export function BookingWidget({
         <Image
           src={logoUrl}
           alt={restaurantName}
-          width={64}
-          height={64}
-          className="mx-auto mb-3 size-16 rounded-[5px] object-contain"
+          width={112}
+          height={112}
+          className="mx-auto mb-3 size-28 rounded-[5px] object-contain"
           unoptimized
         />
       )}
