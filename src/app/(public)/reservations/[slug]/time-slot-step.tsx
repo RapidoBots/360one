@@ -276,7 +276,7 @@ export function TimeSlotStep({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="flex min-w-0 flex-1 justify-between gap-1.5 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 justify-between gap-1.5 overflow-x-auto overflow-y-hidden">
           {weekDates.map((d) => {
             const isSelected = d === value.date;
             const isPast = d < todayLocal;
@@ -289,16 +289,16 @@ export function TimeSlotStep({
                 disabled={isPast}
                 onClick={() => onDateChange(d)}
                 className={cn(
-                  "flex shrink-0 flex-col items-center gap-1 rounded-lg border px-3 py-2 text-sm transition-all",
+                  "flex shrink-0 flex-col items-center gap-1 rounded-lg border px-3 py-2 text-sm transition-colors",
                   isPast
                     ? "cursor-not-allowed border-transparent text-muted-foreground opacity-40"
                     : isSelected
-                      ? "scale-105 border-primary bg-primary text-primary-foreground shadow-sm"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : status === "available"
-                        ? "border-emerald-600/30 text-emerald-600 hover:scale-105 hover:border-emerald-600/60 hover:bg-emerald-500/10"
+                        ? "border-emerald-600/30 text-emerald-600 hover:border-emerald-600/60 hover:bg-emerald-500/10"
                         : status === "closed"
                           ? "border-border text-muted-foreground hover:bg-muted"
-                          : "border-destructive/30 text-destructive hover:scale-105 hover:border-destructive/60 hover:bg-destructive/10"
+                          : "border-destructive/30 text-destructive hover:border-destructive/60 hover:bg-destructive/10"
                 )}
               >
                 <span className="text-xs font-medium">{DAY_LABELS[day.getDay()]}</span>
