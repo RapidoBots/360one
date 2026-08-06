@@ -15,19 +15,6 @@ import { getHoursForDay, type DayHours } from "@/lib/business-hours";
 import { updateBusinessSettingsAction, type BusinessHoursInput } from "./actions";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2);
-  const m = i % 2 === 0 ? "00" : "30";
-  return `${String(h).padStart(2, "0")}:${m}`;
-});
-
-function formatTimeOption(value: string): string {
-  const [hourStr, minuteStr] = value.split(":");
-  const hour = Number(hourStr);
-  const period = hour >= 12 ? "PM" : "AM";
-  const h = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h}:${minuteStr} ${period}`;
-}
 
 function minutesToTime(totalMinutes: number): string {
   const h = Math.floor(totalMinutes / 60);
@@ -108,38 +95,22 @@ export function BusinessHoursForm({
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select
+            <Input
+              type="time"
+              className="h-10 w-full text-base"
+              aria-label={`${DAY_NAMES[row.dayOfWeek]} opens`}
               value={row.openTime ?? "07:00"}
-              onValueChange={(v) => updateRow(row.dayOfWeek, { openTime: v })}
+              onChange={(e) => updateRow(row.dayOfWeek, { openTime: e.target.value })}
               disabled={!row.isOpen}
-            >
-              <SelectTrigger className="h-10 w-full text-base" aria-label={`${DAY_NAMES[row.dayOfWeek]} opens`}>
-                <SelectValue>{(value: string) => formatTimeOption(value)}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_OPTIONS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {formatTimeOption(t)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
+            />
+            <Input
+              type="time"
+              className="h-10 w-full text-base"
+              aria-label={`${DAY_NAMES[row.dayOfWeek]} closes`}
               value={row.closeTime ?? "23:00"}
-              onValueChange={(v) => updateRow(row.dayOfWeek, { closeTime: v })}
+              onChange={(e) => updateRow(row.dayOfWeek, { closeTime: e.target.value })}
               disabled={!row.isOpen}
-            >
-              <SelectTrigger className="h-10 w-full text-base" aria-label={`${DAY_NAMES[row.dayOfWeek]} closes`}>
-                <SelectValue>{(value: string) => formatTimeOption(value)}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_OPTIONS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {formatTimeOption(t)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         ))}
       </div>

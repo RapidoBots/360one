@@ -200,6 +200,7 @@ export function BookingWidget({
               value={{ partySize: selection.partySize, date: selection.date }}
               onChange={(v) => setSelection((prev) => ({ ...prev, ...v, time: null }))}
               onNext={() => setStep("TIME_SLOT")}
+              timeZone={timeZone}
             />
           )}
 

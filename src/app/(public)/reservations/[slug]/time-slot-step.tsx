@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
+import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import type { SlotAvailability } from "@/lib/widget-availability";
 import { getSlotsForDateAction } from "./actions";
 
@@ -51,6 +51,7 @@ export function TimeSlotStep({
 
   const weekStart = mondayOfWeek(value.date);
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const todayLocal = toLocalDateInput(new Date(), timeZone);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +104,7 @@ export function TimeSlotStep({
                   type="button"
                   disabled={!s.available}
                   className={cn(
-                    "h-auto whitespace-normal px-2 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
+                    "h-auto whitespace-nowrap px-1 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
                     !s.available
                       ? "bg-muted text-muted-foreground line-through opacity-60 hover:bg-muted"
                       : selected
@@ -156,22 +157,26 @@ export function TimeSlotStep({
         <div className="flex min-w-0 flex-1 justify-between gap-1 overflow-x-auto">
           {weekDates.map((d) => {
             const isSelected = d === value.date;
+            const isPast = d < todayLocal;
             const status = weekAvailability[d] ?? "available";
             const day = new Date(`${d}T00:00:00`);
             return (
               <button
                 key={d}
                 type="button"
+                disabled={isPast}
                 onClick={() => onDateChange(d)}
                 className={cn(
                   "flex shrink-0 flex-col items-center gap-0.5 rounded-[5px] border px-2.5 py-1.5 text-sm",
-                  isSelected
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : status === "available"
-                      ? "border-emerald-600/40 text-emerald-600 hover:bg-emerald-500/10"
-                      : status === "closed"
-                        ? "border-border text-muted-foreground hover:bg-muted"
-                        : "border-destructive/40 text-destructive hover:bg-destructive/10"
+                  isPast
+                    ? "cursor-not-allowed border-border text-muted-foreground opacity-40"
+                    : isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : status === "available"
+                        ? "border-emerald-600/40 text-emerald-600 hover:bg-emerald-500/10"
+                        : status === "closed"
+                          ? "border-border text-muted-foreground hover:bg-muted"
+                          : "border-destructive/40 text-destructive hover:bg-destructive/10"
                 )}
               >
                 <span className="text-xs">{DAY_LABELS[day.getDay()]}</span>

@@ -50,6 +50,7 @@ export async function getSlotsForDateAction(
     durationMinutes: restaurant.defaultReservationDurationMinutes,
     timeZone: restaurant.timezone,
     blockedTimes: blockedSlots.map((b) => b.time),
+    now: new Date(),
   });
 
   return { slots, isOpen };
@@ -107,6 +108,7 @@ export async function createWidgetReservationAction(
       durationMinutes: restaurant.defaultReservationDurationMinutes,
       timeZone: restaurant.timezone,
       blockedTimes: blockedSlots.map((b) => b.time),
+      now: new Date(),
     }).includes(input.time);
   if (!stillAvailable) {
     return { ok: false, error: "That time was just booked by someone else -- please pick another." };

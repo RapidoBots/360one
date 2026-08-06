@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 
 const PARTY_SIZES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -14,11 +15,14 @@ export function GuestDateStep({
   value,
   onChange,
   onNext,
+  timeZone,
 }: {
   value: GuestDateSelection;
   onChange: (value: GuestDateSelection) => void;
   onNext: () => void;
+  timeZone: string;
 }) {
+  const todayLocal = toLocalDateInput(new Date(), timeZone);
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">Please select the details below.</p>
@@ -50,6 +54,7 @@ export function GuestDateStep({
             id="widgetDate"
             type="date"
             className="h-11 pl-9 text-base"
+            min={todayLocal}
             value={value.date}
             onChange={(e) => onChange({ ...value, date: e.target.value })}
           />

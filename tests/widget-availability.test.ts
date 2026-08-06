@@ -118,6 +118,32 @@ describe("getAvailableSlots", () => {
     expect(slots).toContain("18:45");
     expect(slots).toContain("19:15");
   });
+
+  it("excludes a slot that has already started or passed, but leaves later slots bookable", () => {
+    const slots = getAvailableSlots(TABLES, [], {
+      partySize: 2,
+      date: "2026-07-13",
+      businessHours: NO_HOURS_CONFIGURED,
+      durationMinutes: 90,
+      timeZone: TZ,
+      now: zonedDateTimeToUtc("2026-07-13", "16:00", TZ),
+    });
+    expect(slots).not.toContain("15:45");
+    expect(slots).not.toContain("16:00"); // starting exactly now is also too late
+    expect(slots).toContain("16:15");
+  });
+
+  it("doesn't exclude anything on a future date, regardless of the current time", () => {
+    const slots = getAvailableSlots(TABLES, [], {
+      partySize: 2,
+      date: "2026-07-14",
+      businessHours: NO_HOURS_CONFIGURED,
+      durationMinutes: 90,
+      timeZone: TZ,
+      now: zonedDateTimeToUtc("2026-07-13", "16:00", TZ),
+    });
+    expect(slots[0]).toBe("07:00");
+  });
 });
 
 describe("getSlotTimesForDay", () => {

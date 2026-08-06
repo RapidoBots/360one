@@ -43,6 +43,7 @@ export function getAllSlotsForDay(
     durationMinutes: number;
     timeZone: string;
     blockedTimes?: string[];
+    now?: Date;
   }
 ): SlotAvailability[] {
   const times = getSlotTimesForDay(input.businessHours, input.date, input.durationMinutes);
@@ -51,6 +52,10 @@ export function getAllSlotsForDay(
 
   return times.map((time) => {
     const startsAt = zonedDateTimeToUtc(input.date, time, input.timeZone);
+    // A slot that's already started (or passed) can't be booked, regardless
+    // of table/blocked-slot state -- matters only for today, since any slot
+    // on a future date is necessarily still ahead of "now".
+    if (input.now && startsAt <= input.now) return { time, available: false };
     const hasFreeTable = fitting.some((t) => {
       const conflict = reservations.some(
         (r) => r.tableId === t.id && doesOverlap(r, { startsAt, durationMinutes: input.durationMinutes })
@@ -71,6 +76,7 @@ export function getAvailableSlots(
     durationMinutes: number;
     timeZone: string;
     blockedTimes?: string[];
+    now?: Date;
   }
 ): string[] {
   return getAllSlotsForDay(tables, reservations, input)

@@ -31,8 +31,14 @@ test.describe("Embeddable reservation widget", () => {
     await page.getByRole("button", { name: "Next" }).click();
 
     // Step 2: pick a slot (just highlights it), Next is disabled until one is chosen.
+    // Today's date defaults in, so early slots may already be in the past
+    // (greyed out, disabled) -- filter down to one that's still bookable.
     await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
-    await page.getByRole("button", { name: /^\d{1,2}:\d{2}/ }).first().click();
+    await page
+      .getByRole("button", { name: /^\d{1,2}:\d{2}/ })
+      .and(page.locator(":enabled"))
+      .first()
+      .click();
     await page.getByRole("button", { name: "Next" }).click();
 
     // Step 3: contact info.
