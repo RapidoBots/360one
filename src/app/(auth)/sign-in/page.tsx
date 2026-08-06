@@ -35,7 +35,7 @@ export default function SignInPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border p-8 shadow-sm">
-        <Brand className="mx-auto block h-12 w-auto py-6" />
+        <Brand className="mx-auto my-6 block h-12 w-auto" />
         <h1 className="text-lg font-semibold">Sign in</h1>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
