@@ -1,8 +1,5 @@
+import Image from "next/image";
+
 export function Brand({ className }: { className?: string }) {
-  return (
-    <span className={className}>
-      <span className="text-primary">360</span>
-      <span className="text-foreground">one</span>
-    </span>
-  );
+  return <Image src="/logo.png" alt="360One" width={2000} height={1003} className={className} unoptimized />;
 }

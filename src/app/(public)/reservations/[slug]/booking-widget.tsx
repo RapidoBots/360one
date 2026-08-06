@@ -221,8 +221,8 @@ export function BookingWidget({
             <SuccessScreen booking={booking} timeZone={timeZone} onBookAnother={resetToStart} />
           )}
 
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            powered by <Brand className="font-semibold" />
+          <p className="mt-8 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
+            powered by <Brand className="inline-block h-3.5 w-auto align-middle" />
           </p>
         </div>
 
