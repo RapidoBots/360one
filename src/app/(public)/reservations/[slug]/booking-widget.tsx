@@ -6,7 +6,6 @@ import { Phone } from "lucide-react";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { Brand } from "@/components/shell/brand";
 import { Button } from "@/components/ui/button";
-import { GuestDateStep } from "./guest-date-step";
 
 // lucide-react dropped brand/logo icons -- minimal inline glyphs instead of a new dependency.
 function FacebookIcon({ className }: { className?: string }) {
@@ -55,7 +54,7 @@ export function formatTimeLabel(time: string): string {
   return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-type Step = "GUEST_DATE" | "TIME_SLOT" | "CONTACT" | "SUCCESS";
+type Step = "TIME_SLOT" | "CONTACT" | "SUCCESS";
 
 export function BookingWidget({
   slug,
@@ -82,7 +81,7 @@ export function BookingWidget({
   facebookUrl: string | null;
   instagramUrl: string | null;
 }) {
-  const [step, setStep] = useState<Step>("GUEST_DATE");
+  const [step, setStep] = useState<Step>("TIME_SLOT");
   const [selection, setSelection] = useState<TimeSlotSelection>({
     partySize: 2,
     date: toLocalDateInput(new Date(), timeZone),
@@ -93,7 +92,7 @@ export function BookingWidget({
   function resetToStart() {
     setBooking(null);
     setSelection({ partySize: 2, date: toLocalDateInput(new Date(), timeZone), time: null });
-    setStep("GUEST_DATE");
+    setStep("TIME_SLOT");
   }
 
   const hasInfoPanel = Boolean(bannerUrl || phone || mapsEmbedUrl || notes);
@@ -112,6 +111,7 @@ export function BookingWidget({
           <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
         </div>
       )}
+      {notes && <p className="text-sm text-muted-foreground">{notes}</p>}
       {phone && (
         <Button
           className="h-11 w-full gap-2 bg-blue-600 text-base text-white hover:bg-blue-700"
@@ -121,7 +121,6 @@ export function BookingWidget({
           Call Now
         </Button>
       )}
-      {notes && <p className="text-sm text-muted-foreground">{notes}</p>}
       {mapsEmbedUrl && (
         <iframe
           src={mapsEmbedUrl}
@@ -191,27 +190,17 @@ export function BookingWidget({
           unoptimized
         />
       )}
-      <h1 className="mb-4 text-center text-xl font-bold sm:mb-6">{restaurantName}</h1>
 
       <div className={showInfoPanel ? "grid min-w-0 gap-4 lg:grid-cols-[1fr_320px]" : undefined}>
         <div className="min-w-0 rounded-lg border border-border bg-background p-4 shadow-sm sm:p-6">
-          {step === "GUEST_DATE" && (
-            <GuestDateStep
-              value={{ partySize: selection.partySize, date: selection.date }}
-              onChange={(v) => setSelection((prev) => ({ ...prev, ...v, time: null }))}
-              onNext={() => setStep("TIME_SLOT")}
-              timeZone={timeZone}
-            />
-          )}
-
           {step === "TIME_SLOT" && (
             <TimeSlotStep
               slug={slug}
               value={selection}
               timeZone={timeZone}
+              onPartySizeChange={(partySize) => setSelection((prev) => ({ ...prev, partySize, time: null }))}
               onDateChange={(date) => setSelection((prev) => ({ ...prev, date, time: null }))}
               onSlotSelect={(time) => setSelection((prev) => ({ ...prev, time }))}
-              onBack={() => setStep("GUEST_DATE")}
               onNext={() => setStep("CONTACT")}
             />
           )}

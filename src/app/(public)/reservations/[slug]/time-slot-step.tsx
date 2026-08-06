@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-react";
+import { Users, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import type { SlotAvailability } from "@/lib/widget-availability";
@@ -11,6 +12,7 @@ import { getSlotsForDateAction } from "./actions";
 export type TimeSlotSelection = { partySize: number; date: string; time: string | null };
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const PARTY_SIZES = Array.from({ length: 10 }, (_, i) => i + 1);
 
 // Pure Y-M-D calendar arithmetic, anchored in UTC throughout so it never
 // touches a real timezone (adding N days to a calendar date doesn't need one).
@@ -30,17 +32,17 @@ function mondayOfWeek(date: string): string {
 export function TimeSlotStep({
   slug,
   value,
+  onPartySizeChange,
   onDateChange,
   onSlotSelect,
-  onBack,
   onNext,
   timeZone,
 }: {
   slug: string;
   value: TimeSlotSelection;
+  onPartySizeChange: (partySize: number) => void;
   onDateChange: (date: string) => void;
   onSlotSelect: (time: string) => void;
-  onBack: () => void;
   onNext: () => void;
   timeZone: string;
 }) {
@@ -95,7 +97,7 @@ export function TimeSlotStep({
         ) : groupSlots.length === 0 ? (
           <p className="text-sm text-muted-foreground">No places available</p>
         ) : (
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 sm:gap-2">
             {groupSlots.map((s) => {
               const selected = value.time === s.time;
               return (
@@ -104,7 +106,7 @@ export function TimeSlotStep({
                   type="button"
                   disabled={!s.available}
                   className={cn(
-                    "h-auto whitespace-nowrap px-1 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
+                    "h-auto whitespace-nowrap px-1 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm",
                     !s.available
                       ? "bg-muted text-muted-foreground line-through opacity-60 hover:bg-muted"
                       : selected
@@ -125,14 +127,26 @@ export function TimeSlotStep({
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Select your preferred time slot.</p>
-
       <div className="flex flex-wrap items-center gap-4 rounded-[5px] bg-muted px-4 py-2.5 text-sm font-medium">
-        <span className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
           <Users className="size-4 text-muted-foreground" />
-          {value.partySize} Guest{value.partySize === 1 ? "" : "s"}
-        </span>
-        <span className="flex items-center gap-1.5">
+          <Select value={String(value.partySize)} onValueChange={(v) => v && onPartySizeChange(Number(v))}>
+            <SelectTrigger
+              className="h-auto gap-1 border-none bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
+              aria-label="Number of Guests"
+            >
+              <SelectValue>{(v: string) => `${v} Guest${v === "1" ? "" : "s"}`}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {PARTY_SIZES.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <span className="relative flex items-center gap-1.5">
           <CalendarIcon className="size-4 text-muted-foreground" />
           {zonedDateTimeToUtc(value.date, "12:00", timeZone).toLocaleDateString([], {
             month: "long",
@@ -140,10 +154,19 @@ export function TimeSlotStep({
             year: "numeric",
             timeZone,
           })}
+          {/* Invisible native date input over the formatted text -- the week
+              strip below only moves 7 days at a time, so this is the only way
+              to jump straight to a date further out. */}
+          <input
+            type="date"
+            aria-label="Date"
+            min={todayLocal}
+            value={value.date}
+            onChange={(e) => e.target.value && onDateChange(e.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
         </span>
       </div>
-
-      <p className="text-sm text-muted-foreground italic">Please select the party size, date and time.</p>
 
       <div className="flex items-center gap-1">
         <Button
@@ -206,11 +229,7 @@ export function TimeSlotStep({
         )}
       </div>
 
-      <div className="flex justify-between pt-2">
-        <Button type="button" variant="outline" className="h-11 gap-2 px-5 text-base" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-          Back
-        </Button>
+      <div className="flex justify-end pt-2">
         <Button type="button" className="h-11 gap-2 px-5 text-base" onClick={onNext} disabled={!value.time}>
           Next
           <ArrowRight className="size-4" />

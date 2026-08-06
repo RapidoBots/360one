@@ -51,7 +51,6 @@ test.describe("Availability overrides", () => {
 
     await page.goto("/reservations/blue-fork");
     await page.getByLabel("Date").fill(BLOCKED_SLOT_DATE);
-    await page.getByRole("button", { name: "Next" }).click();
 
     await expect(page.getByRole("button", { name: "7:00 PM", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "6:45 PM", exact: true })).toBeEnabled();
@@ -68,7 +67,6 @@ test.describe("Availability overrides", () => {
 
     await page.goto("/reservations/blue-fork");
     await page.getByLabel("Date").fill(CLOSED_DATE);
-    await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByText("We're closed on this day")).toBeVisible();
   });
 });

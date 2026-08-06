@@ -24,15 +24,12 @@ test.describe("Embeddable reservation widget", () => {
 
   test("books through all 3 steps, lands as Pending, and staff can confirm it", async ({ page }) => {
     await page.goto("/reservations/blue-fork");
-    await expect(page.getByRole("heading", { name: "The Blue Fork" })).toBeVisible();
 
-    // Step 1: guests + date only, no slots yet.
-    await expect(page.getByLabel("Number of Guests")).toBeVisible();
-    await page.getByRole("button", { name: "Next" }).click();
-
-    // Step 2: pick a slot (just highlights it), Next is disabled until one is chosen.
+    // Step 1 (party size, date, and time slot are all on one screen now):
+    // pick a slot (just highlights it), Next is disabled until one is chosen.
     // Today's date defaults in, so early slots may already be in the past
     // (greyed out, disabled) -- filter down to one that's still bookable.
+    await expect(page.getByLabel("Number of Guests")).toBeVisible();
     await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
     await page
       .getByRole("button", { name: /^\d{1,2}:\d{2}/ })
