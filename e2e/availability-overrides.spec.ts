@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 // Far-future fixed dates -- avoids "today" boundary flakiness across
@@ -24,7 +24,23 @@ async function cleanupFixtures() {
   }
 }
 
-async function signInAsOwner(page: import("@playwright/test").Page) {
+// The widget's Date field is a custom calendar popover now, not a native
+// date input -- open it, page forward/back the right number of months, then
+// click the target day number.
+async function pickWidgetDate(page: Page, dateStr: string) {
+  const [targetYear, targetMonth, targetDay] = dateStr.split("-").map(Number);
+  const now = new Date();
+  const monthsForward = (targetYear! - now.getFullYear()) * 12 + (targetMonth! - 1 - now.getMonth());
+
+  await page.getByLabel("Date").click();
+  const navButton = monthsForward >= 0 ? "Next month" : "Previous month";
+  for (let i = 0; i < Math.abs(monthsForward); i++) {
+    await page.getByRole("button", { name: navButton }).click();
+  }
+  await page.getByRole("button", { name: String(targetDay), exact: true }).click();
+}
+
+async function signInAsOwner(page: Page) {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill("owner@blue-fork.example.com");
   await page.getByLabel("Password").fill("password1234");
@@ -50,7 +66,7 @@ test.describe("Availability overrides", () => {
     await expect(slotButton).toHaveClass(/line-through/);
 
     await page.goto("/reservations/blue-fork");
-    await page.getByLabel("Date").fill(BLOCKED_SLOT_DATE);
+    await pickWidgetDate(page, BLOCKED_SLOT_DATE);
 
     await expect(page.getByRole("button", { name: "7:00 PM", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "6:45 PM", exact: true })).toBeEnabled();
@@ -66,7 +82,7 @@ test.describe("Availability overrides", () => {
     await expect(page.getByRole("button", { name: "Closed all day -- click to reopen" })).toBeVisible();
 
     await page.goto("/reservations/blue-fork");
-    await page.getByLabel("Date").fill(CLOSED_DATE);
+    await pickWidgetDate(page, CLOSED_DATE);
     await expect(page.getByText("We're closed on this day")).toBeVisible();
   });
 });
