@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { Users, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { SlotAvailability } from "@/lib/widget-availability";
 import { getSlotsForDateAction } from "./actions";
 
@@ -127,14 +129,12 @@ export function TimeSlotStep({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-4 rounded-[5px] bg-muted px-4 py-2.5 text-sm font-medium">
-        <div className="flex items-center gap-1.5">
-          <Users className="size-4 text-muted-foreground" />
+      <div className="space-y-2">
+        <Label htmlFor="widgetPartySize">Number of Guests</Label>
+        <div className="relative">
+          <Users className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
           <Select value={String(value.partySize)} onValueChange={(v) => v && onPartySizeChange(Number(v))}>
-            <SelectTrigger
-              className="h-auto gap-1 border-none bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
-              aria-label="Number of Guests"
-            >
+            <SelectTrigger id="widgetPartySize" className="h-11 w-full pl-9 text-base">
               <SelectValue>{(v: string) => `${v} Guest${v === "1" ? "" : "s"}`}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -146,26 +146,21 @@ export function TimeSlotStep({
             </SelectContent>
           </Select>
         </div>
-        <span className="relative flex items-center gap-1.5">
-          <CalendarIcon className="size-4 text-muted-foreground" />
-          {zonedDateTimeToUtc(value.date, "12:00", timeZone).toLocaleDateString([], {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-            timeZone,
-          })}
-          {/* Invisible native date input over the formatted text -- the week
-              strip below only moves 7 days at a time, so this is the only way
-              to jump straight to a date further out. */}
-          <input
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="widgetDate">Date</Label>
+        <div className="relative">
+          <CalendarIcon className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="widgetDate"
             type="date"
-            aria-label="Date"
+            className="h-11 pl-9 text-base"
             min={todayLocal}
             value={value.date}
             onChange={(e) => e.target.value && onDateChange(e.target.value)}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
-        </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-1">
