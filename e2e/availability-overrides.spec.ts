@@ -68,6 +68,10 @@ test.describe("Availability overrides", () => {
     await page.goto("/reservations/blue-fork");
     await pickWidgetDate(page, BLOCKED_SLOT_DATE);
 
+    // The widget's per-slot buttons show short visible text ("7:00", no
+    // AM/PM -- the group header already gives that context) but keep the
+    // full "7:00 PM" as their accessible name via aria-label, so this
+    // still uniquely matches instead of colliding with the AM group's 7:00.
     await expect(page.getByRole("button", { name: "7:00 PM", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "6:45 PM", exact: true })).toBeEnabled();
     await expect(page.getByRole("button", { name: "7:15 PM", exact: true })).toBeEnabled();

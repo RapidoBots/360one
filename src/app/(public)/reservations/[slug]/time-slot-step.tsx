@@ -170,9 +170,14 @@ export function TimeSlotStep({
   const amSlots = slots.filter((s) => Number(s.time.split(":")[0]) < 12);
   const pmSlots = slots.filter((s) => Number(s.time.split(":")[0]) >= 12);
 
+  // No AM/PM suffix -- the group header above ("AM"/"PM") already gives that
+  // context, and every character counts in a 4-column grid on a real narrow
+  // phone screen (dropping it is what actually fixes overflow, not just
+  // truncating it away).
   function formatSlotLabel(time: string): string {
-    const [h, m] = time.split(":").map(Number);
-    return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const [h, m] = time.split(":").map(Number) as [number, number];
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12}:${String(m).padStart(2, "0")}`;
   }
 
   function formatDateLabel(date: string): string {
@@ -196,8 +201,13 @@ export function TimeSlotStep({
                   key={s.time}
                   type="button"
                   disabled={!s.available}
+                  aria-label={`${formatSlotLabel(s.time)} ${label}`}
                   className={cn(
-                    "h-auto whitespace-nowrap px-1 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm",
+                    // min-w-0 + truncate: a grid item's default min-width is
+                    // "auto" (its content's width), so without this a long
+                    // label forces the column wider than its 1fr share and
+                    // bleeds into neighboring cells instead of just wrapping.
+                    "h-auto min-w-0 truncate px-1 py-2 text-xs sm:px-3 sm:py-2 sm:text-sm",
                     !s.available
                       ? "bg-muted text-muted-foreground line-through opacity-60 hover:bg-muted"
                       : selected
