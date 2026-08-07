@@ -222,7 +222,7 @@ export function BookingWidget({
           )}
 
           <p className="mt-8 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
-            powered by <Brand className="inline-block h-3.5 w-auto align-middle" />
+            powered by <Brand className="inline-block h-5 w-auto align-middle" />
           </p>
         </div>
 
