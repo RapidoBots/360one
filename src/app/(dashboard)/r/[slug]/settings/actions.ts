@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantOwner } from "@/lib/auth-guards";
-import { createUserAccount } from "@/lib/user-accounts";
+import { createUserAccount, setUserPassword } from "@/lib/user-accounts";
 import type { Role } from "@/generated/prisma/client";
 
 export type SettingsActionResult = { ok: true } | { ok: false; error: string };
@@ -179,9 +179,12 @@ export async function setTeamMemberActiveAction(
 export async function updateTeamMemberAction(
   slug: string,
   userId: string,
-  input: { name: string; email: string; role: Role }
+  input: { name: string; email: string; role: Role; newPassword?: string }
 ): Promise<SettingsActionResult> {
   const { restaurant } = await assertRestaurantOwner(slug);
+  if (input.newPassword && input.newPassword.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
   try {
     const { count } = await prisma.user.updateMany({
       where: { id: userId, restaurantId: restaurant.id },
@@ -190,6 +193,9 @@ export async function updateTeamMemberAction(
     if (count === 0) return { ok: false, error: "Team member not found." };
   } catch {
     return { ok: false, error: `Could not update — "${input.email}" may already be in use.` };
+  }
+  if (input.newPassword) {
+    await setUserPassword(userId, input.newPassword);
   }
   revalidatePath(`/r/${slug}/settings`);
   return { ok: true };

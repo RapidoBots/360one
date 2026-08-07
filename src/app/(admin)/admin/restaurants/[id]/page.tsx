@@ -12,7 +12,7 @@ export default async function RestaurantDetailPage({
     where: { id },
     include: {
       users: {
-        select: { id: true, name: true, email: true, role: true },
+        select: { id: true, name: true, email: true, role: true, active: true },
         orderBy: { role: "asc" },
       },
     },

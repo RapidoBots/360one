@@ -15,9 +15,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RestaurantStatusBadge } from "../restaurant-status-badge";
-import { updateRestaurantAction, setRestaurantStatusAction, updateGhlCredentialsAction } from "../actions";
+import {
+  updateRestaurantAction,
+  setRestaurantStatusAction,
+  updateGhlCredentialsAction,
+  setStaffActiveAction,
+  deleteStaffMemberAction,
+} from "../actions";
 import { AddStaffDialog } from "./add-staff-dialog";
-import type { Role, RestaurantStatus } from "@/generated/prisma/client";
+import { EditStaffDialog, type StaffMember } from "./edit-staff-dialog";
+import type { RestaurantStatus } from "@/generated/prisma/client";
 
 export type RestaurantWithUsers = {
   id: string;
@@ -26,7 +33,7 @@ export type RestaurantWithUsers = {
   status: RestaurantStatus;
   ghlLocationId: string | null;
   ghlApiKey: string | null;
-  users: { id: string; name: string; email: string; role: Role }[];
+  users: StaffMember[];
 };
 
 export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUsers }) {
@@ -37,10 +44,28 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
   const [saving, setSaving] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [addStaffOpen, setAddStaffOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [togglingStaffId, setTogglingStaffId] = useState<string | null>(null);
+  const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
   const [ghlLocationId, setGhlLocationId] = useState(restaurant.ghlLocationId ?? "");
   const [ghlApiKey, setGhlApiKey] = useState(restaurant.ghlApiKey ?? "");
   const [ghlSaving, setGhlSaving] = useState(false);
   const [ghlError, setGhlError] = useState<string | null>(null);
+
+  async function handleToggleStaffActive(member: StaffMember) {
+    setTogglingStaffId(member.id);
+    await setStaffActiveAction(restaurant.id, member.id, !member.active);
+    setTogglingStaffId(null);
+    router.refresh();
+  }
+
+  async function handleDeleteStaff(member: StaffMember) {
+    if (!window.confirm(`Delete ${member.name}? This permanently removes their account.`)) return;
+    setDeletingStaffId(member.id);
+    await deleteStaffMemberAction(restaurant.id, member.id);
+    setDeletingStaffId(null);
+    router.refresh();
+  }
 
   async function handleSaveGhl(e: React.FormEvent) {
     e.preventDefault();
@@ -148,6 +173,8 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,11 +185,45 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
                 <TableCell>
                   <Badge variant="outline">{u.role}</Badge>
                 </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{u.active ? "Active" : "Inactive"}</Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="h-9" onClick={() => setEditingStaff(u)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-9"
+                      onClick={() => handleToggleStaffActive(u)}
+                      disabled={togglingStaffId === u.id}
+                    >
+                      {u.active ? "Deactivate" : "Reactivate"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-9 text-destructive"
+                      onClick={() => handleDeleteStaff(u)}
+                      disabled={deletingStaffId === u.id}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <EditStaffDialog
+        open={editingStaff !== null}
+        onOpenChange={(open) => !open && setEditingStaff(null)}
+        restaurantId={restaurant.id}
+        member={editingStaff}
+        onSaved={() => router.refresh()}
+      />
 
       <AddStaffDialog
         open={addStaffOpen}

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertSuperAdmin } from "@/lib/auth-guards";
-import { createUserAccount } from "@/lib/user-accounts";
+import { createUserAccount, setUserPassword } from "@/lib/user-accounts";
 import { Prisma, type Role, type RestaurantStatus } from "@/generated/prisma/client";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
@@ -97,6 +97,51 @@ export async function addStaffMemberAction(
     return { ok: false, error: `Could not create an account for "${input.email}" — it may already be in use.` };
   }
   await prisma.user.update({ where: { id: user.id }, data: { role: input.role, restaurantId } });
+  revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}
+
+export async function updateStaffMemberAction(
+  restaurantId: string,
+  userId: string,
+  input: { name: string; email: string; role: Role; newPassword?: string }
+): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  if (input.newPassword && input.newPassword.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  try {
+    const { count } = await prisma.user.updateMany({
+      where: { id: userId, restaurantId },
+      data: { name: input.name, email: input.email, role: input.role },
+    });
+    if (count === 0) return { ok: false, error: "Staff member not found." };
+  } catch {
+    return { ok: false, error: `Could not update — "${input.email}" may already be in use.` };
+  }
+  if (input.newPassword) {
+    await setUserPassword(userId, input.newPassword);
+  }
+  revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}
+
+export async function setStaffActiveAction(
+  restaurantId: string,
+  userId: string,
+  active: boolean
+): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  const { count } = await prisma.user.updateMany({ where: { id: userId, restaurantId }, data: { active } });
+  if (count === 0) return { ok: false, error: "Staff member not found." };
+  revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}
+
+export async function deleteStaffMemberAction(restaurantId: string, userId: string): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  const { count } = await prisma.user.deleteMany({ where: { id: userId, restaurantId } });
+  if (count === 0) return { ok: false, error: "Staff member not found." };
   revalidatePath(`/admin/restaurants/${restaurantId}`);
   return { ok: true };
 }

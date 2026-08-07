@@ -12,23 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateTeamMemberAction } from "./actions";
+import { updateStaffMemberAction } from "../actions";
 import type { Role } from "@/generated/prisma/client";
-import type { TeamMember } from "./team-members";
 
 const ROLE_OPTIONS: Role[] = ["OWNER", "STAFF"];
 
-export function EditTeamMemberDialog({
+export type StaffMember = { id: string; name: string; email: string; role: Role; active: boolean };
+
+export function EditStaffDialog({
   open,
   onOpenChange,
-  slug,
+  restaurantId,
   member,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  slug: string;
-  member: TeamMember | null;
+  restaurantId: string;
+  member: StaffMember | null;
   onSaved: () => void;
 }) {
   const [name, setName] = useState("");
@@ -53,7 +54,7 @@ export function EditTeamMemberDialog({
     if (!member) return;
     setSaving(true);
     setError(null);
-    const result = await updateTeamMemberAction(slug, member.id, {
+    const result = await updateStaffMemberAction(restaurantId, member.id, {
       name,
       email,
       role,
@@ -72,17 +73,17 @@ export function EditTeamMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit team member</DialogTitle>
+          <DialogTitle>Edit staff member</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="editTeamMemberName">Staff name</Label>
-            <Input id="editTeamMemberName" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Label htmlFor="editStaffName">Staff name</Label>
+            <Input id="editStaffName" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="editTeamMemberEmail">Email</Label>
+            <Label htmlFor="editStaffEmail">Email</Label>
             <Input
-              id="editTeamMemberEmail"
+              id="editStaffEmail"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -90,9 +91,9 @@ export function EditTeamMemberDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="editTeamMemberRole">Role</Label>
+            <Label htmlFor="editStaffRole">Role</Label>
             <Select value={role} onValueChange={(v) => v && setRole(v as Role)}>
-              <SelectTrigger id="editTeamMemberRole">
+              <SelectTrigger id="editStaffRole">
                 <SelectValue>{(value: string) => value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -105,9 +106,9 @@ export function EditTeamMemberDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="editTeamMemberPassword">New password (leave blank to keep current)</Label>
+            <Label htmlFor="editStaffPassword">New password (leave blank to keep current)</Label>
             <Input
-              id="editTeamMemberPassword"
+              id="editStaffPassword"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
