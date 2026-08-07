@@ -38,16 +38,16 @@ export default function SignInPage() {
         <Brand className="mx-auto my-6 block h-20 w-auto" />
         <h1 className="text-lg font-semibold">Sign in</h1>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" className="h-8" placeholder="you@restaurant.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Label htmlFor="email" className="text-sm">Email</Label>
+          <Input id="email" type="email" className="h-11" placeholder="you@restaurant.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password" className="text-sm">Password</Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              className="h-8 pr-10"
+              className="h-11 pr-10"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
