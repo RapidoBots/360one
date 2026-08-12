@@ -182,3 +182,45 @@ export async function createTableAction(
   revalidatePath(`/r/${slug}/reservations`);
   return { ok: true };
 }
+
+export async function updateTableAction(
+  slug: string,
+  tableId: string,
+  input: { number: string; capacity: number; area: string }
+): Promise<ReservationActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  try {
+    const { count } = await prisma.table.updateMany({
+      where: { id: tableId, restaurantId: restaurant.id },
+      data: {
+        number: input.number,
+        capacity: input.capacity,
+        area: input.area || null,
+      },
+    });
+    if (count === 0) return { ok: false, error: "Table not found." };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: `Table "${input.number}" already exists.` };
+    }
+    throw e;
+  }
+  revalidatePath(`/r/${slug}/reservations`);
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
+// Reservation.tableId is optional, so Prisma's default FK action here is
+// SetNull, not Restrict -- deleting a table unassigns it from any
+// reservations rather than blocking. That's the desired behavior: nothing
+// about the reservation is lost, it just needs a new table.
+export async function deleteTableAction(slug: string, tableId: string): Promise<ReservationActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  const { count } = await prisma.table.deleteMany({
+    where: { id: tableId, restaurantId: restaurant.id },
+  });
+  if (count === 0) return { ok: false, error: "Table not found." };
+  revalidatePath(`/r/${slug}/reservations`);
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
