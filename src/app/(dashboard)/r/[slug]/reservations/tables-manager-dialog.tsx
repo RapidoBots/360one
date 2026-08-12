@@ -111,7 +111,7 @@ export function TablesManagerDialog({
           {tables.map((t) =>
             editingId === t.id ? (
               <li key={t.id} className="space-y-2 rounded-lg border border-border p-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <Input aria-label="Edit table number" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} />
                   <Input
                     aria-label="Edit table capacity"
@@ -163,7 +163,7 @@ export function TablesManagerDialog({
           {tables.length === 0 && <p className="text-base text-muted-foreground">No tables yet.</p>}
         </ul>
 
-        <form onSubmit={handleAdd} className="grid grid-cols-3 gap-3">
+        <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="tableNumber">Number</Label>
             <Input id="tableNumber" value={number} onChange={(e) => setNumber(e.target.value)} required />
@@ -183,8 +183,8 @@ export function TablesManagerDialog({
             <Label htmlFor="tableArea">Area</Label>
             <Input id="tableArea" value={area} onChange={(e) => setArea(e.target.value)} />
           </div>
-          {error && <p className="col-span-3 text-base text-destructive">{error}</p>}
-          <Button type="submit" className="col-span-3 h-11 text-base" disabled={saving}>
+          {error && <p className="col-span-full text-base text-destructive">{error}</p>}
+          <Button type="submit" className="col-span-full h-11 text-base" disabled={saving}>
             {saving ? "Adding..." : "Add table"}
           </Button>
         </form>

@@ -21,7 +21,7 @@ export function WeekView({
   });
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="flex gap-2 overflow-x-auto pb-1">
       {days.map((day) => {
         const dayReservations = reservations
           .filter((r) => r.startsAt.toDateString() === day.toDateString())
@@ -29,7 +29,7 @@ export function WeekView({
         const isToday = day.toDateString() === new Date().toDateString();
 
         return (
-          <div key={day.toISOString()} className="min-h-40 rounded-[5px] border border-border p-2">
+          <div key={day.toISOString()} className="min-h-40 w-36 shrink-0 grow rounded-[5px] border border-border p-2">
             <button
               type="button"
               onClick={() => onDayClick(day)}

@@ -84,7 +84,10 @@ export function TimelineView({
   return (
     <div className="relative overflow-x-auto rounded-[5px] border border-border">
       <div className="relative flex h-14 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-        <div style={{ width: LABEL_COLUMN }} className="flex shrink-0 items-center p-3">
+        <div
+          style={{ width: LABEL_COLUMN }}
+          className="sticky left-0 z-20 flex shrink-0 items-center border-r border-border bg-muted p-3"
+        >
           Tables
         </div>
         <div className="relative min-w-[1600px] flex-1 overflow-hidden">
@@ -112,7 +115,7 @@ export function TimelineView({
         <div className="flex border-b border-border bg-amber-500/5">
           <div
             style={{ width: LABEL_COLUMN }}
-            className="shrink-0 border-r border-border p-3 text-base font-medium text-amber-700"
+            className="sticky left-0 z-20 shrink-0 border-r border-border bg-background p-3 text-base font-medium text-amber-700"
           >
             Unassigned
           </div>
@@ -143,7 +146,10 @@ export function TimelineView({
         const tableReservations = reservations.filter((r) => r.tableId === table.id);
         return (
           <div key={table.id} className="flex border-b border-border last:border-b-0">
-            <div style={{ width: LABEL_COLUMN }} className="shrink-0 border-r border-border p-3 text-base font-medium">
+            <div
+              style={{ width: LABEL_COLUMN }}
+              className="sticky left-0 z-20 shrink-0 border-r border-border bg-background p-3 text-base font-medium"
+            >
               Table {table.number}
             </div>
             <div

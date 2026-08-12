@@ -99,7 +99,7 @@ export function ReservationsCalendar({
           type="date"
           value={searchParams.get("date") ?? toLocalDateInput(date, timeZone)}
           onChange={(e) => updateParams({ date: e.target.value })}
-          className="h-11 w-44 text-base"
+          className="h-11 w-full text-base sm:w-44"
           aria-label="Jump to day"
         />
 
@@ -122,18 +122,18 @@ export function ReservationsCalendar({
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             placeholder="Search guest name or phone"
             defaultValue={searchParams.get("q") ?? ""}
-            className="h-11 w-64 text-base"
+            className="h-11 w-full text-base sm:w-64"
             onChange={(e) => updateParams({ q: e.target.value })}
           />
-          <Button variant="outline" className="h-11 px-5 text-base" onClick={() => setTablesOpen(true)}>
+          <Button variant="outline" className="h-11 flex-1 px-5 text-base sm:flex-none" onClick={() => setTablesOpen(true)}>
             Manage tables
           </Button>
           <Button
-            className="h-11 px-5 text-base"
+            className="h-11 flex-1 px-5 text-base sm:flex-none"
             onClick={() => {
               setEditingId(null);
               setPrefill(undefined);

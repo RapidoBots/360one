@@ -75,7 +75,10 @@ export function BusinessHoursForm({
       <h2 className="text-base font-semibold">Business hours & reservation rules</h2>
       <div className="space-y-3">
         {rows.map((row) => (
-          <div key={row.dayOfWeek} className="grid grid-cols-[7rem_7rem_1fr_1fr] items-center gap-3">
+          <div
+            key={row.dayOfWeek}
+            className="grid grid-cols-2 gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0 sm:grid-cols-[7rem_7rem_1fr_1fr] sm:items-center sm:border-none sm:pb-0"
+          >
             <span className="text-base font-medium">{DAY_NAMES[row.dayOfWeek]}</span>
             <Select
               value={row.isOpen ? "open" : "closed"}
