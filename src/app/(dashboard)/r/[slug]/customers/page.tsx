@@ -18,7 +18,7 @@ export default async function CustomersPage({ params }: { params: Promise<{ slug
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Customers</h1>
-      <CustomerList customers={customers} />
+      <CustomerList slug={slug} customers={customers} />
     </div>
   );
 }

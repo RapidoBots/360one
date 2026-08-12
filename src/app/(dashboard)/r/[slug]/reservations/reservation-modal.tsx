@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createReservationAction, updateReservationAction, type ReservationInput } from "./actions";
+import { createReservationAction, updateReservationAction, deleteReservationAction, type ReservationInput } from "./actions";
 import { recommendTable } from "@/lib/table-allocation";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
@@ -85,6 +85,7 @@ export function ReservationModal({
   const [status, setStatus] = useState<ReservationStatus>("CONFIRMED");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -151,6 +152,21 @@ export function ReservationModal({
       : await createReservationAction(slug, input);
 
     setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onOpenChange(false);
+    onSaved();
+  }
+
+  async function handleDelete() {
+    if (!reservation) return;
+    if (!window.confirm(`Delete this reservation for ${reservation.customer.name}? This cannot be undone.`)) return;
+    setDeleting(true);
+    setError(null);
+    const result = await deleteReservationAction(slug, reservation.id);
+    setDeleting(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -326,9 +342,22 @@ export function ReservationModal({
 
           {error && <p className="text-base text-destructive">{error}</p>}
 
-          <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
-            {saving ? "Saving..." : reservation ? "Save changes" : "Confirm reservation"}
-          </Button>
+          <div className="flex gap-3">
+            <Button type="submit" className="h-12 flex-1 text-base" disabled={saving || deleting}>
+              {saving ? "Saving..." : reservation ? "Save changes" : "Confirm reservation"}
+            </Button>
+            {reservation && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 text-base text-destructive"
+                disabled={saving || deleting}
+                onClick={handleDelete}
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </div>
         </form>
       </DialogContent>
     </Dialog>
