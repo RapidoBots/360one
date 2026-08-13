@@ -23,6 +23,9 @@ const CANVAS_WIDTH = 1600;
 const CANVAS_HEIGHT = 700;
 const TABLE_BOX_SIZE = 96; // matches table-box.tsx's largest size tier (h-24/w-24)
 const DEFAULT_DROP_POSITION = { x: 20, y: 20 };
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 1.5;
+const ZOOM_STEP = 0.2;
 
 const STATUS_LEGEND: { label: string; dot: string }[] = [
   { label: "Available", dot: "bg-muted-foreground/40" },
@@ -46,6 +49,7 @@ export function FloorPlan({
   const dragState = useRef<{ tableId: string; offsetX: number; offsetY: number } | null>(null);
 
   const [editMode, setEditMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const [now, setNow] = useState(() => new Date());
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(() =>
     Object.fromEntries(
@@ -72,8 +76,8 @@ export function FloorPlan({
     const pos = positions[tableId] ?? DEFAULT_DROP_POSITION;
     dragState.current = {
       tableId,
-      offsetX: e.clientX - canvasRect.left - pos.x,
-      offsetY: e.clientY - canvasRect.top - pos.y,
+      offsetX: (e.clientX - canvasRect.left) / zoom - pos.x,
+      offsetY: (e.clientY - canvasRect.top) / zoom - pos.y,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
   }
@@ -82,8 +86,14 @@ export function FloorPlan({
     const drag = dragState.current;
     if (!drag || !canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(CANVAS_WIDTH - TABLE_BOX_SIZE, e.clientX - canvasRect.left - drag.offsetX));
-    const y = Math.max(0, Math.min(CANVAS_HEIGHT - TABLE_BOX_SIZE, e.clientY - canvasRect.top - drag.offsetY));
+    const x = Math.max(
+      0,
+      Math.min(CANVAS_WIDTH - TABLE_BOX_SIZE, (e.clientX - canvasRect.left) / zoom - drag.offsetX)
+    );
+    const y = Math.max(
+      0,
+      Math.min(CANVAS_HEIGHT - TABLE_BOX_SIZE, (e.clientY - canvasRect.top) / zoom - drag.offsetY)
+    );
     setPositions((prev) => ({ ...prev, [drag.tableId]: { x, y } }));
   }
 
@@ -128,6 +138,29 @@ export function FloorPlan({
               </span>
             ))}
           </div>
+          <div className="flex items-center gap-1 rounded-[5px] border border-border">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-r-none"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 10) / 10))}
+              disabled={zoom <= ZOOM_MIN}
+              aria-label="Zoom out"
+            >
+              −
+            </Button>
+            <span className="w-11 text-center text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-l-none"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 10) / 10))}
+              disabled={zoom >= ZOOM_MAX}
+              aria-label="Zoom in"
+            >
+              +
+            </Button>
+          </div>
           <Button
             variant={editMode ? "default" : "outline"}
             className="h-11 px-5 text-base"
@@ -149,39 +182,50 @@ export function FloorPlan({
 
       <div
         ref={canvasRef}
-        className="relative overflow-auto rounded-[5px] border border-border bg-muted/20"
-        style={{ width: "100%", maxWidth: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
+        className="relative h-[60vh] max-h-[700px] overflow-auto rounded-[5px] border border-border bg-muted/20 sm:h-[700px]"
+        style={{ width: "100%", maxWidth: CANVAS_WIDTH }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {placed.map((table) => {
-          const pos = positions[table.id]!;
-          const shape = shapes[table.id]!;
-          const { status, reservation } = getTableStatus(table.id, reservations, now);
-          const dayReservations = reservations
-            .filter((r) => r.tableId === table.id)
-            .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-          return (
-            <TableBox
-              key={table.id}
-              number={table.number}
-              capacity={table.capacity}
-              shape={shape}
-              posX={pos.x}
-              posY={pos.y}
-              status={status}
-              reservation={reservation}
-              dayReservations={dayReservations}
-              editMode={editMode}
-              onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
-              onToggleShape={() => handleToggleShape(table.id)}
-              onClick={() => {
-                if (status === "AVAILABLE") setQuickSeat({ id: table.id, number: table.number });
-                if (status === "SEATED" && reservation) setSeatedInfo({ number: table.number, reservation });
-              }}
-            />
-          );
-        })}
+        {/* Sized to the zoomed pixel dimensions so scroll bounds shrink/grow
+            with the zoom level; the inner div stays at the true canvas size
+            and is visually scaled, so child posX/posY stay in one coordinate
+            space regardless of zoom. */}
+        <div style={{ width: CANVAS_WIDTH * zoom, height: CANVAS_HEIGHT * zoom }}>
+          <div
+            className="relative"
+            style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom})`, transformOrigin: "0 0" }}
+          >
+            {placed.map((table) => {
+              const pos = positions[table.id]!;
+              const shape = shapes[table.id]!;
+              const { status, reservation } = getTableStatus(table.id, reservations, now);
+              const dayReservations = reservations
+                .filter((r) => r.tableId === table.id)
+                .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+              return (
+                <TableBox
+                  key={table.id}
+                  number={table.number}
+                  capacity={table.capacity}
+                  shape={shape}
+                  posX={pos.x}
+                  posY={pos.y}
+                  status={status}
+                  reservation={reservation}
+                  dayReservations={dayReservations}
+                  editMode={editMode}
+                  onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
+                  onToggleShape={() => handleToggleShape(table.id)}
+                  onClick={() => {
+                    if (status === "AVAILABLE") setQuickSeat({ id: table.id, number: table.number });
+                    if (status === "SEATED" && reservation) setSeatedInfo({ number: table.number, reservation });
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {editMode && unplaced.length > 0 && (

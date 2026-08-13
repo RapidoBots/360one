@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { TableShape } from "@/generated/prisma/client";
 import type { TableFloorStatus, TableStatusReservation } from "@/lib/table-status";
@@ -114,10 +115,11 @@ export function TableBox({
 }) {
   const clickable = !editMode && (status === "AVAILABLE" || status === "SEATED");
   const color = tableColor(number);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
     <div
-      className="group absolute"
+      className={cn("group absolute", editMode && "touch-none")}
       style={{ left: posX, top: posY }}
       onPointerDown={editMode ? onPointerDownDrag : undefined}
     >
@@ -138,9 +140,19 @@ export function TableBox({
         <span>{capacity} seats</span>
         {reservation && <span className="w-full truncate">{reservation.customerName}</span>}
         {dayReservations.length > 0 && (
-          <span className="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-full border border-border bg-background text-[10px] font-semibold text-foreground">
+          <button
+            type="button"
+            className="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-full border border-border bg-background text-[10px] font-semibold text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setTooltipOpen((v) => !v);
+            }}
+            aria-label={`${dayReservations.length} reservation${dayReservations.length === 1 ? "" : "s"} today`}
+            aria-expanded={tooltipOpen}
+          >
             {dayReservations.length}
-          </span>
+          </button>
         )}
         {editMode && (
           <button
@@ -159,7 +171,12 @@ export function TableBox({
       </div>
 
       {dayReservations.length > 0 && (
-        <div className="pointer-events-none absolute top-full left-1/2 z-20 mt-2 hidden w-52 -translate-x-1/2 rounded-[5px] border border-border bg-popover p-2.5 text-left text-xs text-popover-foreground shadow-md group-hover:block">
+        <div
+          className={cn(
+            "pointer-events-none absolute top-full left-1/2 z-20 mt-2 w-52 -translate-x-1/2 rounded-[5px] border border-border bg-popover p-2.5 text-left text-xs text-popover-foreground shadow-md",
+            tooltipOpen ? "block" : "hidden group-hover:block"
+          )}
+        >
           <p className="mb-1.5 font-semibold">
             {dayReservations.length} reservation{dayReservations.length === 1 ? "" : "s"} today
           </p>
