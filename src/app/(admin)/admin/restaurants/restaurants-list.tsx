@@ -40,11 +40,11 @@ export function RestaurantsList({ restaurants }: { restaurants: RestaurantListIt
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Input
           placeholder="Search by name or slug"
           defaultValue={searchParams.get("q") ?? ""}
-          className="h-11 w-64 text-base"
+          className="h-11 w-full text-base sm:w-64"
           onChange={(e) => handleSearch(e.target.value)}
         />
         <Button className="h-11 px-5 text-base" onClick={() => setModalOpen(true)}>

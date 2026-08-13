@@ -47,7 +47,7 @@ export function SuperAdmins({
 
   return (
     <div className="rounded-[5px] border border-border">
-      <div className="flex items-center justify-between border-b border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
         <h2 className="text-base font-semibold">Super Admins</h2>
         <Button className="h-11 px-5 text-base" onClick={() => setAddOpen(true)}>
           Add Super Admin

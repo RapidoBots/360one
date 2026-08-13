@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,8 +107,8 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
           <RestaurantStatusBadge status={restaurant.status} />
         </div>
@@ -161,7 +162,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
       </form>
 
       <div className="rounded-[5px] border border-border">
-        <div className="flex items-center justify-between border-b border-border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
           <h2 className="text-base font-semibold">Staff</h2>
           <Button className="h-11 px-5 text-base" onClick={() => setAddStaffOpen(true)}>
             Add staff member
@@ -189,25 +190,28 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
                   <Badge variant="outline">{u.active ? "Active" : "Inactive"}</Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="h-9" onClick={() => setEditingStaff(u)}>
-                      Edit
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="icon-sm" aria-label="Edit" onClick={() => setEditingStaff(u)}>
+                      <Pencil className="size-3.5" />
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-9"
+                      size="icon-sm"
+                      aria-label={u.active ? "Deactivate" : "Reactivate"}
                       onClick={() => handleToggleStaffActive(u)}
                       disabled={togglingStaffId === u.id}
                     >
-                      {u.active ? "Deactivate" : "Reactivate"}
+                      <Power className="size-3.5" />
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-9 text-destructive"
+                      size="icon-sm"
+                      className="text-destructive"
+                      aria-label="Delete"
                       onClick={() => handleDeleteStaff(u)}
                       disabled={deletingStaffId === u.id}
                     >
-                      Delete
+                      <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 </TableCell>

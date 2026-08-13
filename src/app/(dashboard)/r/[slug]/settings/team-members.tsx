@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -67,7 +68,7 @@ export function TeamMembers({
 
   return (
     <div className="rounded-[5px] border border-border">
-      <div className="flex items-center justify-between border-b border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
         <h2 className="text-base font-semibold">Team members</h2>
         <Button className="h-11 px-5 text-base" onClick={() => setAddOpen(true)}>
           Add staff member
@@ -95,27 +96,30 @@ export function TeamMembers({
                 <Badge variant="outline">{m.active ? "Active" : "Inactive"}</Badge>
               </TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="h-9" onClick={() => setEditingMember(m)}>
-                    Edit
+                <div className="flex gap-1">
+                  <Button variant="outline" size="icon-sm" aria-label="Edit" onClick={() => setEditingMember(m)}>
+                    <Pencil className="size-3.5" />
                   </Button>
                   {m.id !== currentUserId && (
                     <>
                       <Button
                         variant="outline"
-                        className="h-9"
+                        size="icon-sm"
+                        aria-label={m.active ? "Deactivate" : "Reactivate"}
                         onClick={() => handleToggle(m)}
                         disabled={togglingId === m.id}
                       >
-                        {m.active ? "Deactivate" : "Reactivate"}
+                        <Power className="size-3.5" />
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-9 text-destructive"
+                        size="icon-sm"
+                        className="text-destructive"
+                        aria-label="Delete"
                         onClick={() => handleDelete(m)}
                         disabled={deletingId === m.id}
                       >
-                        Delete
+                        <Trash2 className="size-3.5" />
                       </Button>
                     </>
                   )}
