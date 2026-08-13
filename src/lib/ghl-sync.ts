@@ -34,17 +34,60 @@ export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown>
   };
 }
 
+// A repeat guest's automation should fire on every booking, not just their
+// first-ever one. GHL's "Tag Added" trigger only fires on an absent ->
+// present transition, so we remove then re-add this tag on every sync --
+// restaurants should set their workflow trigger to "Tag Added:
+// new-reservation" rather than "Contact Created" (which, by design, can
+// only ever fire once per contact).
+const GHL_RESERVATION_TAG = "new-reservation";
+
+function ghlHeaders(apiKey: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    Version: "2021-07-28",
+    "Content-Type": "application/json",
+  };
+}
+
 export async function syncContactToGhl(credentials: GhlCredentials, guest: GhlGuest): Promise<void> {
   if (!credentials.ghlLocationId || !credentials.ghlApiKey) return;
+  // GHL's upsert endpoint identifies/dedupes contacts by email or phone and
+  // rejects a payload with neither (400 "Pass at least one of number,
+  // email"). Both fields are optional on our own reservation forms, so a
+  // name-only guest has nothing to sync -- skip rather than let every such
+  // booking log a guaranteed-failing request.
+  if (!guest.email && !guest.phone) return;
+  const { ghlLocationId, ghlApiKey } = credentials;
   try {
-    await fetch("https://services.leadconnectorhq.com/contacts/", {
+    // Upsert, not create: a plain create-contact call fails once the guest
+    // already exists (from an earlier reservation), which silently dropped
+    // both the contact-info update AND any automation tied to that call.
+    const upsertRes = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${credentials.ghlApiKey}`,
-        Version: "2021-07-28",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ locationId: credentials.ghlLocationId, ...buildGhlContactPayload(guest) }),
+      headers: ghlHeaders(ghlApiKey),
+      body: JSON.stringify({ locationId: ghlLocationId, ...buildGhlContactPayload(guest) }),
+    });
+    if (!upsertRes.ok) {
+      console.error("GHL contact upsert failed", upsertRes.status, await upsertRes.text());
+      return;
+    }
+    const data: { contact?: { id?: string }; id?: string } = await upsertRes.json();
+    const contactId = data.contact?.id ?? data.id;
+    if (!contactId) {
+      console.error("GHL contact upsert returned no contact id", data);
+      return;
+    }
+
+    await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
+      method: "DELETE",
+      headers: ghlHeaders(ghlApiKey),
+      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG] }),
+    });
+    await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
+      method: "POST",
+      headers: ghlHeaders(ghlApiKey),
+      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG] }),
     });
   } catch (error) {
     console.error("GHL contact sync failed", error);

@@ -57,12 +57,23 @@ describe("syncContactToGhl", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("posts the contact to GHL when both credentials are present", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+  it("does nothing when the guest has neither email nor phone (GHL's upsert requires one)", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch");
+    await syncContactToGhl(
+      { ghlLocationId: "loc123", ghlApiKey: "key" },
+      { ...RESERVATION_GUEST, email: null, phone: null }
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("upserts the contact to GHL when both credentials are present", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
     await syncContactToGhl({ ghlLocationId: "loc123", ghlApiKey: "key" }, RESERVATION_GUEST);
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      "https://services.leadconnectorhq.com/contacts/",
+      "https://services.leadconnectorhq.com/contacts/upsert",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
@@ -85,6 +96,32 @@ describe("syncContactToGhl", () => {
         { key: "restaurant_name", field_value: "The Blue Fork" },
       ],
     });
+  });
+
+  it("removes then re-adds the reservation tag, so a repeat guest's automation fires again", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
+    await syncContactToGhl({ ghlLocationId: "loc123", ghlApiKey: "key" }, RESERVATION_GUEST);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    const [removeUrl, removeOptions] = fetchSpy.mock.calls[1]!;
+    expect(removeUrl).toBe("https://services.leadconnectorhq.com/contacts/ghl_contact_1/tags");
+    expect(removeOptions).toMatchObject({ method: "DELETE" });
+    expect(JSON.parse(removeOptions!.body as string)).toEqual({ tags: ["new-reservation"] });
+
+    const [addUrl, addOptions] = fetchSpy.mock.calls[2]!;
+    expect(addUrl).toBe("https://services.leadconnectorhq.com/contacts/ghl_contact_1/tags");
+    expect(addOptions).toMatchObject({ method: "POST" });
+    expect(JSON.parse(addOptions!.body as string)).toEqual({ tags: ["new-reservation"] });
+  });
+
+  it("logs and stops if the upsert response has no contact id, without touching tags", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await syncContactToGhl({ ghlLocationId: "loc123", ghlApiKey: "key" }, RESERVATION_GUEST);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("swallows a fetch failure instead of throwing", async () => {
