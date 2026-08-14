@@ -10,6 +10,7 @@ function reservation(overrides: Partial<TableStatusReservation> = {}): TableStat
     status: "CONFIRMED",
     partySize: 2,
     customerName: "Taylor Guest",
+    internalNote: null,
     ...overrides,
   };
 }

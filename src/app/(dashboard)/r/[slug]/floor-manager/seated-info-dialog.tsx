@@ -46,6 +46,11 @@ export function SeatedInfoDialog({
               <p className="text-muted-foreground">
                 Seated at {reservation.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
               </p>
+              {reservation.internalNote && (
+                <p className="rounded-[5px] border border-border bg-muted/40 p-2 text-sm whitespace-pre-wrap">
+                  <span className="font-semibold">Internal note:</span> {reservation.internalNote}
+                </p>
+              )}
             </div>
             <Button className="h-11 w-full text-base" onClick={handleFree} disabled={freeing}>
               {freeing ? "Freeing..." : "Free table"}

@@ -17,6 +17,7 @@ export type ReservationInput = {
   time: string; // HH:mm
   durationMinutes: number;
   specialRequests: string;
+  internalNote: string;
   tableId: string | null;
   status?: ReservationStatus;
 };
@@ -62,6 +63,7 @@ export async function createReservationAction(
       startsAt,
       durationMinutes: input.durationMinutes,
       specialRequests: input.specialRequests || null,
+      internalNote: input.internalNote || null,
     },
   });
 
@@ -128,6 +130,7 @@ export async function updateReservationAction(
       startsAt,
       durationMinutes: input.durationMinutes,
       specialRequests: input.specialRequests || null,
+      internalNote: input.internalNote || null,
       status: input.status,
     },
   });

@@ -10,6 +10,7 @@ export type ReservationListItem = {
   partySize: number;
   status: ReservationStatus;
   specialRequests: string | null;
+  internalNote: string | null;
   tableId: string | null;
   table: { number: string } | null;
   customer: { name: string; email: string | null; phone: string | null };

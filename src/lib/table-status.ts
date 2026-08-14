@@ -13,6 +13,7 @@ export type TableStatusReservation = {
   status: ReservationStatus;
   partySize: number;
   customerName: string;
+  internalNote: string | null;
 };
 
 export function getTableStatus(

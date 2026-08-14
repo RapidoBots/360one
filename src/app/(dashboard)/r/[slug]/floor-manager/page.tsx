@@ -51,6 +51,7 @@ export default async function FloorManagerPage({
     status: r.status,
     partySize: r.partySize,
     customerName: r.customer.name,
+    internalNote: r.internalNote,
   }));
 
   return (

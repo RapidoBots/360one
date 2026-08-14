@@ -39,6 +39,7 @@ export type ReservationForEdit = {
   durationMinutes: number;
   status: ReservationStatus;
   specialRequests: string | null;
+  internalNote: string | null;
   tableId: string | null;
   customer: { name: string; email: string | null; phone: string | null };
 };
@@ -86,6 +87,7 @@ export function ReservationModal({
   const [time, setTime] = useState("19:00");
   const [durationMinutes, setDurationMinutes] = useState(defaultDurationMinutes);
   const [specialRequests, setSpecialRequests] = useState("");
+  const [internalNote, setInternalNote] = useState("");
   const [tableId, setTableId] = useState<string | null>(null);
   const [tableTouched, setTableTouched] = useState(false);
   const [status, setStatus] = useState<ReservationStatus>("CONFIRMED");
@@ -114,6 +116,7 @@ export function ReservationModal({
       setTime(toTimeInput(reservation.startsAt));
       setDurationMinutes(reservation.durationMinutes);
       setSpecialRequests(reservation.specialRequests ?? "");
+      setInternalNote(reservation.internalNote ?? "");
       setTableId(reservation.tableId);
       setTableTouched(true);
       setStatus(reservation.status);
@@ -128,6 +131,7 @@ export function ReservationModal({
       setTime(prefill?.time ?? "19:00");
       setDurationMinutes(defaultDurationMinutes);
       setSpecialRequests("");
+      setInternalNote("");
       setTableId(prefill?.tableId ?? null);
       setTableTouched(!!prefill?.tableId);
       setStatus("CONFIRMED");
@@ -177,6 +181,7 @@ export function ReservationModal({
       time,
       durationMinutes,
       specialRequests,
+      internalNote,
       tableId: effectiveTableId,
       status: reservation ? status : undefined,
     };
@@ -353,6 +358,16 @@ export function ReservationModal({
                 placeholder="Any allergies, seating preferences, or occasion..."
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="internalNote">Internal note (staff only)</Label>
+              <Textarea
+                id="internalNote"
+                className="text-base"
+                placeholder="Visible to staff only -- never shown to the guest"
+                value={internalNote}
+                onChange={(e) => setInternalNote(e.target.value)}
               />
             </div>
           </div>

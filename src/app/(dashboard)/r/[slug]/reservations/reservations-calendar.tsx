@@ -73,6 +73,7 @@ export function ReservationsCalendar({
         durationMinutes: editing.durationMinutes,
         status: editing.status,
         specialRequests: editing.specialRequests,
+        internalNote: editing.internalNote,
         tableId: editing.tableId,
         customer: { name: editing.customer.name, email: editing.customer.email, phone: editing.customer.phone },
       }
