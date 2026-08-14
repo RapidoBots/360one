@@ -178,6 +178,7 @@ model Verification {
 enum TableShape {
   SQUARE
   ROUND
+  RECTANGLE
 }
 
 model Table {
@@ -192,6 +193,20 @@ model Table {
   posX         Float?
   posY         Float?
   shape        TableShape    @default(SQUARE)
+  // Degrees, 0-359. A diamond is just a SQUARE at rotation 45 -- no separate
+  // shape needed for it.
+  rotation     Int           @default(0)
+  // Null on both means "use the capacity-based default size" (the original
+  // behavior); setting either is what "freeform resize" means in practice.
+  width        Float?
+  height       Float?
+  // Null on all four means "auto-distribute evenly across sides by
+  // capacity" (the original behavior). Explicit values are how an owner
+  // says "no chairs on the wall-facing side" for a banquette/wall table.
+  chairsTop    Int?
+  chairsRight  Int?
+  chairsBottom Int?
+  chairsLeft   Int?
   reservations Reservation[]
   createdAt    DateTime      @default(now())
 

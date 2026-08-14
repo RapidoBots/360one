@@ -70,10 +70,23 @@ export async function deleteFloorAction(slug: string, floorId: string): Promise<
   return { ok: true };
 }
 
+export type TableLayoutInput = {
+  posX: number;
+  posY: number;
+  shape: TableShape;
+  rotation?: number;
+  width?: number | null;
+  height?: number | null;
+  chairsTop?: number | null;
+  chairsRight?: number | null;
+  chairsBottom?: number | null;
+  chairsLeft?: number | null;
+};
+
 export async function updateTableLayoutAction(
   slug: string,
   tableId: string,
-  input: { posX: number; posY: number; shape: TableShape }
+  input: TableLayoutInput
 ): Promise<FloorActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
   const { count } = await prisma.table.updateMany({

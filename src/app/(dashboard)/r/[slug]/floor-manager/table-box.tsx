@@ -1,55 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getEffectiveSize, getChairCounts } from "@/lib/table-layout";
 import type { TableShape } from "@/generated/prisma/client";
 import type { TableFloorStatus, TableStatusReservation } from "@/lib/table-status";
 
-// Status still wins on the border so availability stays glanceable even
-// though each table's fill color is now just a per-table identity color.
-const STATUS_BORDER: Partial<Record<TableFloorStatus, string>> = {
-  RESERVED_SOON: "border-amber-500",
-  SEATED: "border-emerald-500",
+// Status wins over any per-table identity -- the whole box is colored by
+// status (a traffic-light read at a glance), not just a border accent.
+const STATUS_COLORS: Record<TableFloorStatus, { bg: string; border: string; text: string }> = {
+  AVAILABLE: { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-white" },
+  RESERVED_SOON: { bg: "bg-amber-400", border: "border-amber-500", text: "text-amber-950" },
+  SEATED: { bg: "bg-red-500", border: "border-red-600", text: "text-white" },
 };
 
-const TABLE_COLORS = [
-  { bg: "bg-blue-500/10", text: "text-blue-700", border: "border-blue-400/60" },
-  { bg: "bg-purple-500/10", text: "text-purple-700", border: "border-purple-400/60" },
-  { bg: "bg-pink-500/10", text: "text-pink-700", border: "border-pink-400/60" },
-  { bg: "bg-cyan-500/10", text: "text-cyan-700", border: "border-cyan-400/60" },
-  { bg: "bg-indigo-500/10", text: "text-indigo-700", border: "border-indigo-400/60" },
-  { bg: "bg-teal-500/10", text: "text-teal-700", border: "border-teal-400/60" },
-  { bg: "bg-rose-500/10", text: "text-rose-700", border: "border-rose-400/60" },
-  { bg: "bg-violet-500/10", text: "text-violet-700", border: "border-violet-400/60" },
-];
-
-function hashString(s: string): number {
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(hash);
-}
-
-function tableColor(number: string) {
-  return TABLE_COLORS[hashString(number) % TABLE_COLORS.length]!;
-}
-
-function sizeClass(capacity: number) {
-  // min-h rather than a fixed h- so a table with a reservation on it (a third
-  // line of text -- the guest name) grows instead of having flexbox silently
-  // shrink that line toward zero height inside a box too small to fit it.
-  if (capacity <= 2) return "min-h-14 w-14";
-  if (capacity <= 4) return "min-h-20 w-20";
-  return "min-h-24 w-24";
-}
+const SHAPE_LABELS: Record<TableShape, string> = {
+  SQUARE: "Square",
+  RECTANGLE: "Rectangle",
+  ROUND: "Round",
+};
 
 type ChairSide = "top" | "right" | "bottom" | "left";
 const CHAIR_SIDES: ChairSide[] = ["top", "right", "bottom", "left"];
-
-function chairsBySide(capacity: number): Record<ChairSide, number> {
-  const counts: Record<ChairSide, number> = { top: 0, right: 0, bottom: 0, left: 0 };
-  for (let i = 0; i < capacity; i++) counts[CHAIR_SIDES[i % 4]!]++;
-  return counts;
-}
 
 function chairOffsets(count: number): number[] {
   return Array.from({ length: count }, (_, i) => ((i + 1) / (count + 1)) * 100);
@@ -69,8 +47,7 @@ function chairStyle(side: ChairSide, percent: number): React.CSSProperties {
   }
 }
 
-function Chairs({ capacity }: { capacity: number }) {
-  const counts = chairsBySide(capacity);
+function Chairs({ counts }: { counts: Record<ChairSide, number> }) {
   return (
     <>
       {CHAIR_SIDES.flatMap((side) =>
@@ -86,10 +63,187 @@ function Chairs({ capacity }: { capacity: number }) {
   );
 }
 
+export type TableSettings = {
+  shape: TableShape;
+  rotation: number;
+  width: number | null;
+  height: number | null;
+  chairsTop: number | null;
+  chairsRight: number | null;
+  chairsBottom: number | null;
+  chairsLeft: number | null;
+};
+
+function SettingsPanel({
+  capacity,
+  settings,
+  onSave,
+}: {
+  capacity: number;
+  settings: TableSettings;
+  onSave: (next: TableSettings) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [shape, setShape] = useState(settings.shape);
+  const [rotation, setRotation] = useState(settings.rotation);
+  const [width, setWidth] = useState(settings.width);
+  const [height, setHeight] = useState(settings.height);
+  const [chairsTop, setChairsTop] = useState(settings.chairsTop);
+  const [chairsRight, setChairsRight] = useState(settings.chairsRight);
+  const [chairsBottom, setChairsBottom] = useState(settings.chairsBottom);
+  const [chairsLeft, setChairsLeft] = useState(settings.chairsLeft);
+
+  useEffect(() => {
+    if (!open) return;
+    setShape(settings.shape);
+    setRotation(settings.rotation);
+    setWidth(settings.width);
+    setHeight(settings.height);
+    setChairsTop(settings.chairsTop);
+    setChairsRight(settings.chairsRight);
+    setChairsBottom(settings.chairsBottom);
+    setChairsLeft(settings.chairsLeft);
+  }, [open, settings]);
+
+  const defaultSize = getEffectiveSize(capacity, null, null);
+  const defaultChairs = getChairCounts(capacity, null, null, null, null);
+
+  function handleSave() {
+    onSave({ shape, rotation, width, height, chairsTop, chairsRight, chairsBottom, chairsLeft });
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        onPointerDown={(e) => e.stopPropagation()}
+        render={
+          <button
+            type="button"
+            className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border border-border bg-background text-[10px]"
+            aria-label="Table settings"
+          />
+        }
+      >
+        <Settings className="size-3" />
+      </PopoverTrigger>
+      <PopoverContent className="w-64 space-y-3 p-3" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="space-y-1.5">
+          <Label htmlFor="tableShape">Shape</Label>
+          <Select value={shape} onValueChange={(v) => v && setShape(v as TableShape)}>
+            <SelectTrigger id="tableShape" className="h-9 w-full text-sm">
+              <SelectValue>{(value: TableShape) => SHAPE_LABELS[value]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SHAPE_LABELS) as TableShape[]).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {SHAPE_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="tableRotation">Rotation (degrees)</Label>
+          <Input
+            id="tableRotation"
+            type="number"
+            step={15}
+            className="h-9 text-sm"
+            value={rotation}
+            onChange={(e) => setRotation(Number(e.target.value))}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="tableWidth">Width (px)</Label>
+            <Input
+              id="tableWidth"
+              type="number"
+              min={20}
+              className="h-9 text-sm"
+              placeholder={String(defaultSize.width)}
+              value={width ?? ""}
+              onChange={(e) => setWidth(e.target.value === "" ? null : Number(e.target.value))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tableHeight">Height (px)</Label>
+            <Input
+              id="tableHeight"
+              type="number"
+              min={20}
+              className="h-9 text-sm"
+              placeholder={String(defaultSize.height)}
+              value={height ?? ""}
+              onChange={(e) => setHeight(e.target.value === "" ? null : Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Chairs per side</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              aria-label="Chairs on top"
+              type="number"
+              min={0}
+              className="h-9 text-sm"
+              placeholder={`Top: ${defaultChairs.top}`}
+              value={chairsTop ?? ""}
+              onChange={(e) => setChairsTop(e.target.value === "" ? null : Number(e.target.value))}
+            />
+            <Input
+              aria-label="Chairs on right"
+              type="number"
+              min={0}
+              className="h-9 text-sm"
+              placeholder={`Right: ${defaultChairs.right}`}
+              value={chairsRight ?? ""}
+              onChange={(e) => setChairsRight(e.target.value === "" ? null : Number(e.target.value))}
+            />
+            <Input
+              aria-label="Chairs on bottom"
+              type="number"
+              min={0}
+              className="h-9 text-sm"
+              placeholder={`Bottom: ${defaultChairs.bottom}`}
+              value={chairsBottom ?? ""}
+              onChange={(e) => setChairsBottom(e.target.value === "" ? null : Number(e.target.value))}
+            />
+            <Input
+              aria-label="Chairs on left"
+              type="number"
+              min={0}
+              className="h-9 text-sm"
+              placeholder={`Left: ${defaultChairs.left}`}
+              value={chairsLeft ?? ""}
+              onChange={(e) => setChairsLeft(e.target.value === "" ? null : Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <Button type="button" className="h-9 w-full text-sm" onClick={handleSave}>
+          Save
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function TableBox({
   number,
   capacity,
   shape,
+  rotation,
+  width,
+  height,
+  chairsTop,
+  chairsRight,
+  chairsBottom,
+  chairsLeft,
   posX,
   posY,
   status,
@@ -98,11 +252,18 @@ export function TableBox({
   editMode,
   onClick,
   onPointerDownDrag,
-  onToggleShape,
+  onSettingsChange,
 }: {
   number: string;
   capacity: number;
   shape: TableShape;
+  rotation: number;
+  width: number | null;
+  height: number | null;
+  chairsTop: number | null;
+  chairsRight: number | null;
+  chairsBottom: number | null;
+  chairsLeft: number | null;
   posX: number;
   posY: number;
   status: TableFloorStatus;
@@ -111,29 +272,31 @@ export function TableBox({
   editMode: boolean;
   onClick?: () => void;
   onPointerDownDrag?: (e: React.PointerEvent<HTMLDivElement>) => void;
-  onToggleShape?: () => void;
+  onSettingsChange?: (settings: TableSettings) => void;
 }) {
   const clickable = !editMode && (status === "AVAILABLE" || status === "SEATED");
-  const color = tableColor(number);
+  const color = STATUS_COLORS[status];
+  const size = getEffectiveSize(capacity, width, height);
+  const chairCounts = getChairCounts(capacity, chairsTop, chairsRight, chairsBottom, chairsLeft);
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
     <div
       className={cn("group absolute", editMode && "touch-none")}
-      style={{ left: posX, top: posY }}
+      style={{ left: posX, top: posY, transform: rotation ? `rotate(${rotation}deg)` : undefined }}
       onPointerDown={editMode ? onPointerDownDrag : undefined}
     >
-      <Chairs capacity={capacity} />
+      <Chairs counts={chairCounts} />
       <div
         className={cn(
           "relative flex flex-col items-center justify-center gap-0.5 border-2 p-1 text-center text-xs font-medium shadow-sm select-none",
-          sizeClass(capacity),
           shape === "ROUND" ? "rounded-full" : "rounded-[5px]",
           color.bg,
           color.text,
-          STATUS_BORDER[status] ?? color.border,
+          color.border,
           editMode ? "cursor-grab active:cursor-grabbing" : clickable ? "cursor-pointer hover:brightness-95" : ""
         )}
+        style={{ width: size.width, minHeight: size.height }}
         onClick={clickable ? onClick : undefined}
       >
         <span className="font-semibold">Table {number}</span>
@@ -154,19 +317,12 @@ export function TableBox({
             {dayReservations.length}
           </button>
         )}
-        {editMode && (
-          <button
-            type="button"
-            className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border border-border bg-background text-[10px]"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleShape?.();
-            }}
-            aria-label="Toggle table shape"
-          >
-            {shape === "ROUND" ? "▢" : "○"}
-          </button>
+        {editMode && onSettingsChange && (
+          <SettingsPanel
+            capacity={capacity}
+            settings={{ shape, rotation, width, height, chairsTop, chairsRight, chairsBottom, chairsLeft }}
+            onSave={onSettingsChange}
+          />
         )}
       </div>
 

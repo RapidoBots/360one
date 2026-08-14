@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { TableBox } from "./table-box";
+import { TableBox, type TableSettings } from "./table-box";
 import { QuickSeatDialog } from "./quick-seat-dialog";
 import { SeatedInfoDialog } from "./seated-info-dialog";
 import { updateTableLayoutAction } from "./actions";
@@ -18,21 +18,42 @@ export type FloorTable = {
   posX: number | null;
   posY: number | null;
   shape: TableShape;
+  rotation: number;
+  width: number | null;
+  height: number | null;
+  chairsTop: number | null;
+  chairsRight: number | null;
+  chairsBottom: number | null;
+  chairsLeft: number | null;
 };
 
 const CANVAS_WIDTH = 1600;
 const CANVAS_HEIGHT = 700;
-const TABLE_BOX_SIZE = 96; // matches table-box.tsx's largest size tier (h-24/w-24)
+const TABLE_BOX_SIZE = 96; // matches table-layout.ts's largest capacity-based default size
 const DEFAULT_DROP_POSITION = { x: 20, y: 20 };
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 1.5;
 const ZOOM_STEP = 0.2;
+const SNAP_GRID_SIZE = 10;
 
 const STATUS_LEGEND: { label: string; dot: string }[] = [
-  { label: "Available", dot: "bg-muted-foreground/40" },
-  { label: "Reserved soon", dot: "bg-amber-500" },
-  { label: "Seated", dot: "bg-emerald-500" },
+  { label: "Available", dot: "bg-emerald-500" },
+  { label: "Reserved soon", dot: "bg-amber-400" },
+  { label: "Seated", dot: "bg-red-500" },
 ];
+
+function tableSettings(t: FloorTable): TableSettings {
+  return {
+    shape: t.shape,
+    rotation: t.rotation,
+    width: t.width,
+    height: t.height,
+    chairsTop: t.chairsTop,
+    chairsRight: t.chairsRight,
+    chairsBottom: t.chairsBottom,
+    chairsLeft: t.chairsLeft,
+  };
+}
 
 export function FloorPlan({
   slug,
@@ -55,14 +76,15 @@ export function FloorPlan({
 
   const [editMode, setEditMode] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [snapToGrid, setSnapToGrid] = useState(true);
   const [now, setNow] = useState(() => new Date());
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(() =>
     Object.fromEntries(
       tables.filter((t) => t.posX != null && t.posY != null).map((t) => [t.id, { x: t.posX!, y: t.posY! }])
     )
   );
-  const [shapes, setShapes] = useState<Record<string, TableShape>>(() =>
-    Object.fromEntries(tables.map((t) => [t.id, t.shape]))
+  const [settings, setSettings] = useState<Record<string, TableSettings>>(() =>
+    Object.fromEntries(tables.map((t) => [t.id, tableSettings(t)]))
   );
   const [quickSeat, setQuickSeat] = useState<{ id: string; number: string } | null>(null);
   const [seatedInfo, setSeatedInfo] = useState<{ number: string; reservation: TableStatusReservation } | null>(null);
@@ -74,6 +96,10 @@ export function FloorPlan({
 
   const placed = tables.filter((t) => positions[t.id]);
   const unplaced = tables.filter((t) => !positions[t.id]);
+
+  function snap(value: number) {
+    return snapToGrid ? Math.round(value / SNAP_GRID_SIZE) * SNAP_GRID_SIZE : value;
+  }
 
   function handlePointerDown(tableId: string, e: React.PointerEvent<HTMLDivElement>) {
     if (!editMode || !canvasRef.current) return;
@@ -91,13 +117,11 @@ export function FloorPlan({
     const drag = dragState.current;
     if (!drag || !canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = Math.max(
-      0,
-      Math.min(CANVAS_WIDTH - TABLE_BOX_SIZE, (e.clientX - canvasRect.left) / zoom - drag.offsetX)
+    const x = snap(
+      Math.max(0, Math.min(CANVAS_WIDTH - TABLE_BOX_SIZE, (e.clientX - canvasRect.left) / zoom - drag.offsetX))
     );
-    const y = Math.max(
-      0,
-      Math.min(CANVAS_HEIGHT - TABLE_BOX_SIZE, (e.clientY - canvasRect.top) / zoom - drag.offsetY)
+    const y = snap(
+      Math.max(0, Math.min(CANVAS_HEIGHT - TABLE_BOX_SIZE, (e.clientY - canvasRect.top) / zoom - drag.offsetY))
     );
     setPositions((prev) => ({ ...prev, [drag.tableId]: { x, y } }));
   }
@@ -107,26 +131,29 @@ export function FloorPlan({
     dragState.current = null;
     if (!drag) return;
     const pos = positions[drag.tableId];
-    const shape = shapes[drag.tableId];
-    if (!pos || !shape) return;
-    await updateTableLayoutAction(slug, drag.tableId, { posX: pos.x, posY: pos.y, shape });
+    const config = settings[drag.tableId];
+    if (!pos || !config) return;
+    await updateTableLayoutAction(slug, drag.tableId, { posX: pos.x, posY: pos.y, ...config });
     router.refresh();
   }
 
   async function handlePlaceFromTray(tableId: string) {
     setPositions((prev) => ({ ...prev, [tableId]: DEFAULT_DROP_POSITION }));
-    const shape = shapes[tableId];
-    if (!shape) return;
-    await updateTableLayoutAction(slug, tableId, { posX: DEFAULT_DROP_POSITION.x, posY: DEFAULT_DROP_POSITION.y, shape });
+    const config = settings[tableId];
+    if (!config) return;
+    await updateTableLayoutAction(slug, tableId, {
+      posX: DEFAULT_DROP_POSITION.x,
+      posY: DEFAULT_DROP_POSITION.y,
+      ...config,
+    });
     router.refresh();
   }
 
-  async function handleToggleShape(tableId: string) {
-    const nextShape: TableShape = shapes[tableId] === "ROUND" ? "SQUARE" : "ROUND";
-    setShapes((prev) => ({ ...prev, [tableId]: nextShape }));
+  async function handleSettingsChange(tableId: string, next: TableSettings) {
+    setSettings((prev) => ({ ...prev, [tableId]: next }));
     const pos = positions[tableId];
     if (!pos) return;
-    await updateTableLayoutAction(slug, tableId, { posX: pos.x, posY: pos.y, shape: nextShape });
+    await updateTableLayoutAction(slug, tableId, { posX: pos.x, posY: pos.y, ...next });
     router.refresh();
   }
 
@@ -138,7 +165,7 @@ export function FloorPlan({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             {STATUS_LEGEND.map((s) => (
               <span key={s.label} className="flex items-center gap-1.5">
@@ -147,6 +174,16 @@ export function FloorPlan({
               </span>
             ))}
           </div>
+          {editMode && (
+            <Button
+              type="button"
+              variant={snapToGrid ? "default" : "outline"}
+              className="h-9 px-3 text-sm"
+              onClick={() => setSnapToGrid((v) => !v)}
+            >
+              Snap to grid
+            </Button>
+          )}
           <div className="flex items-center gap-1 rounded-[5px] border border-border">
             <Button
               variant="ghost"
@@ -207,7 +244,7 @@ export function FloorPlan({
           >
             {placed.map((table) => {
               const pos = positions[table.id]!;
-              const shape = shapes[table.id]!;
+              const config = settings[table.id]!;
               const { status, reservation } = getTableStatus(table.id, reservations, now);
               const dayReservations = reservations
                 .filter((r) => r.tableId === table.id)
@@ -217,7 +254,14 @@ export function FloorPlan({
                   key={table.id}
                   number={table.number}
                   capacity={table.capacity}
-                  shape={shape}
+                  shape={config.shape}
+                  rotation={config.rotation}
+                  width={config.width}
+                  height={config.height}
+                  chairsTop={config.chairsTop}
+                  chairsRight={config.chairsRight}
+                  chairsBottom={config.chairsBottom}
+                  chairsLeft={config.chairsLeft}
                   posX={pos.x}
                   posY={pos.y}
                   status={status}
@@ -225,7 +269,7 @@ export function FloorPlan({
                   dayReservations={dayReservations}
                   editMode={editMode}
                   onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
-                  onToggleShape={() => handleToggleShape(table.id)}
+                  onSettingsChange={(next) => handleSettingsChange(table.id, next)}
                   onClick={() => {
                     if (status === "AVAILABLE") setQuickSeat({ id: table.id, number: table.number });
                     if (status === "SEATED" && reservation) setSeatedInfo({ number: table.number, reservation });
