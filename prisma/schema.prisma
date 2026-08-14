@@ -41,6 +41,7 @@ model Restaurant {
   instagramUrl  String?
   users        User[]
   tables       Table[]
+  floors       Floor[]
   customers    Customer[]
   reservations Reservation[]
   waitlistEntries WaitlistEntry[]
@@ -49,6 +50,23 @@ model Restaurant {
   blockedSlots  BlockedSlot[]
 
   @@map("restaurant")
+}
+
+// Restaurants with more than one dining area (ground floor, mezzanine,
+// patio, a private room, etc) organize their tables per floor. Every
+// restaurant has at least one (a "Main Floor" is created alongside it),
+// so Table.floorId is required rather than optional.
+model Floor {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  order        Int        @default(0)
+  tables       Table[]
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, name])
+  @@map("floor")
 }
 
 model BusinessHours {
@@ -166,6 +184,8 @@ model Table {
   id           String        @id @default(cuid())
   restaurantId String
   restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  floorId      String
+  floor        Floor         @relation(fields: [floorId], references: [id])
   number       String
   capacity     Int
   area         String?

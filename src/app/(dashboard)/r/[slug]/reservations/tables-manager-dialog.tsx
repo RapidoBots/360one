@@ -10,26 +10,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createTableAction, updateTableAction, deleteTableAction } from "./actions";
 
-export type TableRow = { id: string; number: string; capacity: number; area: string | null };
+export type TableRow = { id: string; number: string; capacity: number; area: string | null; floorId: string };
+export type FloorOption = { id: string; name: string };
 
 export function TablesManagerDialog({
   open,
   onOpenChange,
   slug,
   tables,
+  floors,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   slug: string;
   tables: TableRow[];
+  floors: FloorOption[];
   onSaved: () => void;
 }) {
   const [number, setNumber] = useState("");
   const [capacity, setCapacity] = useState(2);
   const [area, setArea] = useState("");
+  const [floorId, setFloorId] = useState(floors[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -37,15 +42,20 @@ export function TablesManagerDialog({
   const [editNumber, setEditNumber] = useState("");
   const [editCapacity, setEditCapacity] = useState(2);
   const [editArea, setEditArea] = useState("");
+  const [editFloorId, setEditFloorId] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  function floorName(id: string) {
+    return floors.find((f) => f.id === id)?.name ?? "";
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const result = await createTableAction(slug, { number, capacity, area });
+    const result = await createTableAction(slug, { number, capacity, area, floorId });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
@@ -62,6 +72,7 @@ export function TablesManagerDialog({
     setEditNumber(t.number);
     setEditCapacity(t.capacity);
     setEditArea(t.area ?? "");
+    setEditFloorId(t.floorId);
     setEditError(null);
   }
 
@@ -72,6 +83,7 @@ export function TablesManagerDialog({
       number: editNumber,
       capacity: editCapacity,
       area: editArea,
+      floorId: editFloorId,
     });
     setEditSaving(false);
     if (!result.ok) {
@@ -122,6 +134,18 @@ export function TablesManagerDialog({
                   />
                   <Input aria-label="Edit table area" value={editArea} onChange={(e) => setEditArea(e.target.value)} />
                 </div>
+                <Select value={editFloorId} onValueChange={(v) => v && setEditFloorId(v)}>
+                  <SelectTrigger aria-label="Edit table floor" className="h-9 w-full text-base">
+                    <SelectValue>{(value: string) => floorName(value) || "Select a floor"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {floors.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {editError && <p className="text-base text-destructive">{editError}</p>}
                 <div className="flex gap-2">
                   <Button
@@ -140,7 +164,7 @@ export function TablesManagerDialog({
             ) : (
               <li key={t.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-base">
                 <div>
-                  <span>Table {t.number}{t.area ? ` · ${t.area}` : ""}</span>{" "}
+                  <span>Table {t.number}{t.area ? ` · ${t.area}` : ""} · {floorName(t.floorId)}</span>{" "}
                   <span className="text-muted-foreground">seats {t.capacity}</span>
                 </div>
                 <div className="flex gap-2">
@@ -164,6 +188,21 @@ export function TablesManagerDialog({
         </ul>
 
         <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="col-span-full space-y-2">
+            <Label htmlFor="tableFloor">Floor</Label>
+            <Select value={floorId} onValueChange={(v) => v && setFloorId(v)}>
+              <SelectTrigger id="tableFloor" className="h-10 w-full text-base">
+                <SelectValue>{(value: string) => floorName(value) || "Select a floor"}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {floors.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="tableNumber">Number</Label>
             <Input id="tableNumber" value={number} onChange={(e) => setNumber(e.target.value)} required />

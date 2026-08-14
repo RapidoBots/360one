@@ -46,6 +46,7 @@ export default async function ReservationsPage({
   });
 
   const tables = sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId: restaurant.id } }));
+  const floors = await prisma.floor.findMany({ where: { restaurantId: restaurant.id }, orderBy: { order: "asc" } });
   const businessHours = await prisma.businessHours.findMany({ where: { restaurantId: restaurant.id } });
   const dayHours = getHoursForDay(businessHours, getZonedDayOfWeek(date, restaurant.timezone));
 
@@ -56,6 +57,7 @@ export default async function ReservationsPage({
       date={view === "week" ? start : date}
       reservations={reservations}
       tables={tables}
+      floors={floors}
       dayHours={dayHours}
       defaultDurationMinutes={restaurant.defaultReservationDurationMinutes}
       timeZone={restaurant.timezone}

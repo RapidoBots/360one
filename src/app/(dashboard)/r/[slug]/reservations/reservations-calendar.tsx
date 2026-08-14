@@ -10,7 +10,7 @@ import { DayView, type ReservationListItem } from "./day-view";
 import { WeekView } from "./week-view";
 import { TimelineView } from "./timeline-view";
 import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
-import { TablesManagerDialog, type TableRow } from "./tables-manager-dialog";
+import { TablesManagerDialog, type TableRow, type FloorOption } from "./tables-manager-dialog";
 import { STATUS_LABELS, STATUS_SOLID, STATUS_STYLES } from "./reservation-badge";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
@@ -25,6 +25,7 @@ export function ReservationsCalendar({
   date,
   reservations,
   tables,
+  floors,
   dayHours,
   defaultDurationMinutes,
   timeZone,
@@ -34,6 +35,7 @@ export function ReservationsCalendar({
   date: Date;
   reservations: ReservationListItem[];
   tables: TableRow[];
+  floors: FloorOption[];
   dayHours: { isOpen: boolean; startHour: number; endHour: number };
   defaultDurationMinutes: number;
   timeZone: string;
@@ -200,6 +202,7 @@ export function ReservationsCalendar({
         onOpenChange={setTablesOpen}
         slug={slug}
         tables={tables}
+        floors={floors}
         onSaved={() => router.refresh()}
       />
     </div>

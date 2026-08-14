@@ -7,6 +7,7 @@ import { TableBox } from "./table-box";
 import { QuickSeatDialog } from "./quick-seat-dialog";
 import { SeatedInfoDialog } from "./seated-info-dialog";
 import { updateTableLayoutAction } from "./actions";
+import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
 import type { TableShape } from "@/generated/prisma/client";
 
@@ -36,11 +37,15 @@ const STATUS_LEGEND: { label: string; dot: string }[] = [
 export function FloorPlan({
   slug,
   tables,
+  floors,
+  currentFloorId,
   reservations,
   timeZone,
 }: {
   slug: string;
   tables: FloorTable[];
+  floors: FloorOption[];
+  currentFloorId: string;
   reservations: TableStatusReservation[];
   timeZone: string;
 }) {
@@ -129,6 +134,10 @@ export function FloorPlan({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Floor Manager</h1>
+        <FloorSwitcher slug={slug} floors={floors} currentFloorId={currentFloorId} />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             {STATUS_LEGEND.map((s) => (

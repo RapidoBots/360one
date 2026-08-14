@@ -6,9 +6,69 @@ import { assertRestaurantMember } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { syncContactToGhl } from "@/lib/ghl-sync";
-import type { TableShape } from "@/generated/prisma/client";
+import { Prisma, type TableShape } from "@/generated/prisma/client";
 
 export type FloorActionResult = { ok: true } | { ok: false; error: string };
+
+export async function createFloorAction(slug: string, name: string): Promise<FloorActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  try {
+    const maxOrder = await prisma.floor.aggregate({
+      where: { restaurantId: restaurant.id },
+      _max: { order: true },
+    });
+    await prisma.floor.create({
+      data: { restaurantId: restaurant.id, name, order: (maxOrder._max.order ?? -1) + 1 },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: `A floor named "${name}" already exists.` };
+    }
+    throw e;
+  }
+  revalidatePath(`/r/${slug}/floor-manager`);
+  revalidatePath(`/r/${slug}/reservations`);
+  return { ok: true };
+}
+
+export async function renameFloorAction(slug: string, floorId: string, name: string): Promise<FloorActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  try {
+    const { count } = await prisma.floor.updateMany({
+      where: { id: floorId, restaurantId: restaurant.id },
+      data: { name },
+    });
+    if (count === 0) return { ok: false, error: "Floor not found." };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: `A floor named "${name}" already exists.` };
+    }
+    throw e;
+  }
+  revalidatePath(`/r/${slug}/floor-manager`);
+  revalidatePath(`/r/${slug}/reservations`);
+  return { ok: true };
+}
+
+export async function deleteFloorAction(slug: string, floorId: string): Promise<FloorActionResult> {
+  const { restaurant } = await assertRestaurantMember(slug);
+
+  const floorCount = await prisma.floor.count({ where: { restaurantId: restaurant.id } });
+  if (floorCount <= 1) return { ok: false, error: "Can't delete the only floor -- add another one first." };
+
+  try {
+    const { count } = await prisma.floor.deleteMany({ where: { id: floorId, restaurantId: restaurant.id } });
+    if (count === 0) return { ok: false, error: "Floor not found." };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+      return { ok: false, error: "Can't delete -- this floor still has tables on it. Move or delete those first." };
+    }
+    throw e;
+  }
+  revalidatePath(`/r/${slug}/floor-manager`);
+  revalidatePath(`/r/${slug}/reservations`);
+  return { ok: true };
+}
 
 export async function updateTableLayoutAction(
   slug: string,

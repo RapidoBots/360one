@@ -161,13 +161,14 @@ export async function setReservationStatusAction(
 
 export async function createTableAction(
   slug: string,
-  input: { number: string; capacity: number; area: string }
+  input: { number: string; capacity: number; area: string; floorId: string }
 ): Promise<ReservationActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
   try {
     await prisma.table.create({
       data: {
         restaurantId: restaurant.id,
+        floorId: input.floorId,
         number: input.number,
         capacity: input.capacity,
         area: input.area || null,
@@ -180,13 +181,14 @@ export async function createTableAction(
     throw e;
   }
   revalidatePath(`/r/${slug}/reservations`);
+  revalidatePath(`/r/${slug}/floor-manager`);
   return { ok: true };
 }
 
 export async function updateTableAction(
   slug: string,
   tableId: string,
-  input: { number: string; capacity: number; area: string }
+  input: { number: string; capacity: number; area: string; floorId: string }
 ): Promise<ReservationActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
   try {
@@ -196,6 +198,7 @@ export async function updateTableAction(
         number: input.number,
         capacity: input.capacity,
         area: input.area || null,
+        floorId: input.floorId,
       },
     });
     if (count === 0) return { ok: false, error: "Table not found." };

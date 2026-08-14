@@ -18,7 +18,9 @@ export async function createRestaurantAction(input: {
 
   let restaurant;
   try {
-    restaurant = await prisma.restaurant.create({ data: { name: input.name, slug: input.slug } });
+    restaurant = await prisma.restaurant.create({
+      data: { name: input.name, slug: input.slug, floors: { create: { name: "Main Floor" } } },
+    });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { ok: false, error: `A restaurant with slug "${input.slug}" already exists.` };
