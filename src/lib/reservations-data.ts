@@ -66,3 +66,12 @@ export async function hasTableConflict(
 export async function listTables(restaurantId: string) {
   return sortTablesByNumber(await prisma.table.findMany({ where: { restaurantId } }));
 }
+
+// Phone-first lookup: staff type a phone number before anything else, and a
+// returning guest's name/email auto-fill from here rather than being
+// retyped every visit.
+export async function findCustomerByPhone(restaurantId: string, phone: string) {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return null;
+  return prisma.customer.findFirst({ where: { restaurantId, phone: normalized } });
+}

@@ -45,6 +45,7 @@ test.describe("Phase 7 Reports", () => {
     // One reservation that will be marked SEATED (shows up), one left PENDING
     // then marked NO_SHOW -- gives a known, non-zero no-show rate to assert on.
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(SHOWN_GUEST);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill(START_DATE);
@@ -55,6 +56,7 @@ test.describe("Phase 7 Reports", () => {
     await expect(page.getByRole("dialog")).toBeHidden();
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(NO_SHOW_GUEST);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill(START_DATE);

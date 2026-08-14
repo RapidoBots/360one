@@ -46,8 +46,9 @@ test.describe("Phase 5 Waitlist", () => {
 
     await page.goto("/r/blue-fork/waitlist");
     await page.getByRole("button", { name: "Add to Waiting Area" }).click();
+    await page.getByLabel("Phone number").fill("555-000-4444");
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(FIXTURE_GUEST_NAME);
-    await page.getByLabel("Phone").fill("555-000-4444");
     await page.getByLabel("Party size").fill("2");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeHidden();

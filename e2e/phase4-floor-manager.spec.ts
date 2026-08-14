@@ -80,6 +80,7 @@ test.describe("Phase 4 Floor Manager", () => {
 
     // Seat a walk-in at FM-1, then free it.
     await page.getByText("Table FM-1", { exact: true }).click();
+    await page.getByRole("button", { name: "Skip" }).click();
     await page.getByLabel("Party size").fill("2");
     await page.getByRole("button", { name: "Add walk-in" }).click();
     // "Walk-in" alone is a bad check here -- it case-insensitively substring-
@@ -104,8 +105,9 @@ test.describe("Phase 4 Floor Manager", () => {
     // this e2e check only needs to prove the modal is actually wired to it.
     await page.goto("/r/blue-fork/reservations");
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByLabel("Phone number").fill("555-000-2222");
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill("Recommend Test");
-    await page.getByLabel("Phone").fill("555-000-2222");
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-05");
     await page.getByLabel("Time").fill("18:00");

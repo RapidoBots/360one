@@ -42,6 +42,7 @@ test.describe("Reservation and customer edit/delete", () => {
     await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-03");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(RESERVATION_DELETE_GUEST);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-03");
@@ -62,6 +63,7 @@ test.describe("Reservation and customer edit/delete", () => {
     await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-04");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(CUSTOMER_EDIT_GUEST);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-04");
@@ -117,6 +119,7 @@ test.describe("Reservation and customer edit/delete", () => {
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(TABLE_CRUD_GUEST);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-05");

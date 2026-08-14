@@ -74,6 +74,7 @@ test.describe("Phase 6 GHL reservation sync", () => {
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(FIXTURE_CUSTOMER_NAME);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-03");

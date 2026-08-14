@@ -102,6 +102,7 @@ test.describe("Floor Manager table styling", () => {
     await expect(tableInner).toHaveClass(/bg-emerald-500/); // available
 
     await tableInner.click();
+    await page.getByRole("button", { name: "Skip" }).click();
     await page.getByLabel("Party size").fill("2");
     await page.getByRole("button", { name: "Add walk-in" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();

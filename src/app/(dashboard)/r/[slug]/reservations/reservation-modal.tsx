@@ -18,7 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createReservationAction, updateReservationAction, deleteReservationAction, type ReservationInput } from "./actions";
+import {
+  createReservationAction,
+  updateReservationAction,
+  deleteReservationAction,
+  findCustomerByPhoneAction,
+  type ReservationInput,
+} from "./actions";
 import { recommendTable } from "@/lib/table-allocation";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
@@ -87,10 +93,19 @@ export function ReservationModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Phone-first: a new reservation starts by asking for the guest's phone
+  // number and looking them up, so a returning guest's name/email auto-fill
+  // instead of being retyped every visit. Editing an existing reservation
+  // skips straight to the full form -- it's already tied to a customer.
+  const [phoneStep, setPhoneStep] = useState(!reservation);
+  const [lookupPhone, setLookupPhone] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     setError(null);
     if (reservation) {
+      setPhoneStep(false);
       setGuestName(reservation.customer.name);
       setGuestEmail(reservation.customer.email ?? "");
       setGuestPhone(reservation.customer.phone ?? "");
@@ -103,6 +118,8 @@ export function ReservationModal({
       setTableTouched(true);
       setStatus(reservation.status);
     } else {
+      setPhoneStep(true);
+      setLookupPhone("");
       setGuestName("");
       setGuestEmail("");
       setGuestPhone("");
@@ -116,6 +133,23 @@ export function ReservationModal({
       setStatus("CONFIRMED");
     }
   }, [open, reservation, prefill]);
+
+  async function handlePhoneContinue(e: React.FormEvent) {
+    e.preventDefault();
+    setLookingUp(true);
+    setError(null);
+    const match = await findCustomerByPhoneAction(slug, lookupPhone);
+    setLookingUp(false);
+    setGuestPhone(lookupPhone);
+    if (match) {
+      setGuestName(match.name);
+      setGuestEmail(match.email ?? "");
+    } else {
+      setGuestName("");
+      setGuestEmail("");
+    }
+    setPhoneStep(false);
+  }
 
   const availableTables = tables.filter((t) => t.capacity >= partySize);
 
@@ -182,9 +216,42 @@ export function ReservationModal({
           <DialogTitle>{reservation ? "Edit reservation" : "New reservation"}</DialogTitle>
         </DialogHeader>
 
+        {phoneStep ? (
+          <form onSubmit={handlePhoneContinue} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="lookupPhone">Phone number</Label>
+              <Input
+                id="lookupPhone"
+                type="tel"
+                className="h-11 text-base"
+                placeholder="(555) 123-4567"
+                value={lookupPhone}
+                onChange={(e) => setLookupPhone(e.target.value)}
+                autoFocus
+              />
+              <p className="text-sm text-muted-foreground">
+                A returning guest&apos;s name and email fill in automatically.
+              </p>
+            </div>
+            <Button type="submit" className="h-12 w-full text-base" disabled={lookingUp}>
+              {lookingUp ? "Looking up..." : "Continue"}
+            </Button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground">Guest information</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground">Guest information</h3>
+              {!reservation && (
+                <button
+                  type="button"
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                  onClick={() => setPhoneStep(true)}
+                >
+                  Use a different phone number
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="guestName">Name</Label>
               <Input
@@ -359,6 +426,7 @@ export function ReservationModal({
             )}
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

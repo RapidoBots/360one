@@ -48,8 +48,9 @@ test.describe("Phase 3 reservations core", () => {
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByLabel("Phone number").fill("555-000-1111");
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill("Taylor Guest");
-    await page.getByLabel("Phone").fill("555-000-1111");
     await page.getByLabel("Party size").fill("3");
     await page.getByLabel("Date").fill("2026-08-01");
     await page.getByLabel("Time").fill("19:00");
@@ -91,6 +92,7 @@ test.describe("Phase 3 reservations core", () => {
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill("First Guest");
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-02");
@@ -101,6 +103,7 @@ test.describe("Phase 3 reservations core", () => {
     await expect(page.getByRole("dialog")).toBeHidden();
 
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill("Second Guest");
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Date").fill("2026-08-02");

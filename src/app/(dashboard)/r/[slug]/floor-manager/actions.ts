@@ -101,7 +101,7 @@ export async function updateTableLayoutAction(
 export async function quickSeatWalkInAction(
   slug: string,
   tableId: string,
-  input: { partySize: number; time: string }
+  input: { partySize: number; time: string; guestName: string; guestPhone: string }
 ): Promise<FloorActionResult> {
   const { restaurant } = await assertRestaurantMember(slug);
   const startsAt = zonedDateTimeToUtc(toLocalDateInput(new Date(), restaurant.timezone), input.time, restaurant.timezone);
@@ -114,7 +114,10 @@ export async function quickSeatWalkInAction(
   );
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
 
-  const customer = await findOrCreateCustomer(restaurant.id, { name: "Walk-in" });
+  const customer = await findOrCreateCustomer(restaurant.id, {
+    name: input.guestName || "Walk-in",
+    phone: input.guestPhone || null,
+  });
 
   await prisma.reservation.create({
     data: {

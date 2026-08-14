@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
+import { findOrCreateCustomer, findCustomerByPhone, hasTableConflict } from "@/lib/reservations-data";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { assertRestaurantMember } from "@/lib/auth-guards";
 import { syncContactToGhl } from "@/lib/ghl-sync";
@@ -22,6 +22,18 @@ export type ReservationInput = {
 };
 
 export type ReservationActionResult = { ok: true } | { ok: false; error: string };
+
+export type CustomerLookup = { name: string; email: string | null; phone: string | null } | null;
+
+// Shared by every "add a guest" flow (New Reservation, Floor Manager
+// walk-in, Waiting Area) -- staff type a phone number first, and a
+// returning guest's name/email auto-fill instead of being retyped.
+export async function findCustomerByPhoneAction(slug: string, phone: string): Promise<CustomerLookup> {
+  const { restaurant } = await assertRestaurantMember(slug);
+  const customer = await findCustomerByPhone(restaurant.id, phone);
+  if (!customer) return null;
+  return { name: customer.name, email: customer.email, phone: customer.phone };
+}
 
 export async function createReservationAction(
   slug: string,

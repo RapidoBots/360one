@@ -186,6 +186,7 @@ test.describe("Mobile responsiveness (375px viewport)", () => {
     // Book a reservation for today (no date override) so it shows up on the
     // Floor Manager, which only surfaces today's reservations.
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByLabel("Name").fill(FIXTURE_GUEST_NAME);
     await page.getByLabel("Party size").fill("2");
     await page.getByLabel("Assigned table").click();

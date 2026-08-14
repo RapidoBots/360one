@@ -70,6 +70,7 @@ test.describe("Phase 8 Settings", () => {
     // Internal booking: the modal's default duration should reflect the new setting.
     await page.goto(`/r/${FIXTURE_SLUG}/reservations`);
     await page.getByRole("button", { name: "New reservation" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByText("60 min")).toBeVisible();
   });
 
