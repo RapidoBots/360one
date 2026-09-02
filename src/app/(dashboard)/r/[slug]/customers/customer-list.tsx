@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -56,12 +57,15 @@ export function CustomerList({ slug, customers }: { slug: string; customers: Cus
     if (!selected) return;
     setSaving(true);
     setError(null);
+    const toastId = toast.loading("Saving customer...");
     const result = await updateCustomerAction(slug, selected.id, { name, email, phone });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
+      toast.error(result.error, { id: toastId });
       return;
     }
+    toast.success("Customer saved.", { id: toastId });
     setEditing(false);
     setSelected(null);
     router.refresh();
@@ -69,15 +73,20 @@ export function CustomerList({ slug, customers }: { slug: string; customers: Cus
 
   async function handleDelete() {
     if (!selected) return;
-    if (!window.confirm(`Delete ${selected.name}? This cannot be undone.`)) return;
+    const reservationCount = selected.reservations.length;
+    const warning = reservationCount > 0 ? ` and their ${reservationCount} reservation${reservationCount === 1 ? "" : "s"}` : "";
+    if (!window.confirm(`Delete ${selected.name}${warning}? This cannot be undone.`)) return;
     setDeleting(true);
     setError(null);
+    const toastId = toast.loading("Deleting customer...");
     const result = await deleteCustomerAction(slug, selected.id);
     setDeleting(false);
     if (!result.ok) {
       setError(result.error);
+      toast.error(result.error, { id: toastId });
       return;
     }
+    toast.success("Customer deleted.", { id: toastId });
     setSelected(null);
     router.refresh();
   }

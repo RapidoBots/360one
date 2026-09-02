@@ -57,7 +57,7 @@ test.describe("Reservation and customer edit/delete", () => {
     await expect(page.getByText(RESERVATION_DELETE_GUEST)).toBeHidden();
   });
 
-  test("owner edits a customer's details, then can't delete until their reservation is gone", async ({ page }) => {
+  test("owner edits a customer's details, then deletes them along with their reservation", async ({ page }) => {
     page.on("dialog", (d) => d.accept());
     await signInAsOwner(page);
     await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-04");
@@ -79,21 +79,16 @@ test.describe("Reservation and customer edit/delete", () => {
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText(CUSTOMER_EDIT_GUEST_RENAMED)).toBeVisible();
 
-    // Deleting is blocked while the customer still has a reservation.
+    // Deleting a customer with a reservation succeeds -- the reservation is
+    // deleted with them, since customerId is required (not optional) on
+    // Reservation, so there's no "unassign and keep" option like Table has.
     await page.getByText(CUSTOMER_EDIT_GUEST_RENAMED).click();
     await page.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText("Can't delete — this customer has reservations. Delete those first.")).toBeVisible();
-
-    // Remove the reservation, then deletion succeeds.
-    await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-04");
-    await page.getByText(CUSTOMER_EDIT_GUEST_RENAMED).click();
-    await page.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
-
-    await page.goto("/r/blue-fork/customers");
-    await page.getByText(CUSTOMER_EDIT_GUEST_RENAMED).click();
-    await page.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("Customer deleted.")).toBeVisible();
     await expect(page.locator("tbody").getByText(CUSTOMER_EDIT_GUEST_RENAMED)).toBeHidden();
+
+    await page.goto("/r/blue-fork/reservations?view=day&date=2026-08-04");
+    await expect(page.getByText(CUSTOMER_EDIT_GUEST_RENAMED)).toBeHidden();
   });
 
   test("owner edits a table's details, then deletes it, unassigning (not cancelling) its reservation", async ({
