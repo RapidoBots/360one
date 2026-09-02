@@ -6,7 +6,6 @@ import { getDayRange, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { getAllSlotsForDay, getAvailableSlots, type SlotAvailability } from "@/lib/widget-availability";
 import { getHoursForDay } from "@/lib/business-hours";
 import { findOrCreateCustomer } from "@/lib/reservations-data";
-import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { ContactChannel } from "@/generated/prisma/client";
 
 export type SlotsForDateResult = { slots: SlotAvailability[]; isOpen: boolean };
@@ -137,18 +136,9 @@ export async function createWidgetReservationAction(
     },
   });
 
-  await syncContactToGhl(
-    { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
-    {
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      startsAt,
-      partySize: input.partySize,
-      restaurantName: restaurant.name,
-      timeZone: restaurant.timezone,
-    }
-  );
+  // No GHL sync here -- a widget booking starts PENDING, and the contact
+  // (and its confirmation email) should only be created once staff confirm
+  // it, not the moment a guest submits the form. See updateReservationAction.
 
   revalidatePath(`/r/${slug}/reservations`);
 

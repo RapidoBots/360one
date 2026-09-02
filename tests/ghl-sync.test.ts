@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { buildGhlContactPayload, syncContactToGhl } from "@/lib/ghl-sync";
+import { buildGhlContactPayload, syncContactToGhl, shouldSyncOnStatusChange } from "@/lib/ghl-sync";
 
 const RESERVATION_GUEST = {
   name: "Taylor Guest",
@@ -37,6 +37,29 @@ describe("buildGhlContactPayload", () => {
       { key: "party_size", field_value: "4" },
       { key: "restaurant_name", field_value: "The Blue Fork" },
     ]);
+  });
+});
+
+describe("shouldSyncOnStatusChange", () => {
+  it("syncs on the PENDING -> CONFIRMED transition (the confirm step)", () => {
+    expect(shouldSyncOnStatusChange("PENDING", "CONFIRMED")).toBe(true);
+  });
+
+  it("does not sync when already PENDING and staying PENDING", () => {
+    expect(shouldSyncOnStatusChange("PENDING", "PENDING")).toBe(false);
+  });
+
+  it("does not sync when already CONFIRMED and staying CONFIRMED", () => {
+    expect(shouldSyncOnStatusChange("CONFIRMED", "CONFIRMED")).toBe(false);
+  });
+
+  it("does not sync on PENDING -> CANCELLED or PENDING -> NO_SHOW", () => {
+    expect(shouldSyncOnStatusChange("PENDING", "CANCELLED")).toBe(false);
+    expect(shouldSyncOnStatusChange("PENDING", "NO_SHOW")).toBe(false);
+  });
+
+  it("does not sync on a later transition, e.g. CONFIRMED -> SEATED", () => {
+    expect(shouldSyncOnStatusChange("CONFIRMED", "SEATED")).toBe(false);
   });
 });
 

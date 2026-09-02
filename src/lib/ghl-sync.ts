@@ -1,4 +1,13 @@
+import type { ReservationStatus } from "@/generated/prisma/client";
+
 export type GhlCredentials = { ghlLocationId: string | null; ghlApiKey: string | null };
+
+// The GHL contact (and the confirmation automation it triggers) should only
+// be created once staff confirm a reservation, not when a guest submits it
+// -- this is the one transition that means "confirm".
+export function shouldSyncOnStatusChange(previousStatus: ReservationStatus, nextStatus: ReservationStatus): boolean {
+  return previousStatus === "PENDING" && nextStatus === "CONFIRMED";
+}
 export type GhlGuest = {
   name: string;
   email: string | null;

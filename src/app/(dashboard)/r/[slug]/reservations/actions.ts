@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, findCustomerByPhone, hasTableConflict } from "@/lib/reservations-data";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { assertRestaurantMember } from "@/lib/auth-guards";
-import { syncContactToGhl } from "@/lib/ghl-sync";
+import { syncContactToGhl, shouldSyncOnStatusChange } from "@/lib/ghl-sync";
 import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
 
 export type ReservationInput = {
@@ -94,7 +94,7 @@ export async function updateReservationAction(
 
   const current = await prisma.reservation.findFirst({
     where: { id: reservationId, restaurantId: restaurant.id },
-    select: { customerId: true },
+    select: { customerId: true, status: true },
   });
   if (!current) return { ok: false, error: "Reservation not found." };
 
@@ -135,6 +135,21 @@ export async function updateReservationAction(
     },
   });
   if (count === 0) return { ok: false, error: "Reservation not found." };
+
+  if (input.status && shouldSyncOnStatusChange(current.status, input.status)) {
+    await syncContactToGhl(
+      { ghlLocationId: restaurant.ghlLocationId, ghlApiKey: restaurant.ghlApiKey },
+      {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        startsAt,
+        partySize: input.partySize,
+        restaurantName: restaurant.name,
+        timeZone: restaurant.timezone,
+      }
+    );
+  }
 
   revalidatePath(`/r/${slug}/reservations`);
   revalidatePath(`/r/${slug}/customers`);
