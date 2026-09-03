@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Phone } from "lucide-react";
+import type { Country } from "react-phone-number-input";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { Brand } from "@/components/shell/brand";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export function BookingWidget({
   notes,
   facebookUrl,
   instagramUrl,
+  visitorCountry,
 }: {
   slug: string;
   restaurantName: string;
@@ -80,6 +82,7 @@ export function BookingWidget({
   notes: string | null;
   facebookUrl: string | null;
   instagramUrl: string | null;
+  visitorCountry: Country;
 }) {
   const [step, setStep] = useState<Step>("TIME_SLOT");
   const [selection, setSelection] = useState<TimeSlotSelection>({
@@ -209,6 +212,7 @@ export function BookingWidget({
             <ContactForm
               slug={slug}
               selection={{ partySize: selection.partySize, date: selection.date, time: selection.time }}
+              visitorCountry={visitorCountry}
               onBack={() => setStep("TIME_SLOT")}
               onSuccess={(b) => {
                 setBooking(b);

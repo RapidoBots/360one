@@ -15,7 +15,6 @@ function PhoneInput({
   return (
     <PhoneInputPrimitive
       international
-      defaultCountry="US"
       className={cn("cn-phone-input h-11 text-base", className)}
       onChange={(value) => onChange(value ?? "")}
       {...props}

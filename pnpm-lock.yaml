@@ -38,6 +38,9 @@ importers:
       framer-motion:
         specifier: ^12.42.2
         version: 12.42.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      libphonenumber-js:
+        specifier: 1.13.12
+        version: 1.13.12
       lucide-react:
         specifier: ^1.23.0
         version: 1.23.0(react@19.2.4)

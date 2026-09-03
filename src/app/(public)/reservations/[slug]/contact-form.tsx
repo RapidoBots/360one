@@ -10,6 +10,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createWidgetReservationAction } from "./actions";
 import type { ContactChannel } from "@/generated/prisma/client";
+import type { Country } from "react-phone-number-input";
 
 const CHANNEL_OPTIONS: ContactChannel[] = ["EMAIL", "SMS", "BOTH"];
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
@@ -22,11 +23,13 @@ const CHANNEL_LABELS: Record<ContactChannel, string> = {
 export function ContactForm({
   slug,
   selection,
+  visitorCountry,
   onBack,
   onSuccess,
 }: {
   slug: string;
   selection: { partySize: number; date: string; time: string };
+  visitorCountry: Country;
   onBack: () => void;
   onSuccess: (booking: { partySize: number; date: string; time: string }) => void;
 }) {
@@ -95,7 +98,7 @@ export function ContactForm({
 
       <div className="space-y-2">
         <Label htmlFor="widgetPhone">Phone Number</Label>
-        <PhoneInput id="widgetPhone" value={phone} onChange={setPhone} required />
+        <PhoneInput id="widgetPhone" value={phone} onChange={setPhone} defaultCountry={visitorCountry} required />
       </div>
 
       <div className="space-y-2">
