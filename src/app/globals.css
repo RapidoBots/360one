@@ -139,3 +139,44 @@
     text-transform: none;
   }
 }
+
+/* react-phone-number-input: restyle its default layout to match our Input
+   (border-input/rounded-lg/ring) instead of its own bare-bones CSS -- we
+   keep its country-select + flag + formatting logic, just re-skin the shell. */
+.cn-phone-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 0 0.625rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cn-phone-input:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+}
+.cn-phone-input .PhoneInputCountry {
+  gap: 0.375rem;
+}
+.cn-phone-input .PhoneInputCountrySelect {
+  color: var(--foreground);
+}
+.cn-phone-input .PhoneInputCountryIcon {
+  box-shadow: none;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cn-phone-input .PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--foreground);
+  height: 100%;
+}
+.cn-phone-input .PhoneInputInput::placeholder {
+  color: var(--muted-foreground);
+}

@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { User, Mail, Phone, MessageCircle, ArrowLeft } from "lucide-react";
+import { User, Mail, MessageCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createWidgetReservationAction } from "./actions";
 import type { ContactChannel } from "@/generated/prisma/client";
 
-const CHANNEL_OPTIONS: ContactChannel[] = ["EMAIL", "SMS", "CALL"];
+const CHANNEL_OPTIONS: ContactChannel[] = ["EMAIL", "SMS", "BOTH"];
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
-  EMAIL: "Email",
-  SMS: "Text message",
+  EMAIL: "📧 Email",
+  SMS: "📱 SMS",
   CALL: "Phone call",
+  BOTH: "✅ Both Email & SMS (Recommended)",
 };
 
 export function ContactForm({
@@ -31,7 +33,7 @@ export function ContactForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [preferredContact, setPreferredContact] = useState<ContactChannel>("EMAIL");
+  const [preferredContact, setPreferredContact] = useState<ContactChannel>("BOTH");
   const [specialRequests, setSpecialRequests] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,7 +60,7 @@ export function ContactForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-muted-foreground">Please provide your contact information.</p>
+      <h3 className="text-sm font-semibold text-muted-foreground">Contact Information</h3>
 
       <div className="space-y-2">
         <Label htmlFor="widgetName">Full Name</Label>
@@ -93,18 +95,7 @@ export function ContactForm({
 
       <div className="space-y-2">
         <Label htmlFor="widgetPhone">Phone Number</Label>
-        <div className="relative">
-          <Phone className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="widgetPhone"
-            type="tel"
-            className="h-11 pl-9 text-base"
-            placeholder="Enter your phone number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
-        </div>
+        <PhoneInput id="widgetPhone" value={phone} onChange={setPhone} required />
       </div>
 
       <div className="space-y-2">
@@ -131,7 +122,7 @@ export function ContactForm({
         <Textarea
           id="widgetSpecialRequests"
           className="text-base"
-          placeholder="Any allergies, seating preferences, or occasion..."
+          placeholder="Allergies, dietary restrictions, seating preferences, high chair requests, accessibility needs, or special occasions."
           value={specialRequests}
           onChange={(e) => setSpecialRequests(e.target.value)}
         />

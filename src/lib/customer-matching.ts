@@ -1,5 +1,11 @@
+// NANP (US/Canada) numbers are 10 digits; the widget's country-code phone
+// input produces an 11-digit "1" + 10-digit form, but staff-entered numbers
+// (internal booking, walk-in, waitlist) never carry a country code. Stripping
+// a leading NANP "1" keeps both forms matching to the same customer.
 export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
+  return digits;
 }
 
 export function normalizeEmail(email: string): string {

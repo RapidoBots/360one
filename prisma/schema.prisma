@@ -218,6 +218,7 @@ enum ContactChannel {
   EMAIL
   SMS
   CALL
+  BOTH
 }
 
 model Customer {

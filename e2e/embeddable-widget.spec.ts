@@ -41,7 +41,9 @@ test.describe("Embeddable reservation widget", () => {
     // Step 3: contact info.
     await page.getByLabel("Full Name").fill(FIXTURE_CUSTOMER_NAME);
     await page.getByLabel("Email Address").fill("widget-e2e@example.com");
-    await page.getByLabel("Phone Number").fill("555-000-3333");
+    // exact: true -- react-phone-number-input's country-select carries
+    // aria-label="Phone number country", which substring-matches "Phone Number".
+    await page.getByLabel("Phone Number", { exact: true }).fill("5550003333");
     await page.getByRole("button", { name: "Submit" }).click();
 
     await expect(page.getByText("Request received!")).toBeVisible();

@@ -5,6 +5,15 @@ describe("normalizePhone", () => {
   it("strips non-digit characters", () => {
     expect(normalizePhone("(555) 123-4567")).toBe("5551234567");
   });
+
+  it("strips a leading NANP country code so it matches the bare 10-digit form", () => {
+    expect(normalizePhone("+15551234567")).toBe("5551234567");
+    expect(normalizePhone("1-555-123-4567")).toBe("5551234567");
+  });
+
+  it("leaves a non-NANP 11-digit number alone (doesn't start with 1)", () => {
+    expect(normalizePhone("44551234567")).toBe("44551234567");
+  });
 });
 
 describe("normalizeEmail", () => {
