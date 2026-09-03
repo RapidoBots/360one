@@ -37,6 +37,8 @@ describe("buildGhlContactPayload", () => {
       { key: "time", field_value: "7:00 PM" },
       { key: "party_size", field_value: "4" },
       { key: "restaurant_name", field_value: "The Blue Fork" },
+      { key: "reservation_date", field_value: "2026-08-01" },
+      { key: "reservation_datetime", field_value: "2026-08-01T23:00:00.000Z" },
     ]);
   });
 });
@@ -118,6 +120,8 @@ describe("syncContactToGhl", () => {
         { key: "time", field_value: "7:00 PM" },
         { key: "party_size", field_value: "4" },
         { key: "restaurant_name", field_value: "The Blue Fork" },
+        { key: "reservation_date", field_value: "2026-08-01" },
+        { key: "reservation_datetime", field_value: "2026-08-01T23:00:00.000Z" },
       ],
     });
   });

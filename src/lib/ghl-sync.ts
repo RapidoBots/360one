@@ -1,4 +1,5 @@
 import type { ContactChannel, ReservationStatus } from "@/generated/prisma/client";
+import { toLocalDateInput } from "@/lib/reservation-dates";
 
 export type GhlCredentials = { ghlLocationId: string | null; ghlApiKey: string | null };
 
@@ -40,6 +41,12 @@ export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown>
       { key: "time", field_value: formatReservationTime(guest.startsAt, guest.timeZone) },
       { key: "party_size", field_value: String(guest.partySize) },
       { key: "restaurant_name", field_value: guest.restaurantName },
+      // "date" above is a human-readable string ("August 1, 2026") for
+      // display in messages -- GHL's reminder triggers/Wait steps need an
+      // actual parseable date to compute offsets from, hence these two,
+      // sent only for that purpose (not meant to be shown to the guest).
+      { key: "reservation_date", field_value: toLocalDateInput(guest.startsAt, guest.timeZone) },
+      { key: "reservation_datetime", field_value: guest.startsAt.toISOString() },
     ],
   };
 }
