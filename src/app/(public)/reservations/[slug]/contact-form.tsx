@@ -13,10 +13,10 @@ import type { ContactChannel } from "@/generated/prisma/client";
 
 const CHANNEL_OPTIONS: ContactChannel[] = ["EMAIL", "SMS", "BOTH"];
 const CHANNEL_LABELS: Record<ContactChannel, string> = {
-  EMAIL: "📧 Email",
-  SMS: "📱 SMS",
+  EMAIL: "Email",
+  SMS: "SMS",
   CALL: "Phone call",
-  BOTH: "✅ Both Email & SMS (Recommended)",
+  BOTH: "Both Email & SMS (Recommended)",
 };
 
 export function ContactForm({
