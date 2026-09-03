@@ -86,6 +86,7 @@ export async function seatFromWaitlistAction(
       partySize: entry.partySize,
       restaurantName: restaurant.name,
       timeZone: restaurant.timezone,
+      preferredContact: entry.customer.preferredContact,
     }
   );
 

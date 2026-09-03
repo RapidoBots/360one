@@ -1,4 +1,4 @@
-import type { ReservationStatus } from "@/generated/prisma/client";
+import type { ContactChannel, ReservationStatus } from "@/generated/prisma/client";
 
 export type GhlCredentials = { ghlLocationId: string | null; ghlApiKey: string | null };
 
@@ -16,6 +16,7 @@ export type GhlGuest = {
   partySize: number;
   restaurantName: string;
   timeZone: string;
+  preferredContact: ContactChannel;
 };
 
 function formatReservationDate(startsAt: Date, timeZone: string): string {
@@ -50,6 +51,19 @@ export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown>
 // new-reservation" rather than "Contact Created" (which, by design, can
 // only ever fire once per contact).
 const GHL_RESERVATION_TAG = "new-reservation";
+
+// A separate tag per channel so the restaurant's GHL workflows can each
+// trigger on their own "Tag Added: prefers-X" and fire only the email
+// automation, only the SMS automation, or both -- rather than one workflow
+// always sending everything regardless of what the guest actually chose.
+// CALL has no mapped tag: it's no longer offered by the widget (kept in the
+// enum only for pre-existing data), so there's nothing to notify.
+const CHANNEL_TAGS: Partial<Record<ContactChannel, string>> = {
+  EMAIL: "prefers-email",
+  SMS: "prefers-sms",
+  BOTH: "prefers-both",
+};
+const ALL_CHANNEL_TAGS = Object.values(CHANNEL_TAGS);
 
 function ghlHeaders(apiKey: string): Record<string, string> {
   return {
@@ -88,15 +102,20 @@ export async function syncContactToGhl(credentials: GhlCredentials, guest: GhlGu
       return;
     }
 
+    // Remove every channel tag (not just the guest's current one) before
+    // re-adding -- otherwise a guest who picked SMS last time and Both this
+    // time would end up wearing both tags, and a workflow gated on "has tag
+    // prefers-sms" would still fire even though they no longer want SMS.
     await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
       method: "DELETE",
       headers: ghlHeaders(ghlApiKey),
-      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG] }),
+      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG, ...ALL_CHANNEL_TAGS] }),
     });
+    const channelTag = CHANNEL_TAGS[guest.preferredContact];
     await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
       method: "POST",
       headers: ghlHeaders(ghlApiKey),
-      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG] }),
+      body: JSON.stringify({ tags: channelTag ? [GHL_RESERVATION_TAG, channelTag] : [GHL_RESERVATION_TAG] }),
     });
   } catch (error) {
     console.error("GHL contact sync failed", error);

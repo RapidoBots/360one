@@ -143,6 +143,7 @@ export async function quickSeatWalkInAction(
       partySize: input.partySize,
       restaurantName: restaurant.name,
       timeZone: restaurant.timezone,
+      preferredContact: customer.preferredContact,
     }
   );
 

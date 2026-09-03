@@ -9,6 +9,7 @@ const RESERVATION_GUEST = {
   partySize: 4,
   restaurantName: "The Blue Fork",
   timeZone: "America/Toronto",
+  preferredContact: "BOTH" as const,
 };
 
 describe("buildGhlContactPayload", () => {
@@ -132,12 +133,52 @@ describe("syncContactToGhl", () => {
     const [removeUrl, removeOptions] = fetchSpy.mock.calls[1]!;
     expect(removeUrl).toBe("https://services.leadconnectorhq.com/contacts/ghl_contact_1/tags");
     expect(removeOptions).toMatchObject({ method: "DELETE" });
-    expect(JSON.parse(removeOptions!.body as string)).toEqual({ tags: ["new-reservation"] });
+    expect(JSON.parse(removeOptions!.body as string).tags).toContain("new-reservation");
 
     const [addUrl, addOptions] = fetchSpy.mock.calls[2]!;
     expect(addUrl).toBe("https://services.leadconnectorhq.com/contacts/ghl_contact_1/tags");
     expect(addOptions).toMatchObject({ method: "POST" });
-    expect(JSON.parse(addOptions!.body as string)).toEqual({ tags: ["new-reservation"] });
+    expect(JSON.parse(addOptions!.body as string).tags).toContain("new-reservation");
+  });
+
+  it.each([
+    ["EMAIL", "prefers-email"],
+    ["SMS", "prefers-sms"],
+    ["BOTH", "prefers-both"],
+  ] as const)(
+    "tags a %s preference as %s, so the restaurant's per-channel GHL workflow can fire",
+    async (preferredContact, expectedTag) => {
+      const fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
+      await syncContactToGhl(
+        { ghlLocationId: "loc123", ghlApiKey: "key" },
+        { ...RESERVATION_GUEST, preferredContact }
+      );
+
+      const [, removeOptions] = fetchSpy.mock.calls[1]!;
+      const removedTags = JSON.parse(removeOptions!.body as string).tags;
+      // Every channel tag is removed regardless of the current preference --
+      // otherwise a guest who switches from SMS to Both would end up wearing
+      // both tags, and the old "prefers-sms" workflow would keep firing.
+      expect(removedTags).toEqual(expect.arrayContaining(["prefers-email", "prefers-sms", "prefers-both"]));
+
+      const [, addOptions] = fetchSpy.mock.calls[2]!;
+      expect(JSON.parse(addOptions!.body as string).tags).toEqual(["new-reservation", expectedTag]);
+    }
+  );
+
+  it("adds no channel tag for CALL (no longer offered by the widget, no automation to notify)", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
+    await syncContactToGhl(
+      { ghlLocationId: "loc123", ghlApiKey: "key" },
+      { ...RESERVATION_GUEST, preferredContact: "CALL" }
+    );
+
+    const [, addOptions] = fetchSpy.mock.calls[2]!;
+    expect(JSON.parse(addOptions!.body as string).tags).toEqual(["new-reservation"]);
   });
 
   it("logs and stops if the upsert response has no contact id, without touching tags", async () => {
