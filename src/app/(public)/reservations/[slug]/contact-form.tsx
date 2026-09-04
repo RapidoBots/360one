@@ -109,7 +109,7 @@ export function ContactForm({
         <div className="relative">
           <MessageCircle className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
           <Select value={preferredContact} onValueChange={(v) => setPreferredContact(v as ContactChannel)}>
-            <SelectTrigger id="widgetPreferredContact" className="h-11 w-full pl-9 text-base">
+            <SelectTrigger id="widgetPreferredContact" className="h-11 w-full pl-9 text-base md:text-sm">
               <SelectValue>{(value: string) => CHANNEL_LABELS[value as ContactChannel]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
