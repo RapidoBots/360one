@@ -47,7 +47,9 @@ test.describe("Widget confirmation message customization", () => {
     await page.goto("/r/blue-fork/settings");
     await page
       .getByLabel("Widget confirmation message")
-      .fill("Your request has been sent to {restaurant_name}. We'll notify you once confirmed.");
+      .fill(
+        "Your request has been sent to {restaurant_name} for {date} at {time}. We'll notify you once confirmed."
+      );
     await page.getByLabel("Widget confirmation button text").fill("New Reservation");
     await page.getByRole("button", { name: "Save profile" }).click();
     await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
@@ -66,10 +68,13 @@ test.describe("Widget confirmation message customization", () => {
     await page.getByLabel("Phone Number", { exact: true }).fill("5550004444");
     await page.getByRole("button", { name: "Submit" }).click();
 
-    // The token in the custom message resolves to the restaurant's real name.
-    await expect(
-      page.getByText("Your request has been sent to The Blue Fork. We'll notify you once confirmed.")
-    ).toBeVisible();
+    // {restaurant_name} resolves to the real name; {date}/{time} resolve to
+    // the actual booked slot -- checked as "no longer literal placeholders"
+    // rather than an exact string, since which slot got picked is dynamic.
+    await expect(page.getByText("Your request has been sent to The Blue Fork for", { exact: false })).toBeVisible();
+    const messageText = await page.getByText("Your request has been sent to The Blue Fork").innerText();
+    expect(messageText).not.toContain("{date}");
+    expect(messageText).not.toContain("{time}");
     await expect(page.getByRole("button", { name: "New Reservation" })).toBeVisible();
   });
 });

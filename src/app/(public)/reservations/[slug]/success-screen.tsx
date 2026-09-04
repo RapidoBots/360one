@@ -21,7 +21,10 @@ export function SuccessScreen({
   onBookAnother: () => void;
 }) {
   const message = successMessage
-    ? successMessage.replaceAll("{restaurant_name}", restaurantName)
+    ? successMessage
+        .replaceAll("{restaurant_name}", restaurantName)
+        .replaceAll("{date}", formatDateLabel(booking.date, timeZone))
+        .replaceAll("{time}", formatTimeLabel(booking.time))
     : `We've received your request for ${booking.partySize} ${
         booking.partySize === 1 ? "guest" : "guests"
       } on ${formatDateLabel(booking.date, timeZone)} at ${formatTimeLabel(booking.time)} -- we'll be in touch to confirm.`;

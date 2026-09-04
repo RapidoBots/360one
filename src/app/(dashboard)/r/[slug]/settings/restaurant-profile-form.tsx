@@ -289,8 +289,8 @@ export function RestaurantProfileForm({
           />
           <p className="text-sm text-muted-foreground">
             Shown to guests right after they submit a booking on your widget. Use{" "}
-            <code>{"{restaurant_name}"}</code> anywhere you want your restaurant&apos;s name inserted. Leave blank
-            to use the default English text.
+            <code>{"{restaurant_name}"}</code>, <code>{"{date}"}</code>, and <code>{"{time}"}</code> anywhere you
+            want those inserted. Leave blank to use the default English text.
           </p>
         </div>
 
