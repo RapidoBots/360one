@@ -38,6 +38,8 @@ export default async function RestaurantSettingsPage({
         notes={restaurant.notes}
         facebookUrl={restaurant.facebookUrl}
         instagramUrl={restaurant.instagramUrl}
+        successMessage={restaurant.successMessage}
+        successButtonText={restaurant.successButtonText}
       />
       <EmbedSnippet slug={slug} />
       <BusinessHoursForm

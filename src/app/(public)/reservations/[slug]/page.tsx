@@ -55,6 +55,8 @@ export default async function BookingWidgetPage({
       facebookUrl={restaurant.facebookUrl}
       instagramUrl={restaurant.instagramUrl}
       visitorCountry={visitorCountry}
+      successMessage={restaurant.successMessage}
+      successButtonText={restaurant.successButtonText}
     />
   );
 }

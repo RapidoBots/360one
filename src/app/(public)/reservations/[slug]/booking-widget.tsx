@@ -70,6 +70,8 @@ export function BookingWidget({
   facebookUrl,
   instagramUrl,
   visitorCountry,
+  successMessage,
+  successButtonText,
 }: {
   slug: string;
   restaurantName: string;
@@ -83,6 +85,8 @@ export function BookingWidget({
   facebookUrl: string | null;
   instagramUrl: string | null;
   visitorCountry: Country;
+  successMessage: string | null;
+  successButtonText: string | null;
 }) {
   const [step, setStep] = useState<Step>("TIME_SLOT");
   const [selection, setSelection] = useState<TimeSlotSelection>({
@@ -222,7 +226,14 @@ export function BookingWidget({
           )}
 
           {step === "SUCCESS" && booking && (
-            <SuccessScreen booking={booking} timeZone={timeZone} onBookAnother={resetToStart} />
+            <SuccessScreen
+              booking={booking}
+              timeZone={timeZone}
+              restaurantName={restaurantName}
+              successMessage={successMessage}
+              successButtonText={successButtonText}
+              onBookAnother={resetToStart}
+            />
           )}
 
           <p className="mt-8 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">

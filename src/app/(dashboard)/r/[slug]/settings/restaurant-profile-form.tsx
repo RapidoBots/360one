@@ -99,6 +99,8 @@ export function RestaurantProfileForm({
   notes,
   facebookUrl,
   instagramUrl,
+  successMessage,
+  successButtonText,
 }: {
   slug: string;
   timezone: string;
@@ -110,6 +112,8 @@ export function RestaurantProfileForm({
   notes: string | null;
   facebookUrl: string | null;
   instagramUrl: string | null;
+  successMessage: string | null;
+  successButtonText: string | null;
 }) {
   const [tz, setTz] = useState(timezone);
   const [maps, setMaps] = useState(mapsEmbedUrl ?? "");
@@ -118,6 +122,8 @@ export function RestaurantProfileForm({
   const [notesValue, setNotesValue] = useState(notes ?? "");
   const [facebookValue, setFacebookValue] = useState(facebookUrl ?? "");
   const [instagramValue, setInstagramValue] = useState(instagramUrl ?? "");
+  const [successMessageValue, setSuccessMessageValue] = useState(successMessage ?? "");
+  const [successButtonTextValue, setSuccessButtonTextValue] = useState(successButtonText ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +142,8 @@ export function RestaurantProfileForm({
         notes: notesValue,
         facebookUrl: facebookValue,
         instagramUrl: instagramValue,
+        successMessage: successMessageValue,
+        successButtonText: successButtonTextValue,
       });
       if (!result.ok) {
         setError(result.error);
@@ -268,6 +276,36 @@ export function RestaurantProfileForm({
             value={notesValue}
             onChange={(e) => setNotesValue(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="successMessage">Widget confirmation message</Label>
+          <Textarea
+            id="successMessage"
+            className="text-base"
+            placeholder="Your request has been sent to {restaurant_name}. We'll notify you once confirmed."
+            value={successMessageValue}
+            onChange={(e) => setSuccessMessageValue(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Shown to guests right after they submit a booking on your widget. Use{" "}
+            <code>{"{restaurant_name}"}</code> anywhere you want your restaurant&apos;s name inserted. Leave blank
+            to use the default English text.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="successButtonText">Widget confirmation button text</Label>
+          <Input
+            id="successButtonText"
+            className="h-11 text-base"
+            placeholder="Book another reservation"
+            value={successButtonTextValue}
+            onChange={(e) => setSuccessButtonTextValue(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            The button below the confirmation message. Leave blank for the default.
+          </p>
         </div>
 
         {error && <p className="text-base text-destructive">{error}</p>}

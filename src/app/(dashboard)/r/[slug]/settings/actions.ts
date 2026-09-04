@@ -25,6 +25,8 @@ export async function updateRestaurantProfileAction(
     notes: string;
     facebookUrl: string;
     instagramUrl: string;
+    successMessage: string;
+    successButtonText: string;
   }
 ): Promise<ProfileActionResult> {
   const { restaurant } = await assertRestaurantOwner(slug);
@@ -53,6 +55,8 @@ export async function updateRestaurantProfileAction(
       notes: input.notes || null,
       facebookUrl: input.facebookUrl || null,
       instagramUrl: input.instagramUrl || null,
+      successMessage: input.successMessage || null,
+      successButtonText: input.successButtonText || null,
     },
   });
 

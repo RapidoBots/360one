@@ -39,6 +39,11 @@ model Restaurant {
   notes         String?
   facebookUrl   String?
   instagramUrl  String?
+  // Widget's post-submit screen, per-restaurant so a new onboard doesn't need
+  // a code change for different wording/language. successMessage supports a
+  // {restaurant_name} token; both fall back to English defaults when null.
+  successMessage    String?
+  successButtonText String?
   users        User[]
   tables       Table[]
   floors       Floor[]
