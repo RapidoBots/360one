@@ -44,6 +44,18 @@ test.describe("Embeddable reservation widget", () => {
     // exact: true -- react-phone-number-input's country-select carries
     // aria-label="Phone number country", which substring-matches "Phone Number".
     await page.getByLabel("Phone Number", { exact: true }).fill("5550003333");
+
+    // Marketing consent: optional, unchecked by default. getByRole, not
+    // getByLabel -- Base UI's Checkbox renders a hidden native <input>
+    // alongside the accessible <span role="checkbox">, and getByLabel
+    // matches both; the hidden input is aria-hidden and role queries skip it.
+    const marketingConsent = page.getByRole("checkbox", {
+      name: "I'd like to receive promotions and special offers.",
+    });
+    await expect(marketingConsent).not.toBeChecked();
+    await marketingConsent.click();
+    await expect(marketingConsent).toBeChecked();
+
     await page.getByRole("button", { name: "Submit" }).click();
 
     await expect(page.getByText("Request received!")).toBeVisible();
@@ -64,6 +76,17 @@ test.describe("Embeddable reservation widget", () => {
     await page.getByRole("option", { name: "CONFIRMED" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
+
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    try {
+      const { rows } = await client.query(`SELECT "marketingConsent" FROM customer WHERE name = $1`, [
+        FIXTURE_CUSTOMER_NAME,
+      ]);
+      expect(rows[0]?.marketingConsent).toBe(true);
+    } finally {
+      await client.end();
+    }
   });
 
   test("Settings page shows a working embed snippet", async ({ page }) => {

@@ -18,6 +18,7 @@ export type GhlGuest = {
   restaurantName: string;
   timeZone: string;
   preferredContact: ContactChannel;
+  marketingConsent: boolean;
 };
 
 function formatReservationDate(startsAt: Date, timeZone: string): string {
@@ -72,6 +73,10 @@ const CHANNEL_TAGS: Partial<Record<ContactChannel, string>> = {
 };
 const ALL_CHANNEL_TAGS = Object.values(CHANNEL_TAGS);
 
+// So the restaurant can build a GHL Smart List of consented contacts for
+// promotional campaigns, separate from the transactional reservation tags.
+const MARKETING_CONSENT_TAG = "marketing-consent";
+
 function ghlHeaders(apiKey: string): Record<string, string> {
   return {
     Authorization: `Bearer ${apiKey}`,
@@ -109,20 +114,24 @@ export async function syncContactToGhl(credentials: GhlCredentials, guest: GhlGu
       return;
     }
 
-    // Remove every channel tag (not just the guest's current one) before
-    // re-adding -- otherwise a guest who picked SMS last time and Both this
-    // time would end up wearing both tags, and a workflow gated on "has tag
-    // prefers-sms" would still fire even though they no longer want SMS.
+    // Remove every channel tag and the consent tag (not just their current
+    // state) before re-adding -- otherwise a guest who picked SMS last time
+    // and Both this time would end up wearing both tags, and one who
+    // unchecks marketing consent on a later booking would stay tagged from
+    // an earlier one.
     await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
       method: "DELETE",
       headers: ghlHeaders(ghlApiKey),
-      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG, ...ALL_CHANNEL_TAGS] }),
+      body: JSON.stringify({ tags: [GHL_RESERVATION_TAG, ...ALL_CHANNEL_TAGS, MARKETING_CONSENT_TAG] }),
     });
     const channelTag = CHANNEL_TAGS[guest.preferredContact];
+    const tagsToAdd = [GHL_RESERVATION_TAG];
+    if (channelTag) tagsToAdd.push(channelTag);
+    if (guest.marketingConsent) tagsToAdd.push(MARKETING_CONSENT_TAG);
     await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tags`, {
       method: "POST",
       headers: ghlHeaders(ghlApiKey),
-      body: JSON.stringify({ tags: channelTag ? [GHL_RESERVATION_TAG, channelTag] : [GHL_RESERVATION_TAG] }),
+      body: JSON.stringify({ tags: tagsToAdd }),
     });
   } catch (error) {
     console.error("GHL contact sync failed", error);

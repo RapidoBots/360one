@@ -229,6 +229,7 @@ model Customer {
   email            String?
   phone            String?
   preferredContact ContactChannel @default(EMAIL)
+  marketingConsent Boolean        @default(false)
   reservations     Reservation[]
   waitlistEntries  WaitlistEntry[]
   createdAt        DateTime       @default(now())

@@ -10,6 +10,7 @@ const RESERVATION_GUEST = {
   restaurantName: "The Blue Fork",
   timeZone: "America/Toronto",
   preferredContact: "BOTH" as const,
+  marketingConsent: false,
 };
 
 describe("buildGhlContactPayload", () => {
@@ -183,6 +184,35 @@ describe("syncContactToGhl", () => {
 
     const [, addOptions] = fetchSpy.mock.calls[2]!;
     expect(JSON.parse(addOptions!.body as string).tags).toEqual(["new-reservation"]);
+  });
+
+  it("tags marketing-consent when the guest opted in", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
+    await syncContactToGhl(
+      { ghlLocationId: "loc123", ghlApiKey: "key" },
+      { ...RESERVATION_GUEST, marketingConsent: true }
+    );
+
+    const [, removeOptions] = fetchSpy.mock.calls[1]!;
+    expect(JSON.parse(removeOptions!.body as string).tags).toContain("marketing-consent");
+
+    const [, addOptions] = fetchSpy.mock.calls[2]!;
+    expect(JSON.parse(addOptions!.body as string).tags).toEqual(["new-reservation", "prefers-both", "marketing-consent"]);
+  });
+
+  it("adds no marketing-consent tag when the guest didn't opt in", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ contact: { id: "ghl_contact_1" } }), { status: 200 }));
+    await syncContactToGhl(
+      { ghlLocationId: "loc123", ghlApiKey: "key" },
+      { ...RESERVATION_GUEST, marketingConsent: false }
+    );
+
+    const [, addOptions] = fetchSpy.mock.calls[2]!;
+    expect(JSON.parse(addOptions!.body as string).tags).not.toContain("marketing-consent");
   });
 
   it("logs and stops if the upsert response has no contact id, without touching tags", async () => {

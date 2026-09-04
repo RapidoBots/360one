@@ -69,6 +69,7 @@ export async function createWidgetReservationAction(
     guestEmail: string;
     guestPhone: string;
     preferredContact: ContactChannel;
+    marketingConsent: boolean;
     specialRequests: string;
   }
 ): Promise<WidgetActionResult> {
@@ -120,7 +121,7 @@ export async function createWidgetReservationAction(
   });
   await prisma.customer.update({
     where: { id: customer.id },
-    data: { preferredContact: input.preferredContact },
+    data: { preferredContact: input.preferredContact, marketingConsent: input.marketingConsent },
   });
 
   await prisma.reservation.create({

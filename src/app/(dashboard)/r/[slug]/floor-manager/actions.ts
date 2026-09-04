@@ -144,6 +144,7 @@ export async function quickSeatWalkInAction(
       restaurantName: restaurant.name,
       timeZone: restaurant.timezone,
       preferredContact: customer.preferredContact,
+      marketingConsent: customer.marketingConsent,
     }
   );
 

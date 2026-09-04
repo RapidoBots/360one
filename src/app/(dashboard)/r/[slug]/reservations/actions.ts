@@ -78,6 +78,7 @@ export async function createReservationAction(
       restaurantName: restaurant.name,
       timeZone: restaurant.timezone,
       preferredContact: customer.preferredContact,
+      marketingConsent: customer.marketingConsent,
     }
   );
 
@@ -149,6 +150,7 @@ export async function updateReservationAction(
         restaurantName: restaurant.name,
         timeZone: restaurant.timezone,
         preferredContact: customer.preferredContact,
+        marketingConsent: customer.marketingConsent,
       }
     );
   }

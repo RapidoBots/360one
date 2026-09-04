@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createWidgetReservationAction } from "./actions";
@@ -37,6 +38,7 @@ export function ContactForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [preferredContact, setPreferredContact] = useState<ContactChannel>("BOTH");
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [specialRequests, setSpecialRequests] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,7 @@ export function ContactForm({
       guestEmail: email,
       guestPhone: phone,
       preferredContact,
+      marketingConsent,
       specialRequests,
     });
     setSaving(false);
@@ -129,6 +132,18 @@ export function ContactForm({
           value={specialRequests}
           onChange={(e) => setSpecialRequests(e.target.value)}
         />
+      </div>
+
+      <div className="flex items-start gap-2.5">
+        <Checkbox
+          id="widgetMarketingConsent"
+          checked={marketingConsent}
+          onCheckedChange={setMarketingConsent}
+          className="mt-0.5"
+        />
+        <Label htmlFor="widgetMarketingConsent" className="text-sm font-normal text-muted-foreground">
+          I&apos;d like to receive promotions and special offers.
+        </Label>
       </div>
 
       {error && <p className="text-base text-destructive">{error}</p>}
