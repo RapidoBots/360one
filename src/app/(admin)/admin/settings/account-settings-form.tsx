@@ -39,6 +39,10 @@ export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) 
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
     setPasswordSaving(true);
     setPasswordError(null);
     setPasswordSaved(false);

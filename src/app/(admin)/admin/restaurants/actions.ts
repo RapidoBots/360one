@@ -15,6 +15,12 @@ export async function createRestaurantAction(input: {
   ownerPassword: string;
 }): Promise<AdminActionResult> {
   await assertSuperAdmin();
+  if (!input.ownerPassword || input.ownerPassword.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (input.ownerPassword.length > 128) {
+    return { ok: false, error: "Password must be 128 characters or fewer." };
+  }
 
   let restaurant;
   try {
@@ -92,6 +98,12 @@ export async function addStaffMemberAction(
   input: { name: string; email: string; password: string; role: Role }
 ): Promise<AdminActionResult> {
   await assertSuperAdmin();
+  if (!input.password || input.password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (input.password.length > 128) {
+    return { ok: false, error: "Password must be 128 characters or fewer." };
+  }
   let user;
   try {
     user = await createUserAccount({ name: input.name, email: input.email, password: input.password });
@@ -155,5 +167,22 @@ export async function toggleSchedulingAction(
   await assertSuperAdmin();
   await prisma.restaurant.update({ where: { id: restaurantId }, data: { schedulingEnabled: enabled } });
   revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}
+
+export async function resetUserPasswordAction(
+  userId: string,
+  newPassword: string
+): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  if (!newPassword || newPassword.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (newPassword.length > 128) {
+    return { ok: false, error: "Password must be 128 characters or fewer." };
+  }
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!target) return { ok: false, error: "User not found." };
+  await setUserPassword(userId, newPassword);
   return { ok: true };
 }

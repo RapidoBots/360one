@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AddSuperAdminDialog } from "./add-super-admin-dialog";
+import { ResetPasswordDialog } from "../restaurants/[id]/reset-password-dialog";
 import { setSuperAdminActiveAction } from "./actions";
 
 export type SuperAdminItem = { id: string; name: string; email: string; active: boolean };
@@ -27,6 +29,7 @@ export function SuperAdmins({
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [resettingAdmin, setResettingAdmin] = useState<SuperAdminItem | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(admin: SuperAdminItem) {
@@ -71,16 +74,21 @@ export function SuperAdmins({
                 <Badge variant="outline">{a.active ? "Active" : "Inactive"}</Badge>
               </TableCell>
               <TableCell>
-                {a.id !== currentUserId && (
-                  <Button
-                    variant="outline"
-                    className="h-9"
-                    onClick={() => handleToggle(a)}
-                    disabled={togglingId === a.id}
-                  >
-                    {a.active ? "Deactivate" : "Reactivate"}
+                <div className="flex gap-1">
+                  <Button variant="outline" size="icon-sm" aria-label="Reset password" onClick={() => setResettingAdmin(a)}>
+                    <KeyRound className="size-3.5" />
                   </Button>
-                )}
+                  {a.id !== currentUserId && (
+                    <Button
+                      variant="outline"
+                      className="h-9"
+                      onClick={() => handleToggle(a)}
+                      disabled={togglingId === a.id}
+                    >
+                      {a.active ? "Deactivate" : "Reactivate"}
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -88,6 +96,12 @@ export function SuperAdmins({
       </Table>
       {error && <p className="p-4 text-base text-destructive">{error}</p>}
       <AddSuperAdminDialog open={addOpen} onOpenChange={setAddOpen} onAdded={() => router.refresh()} />
+      <ResetPasswordDialog
+        open={resettingAdmin !== null}
+        onOpenChange={(open) => !open && setResettingAdmin(null)}
+        userId={resettingAdmin?.id ?? ""}
+        userName={resettingAdmin?.name ?? ""}
+      />
     </div>
   );
 }

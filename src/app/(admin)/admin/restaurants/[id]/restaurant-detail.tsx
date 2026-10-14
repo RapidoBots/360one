@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Pencil, Power, Trash2 } from "lucide-react";
+import { CalendarDays, KeyRound, Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import {
 } from "../actions";
 import { AddStaffDialog } from "./add-staff-dialog";
 import { EditStaffDialog, type StaffMember } from "./edit-staff-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 import type { RestaurantStatus } from "@/generated/prisma/client";
 
 export type RestaurantWithUsers = {
@@ -48,6 +49,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [addStaffOpen, setAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [resettingStaff, setResettingStaff] = useState<StaffMember | null>(null);
   const [togglingStaffId, setTogglingStaffId] = useState<string | null>(null);
   const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
   const [ghlLocationId, setGhlLocationId] = useState(restaurant.ghlLocationId ?? "");
@@ -222,6 +224,9 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
                     <Button variant="outline" size="icon-sm" aria-label="Edit" onClick={() => setEditingStaff(u)}>
                       <Pencil className="size-3.5" />
                     </Button>
+                    <Button variant="outline" size="icon-sm" aria-label="Reset password" onClick={() => setResettingStaff(u)}>
+                      <KeyRound className="size-3.5" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="icon-sm"
@@ -262,6 +267,13 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
         onOpenChange={setAddStaffOpen}
         restaurantId={restaurant.id}
         onAdded={() => router.refresh()}
+      />
+
+      <ResetPasswordDialog
+        open={resettingStaff !== null}
+        onOpenChange={(open) => !open && setResettingStaff(null)}
+        userId={resettingStaff?.id ?? ""}
+        userName={resettingStaff?.name ?? ""}
       />
     </div>
   );
