@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import {
-  LayoutGrid, CalendarDays, Users, ClipboardList,
+  LayoutGrid, CalendarDays, Users, ClipboardList, ArrowRightLeft,
   Calendar, Clock, AlertTriangle,
 } from "lucide-react";
 import { WeeklySchedule } from "./weekly-schedule";
 import { StaffList } from "./staff-list";
 import { TimeOffRequests } from "./time-off-requests";
+import { ExchangeHistory } from "./exchange-history";
 import { positionLabel } from "./position-utils";
 import type { Role, StaffPosition, ExchangeStatus, TimeOffStatus } from "@/generated/prisma/client";
 
@@ -73,12 +74,13 @@ export type TimeOffRequestData = {
   user: { id: string; name: string };
 };
 
-type SubPage = "overview" | "schedule" | "team" | "requests" | "my" | "myrequests";
+type SubPage = "overview" | "schedule" | "team" | "requests" | "exchanges" | "my" | "myrequests";
 
 const OWNER_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
   { key: "overview", label: "Overview", icon: LayoutGrid },
   { key: "schedule", label: "Schedule", icon: CalendarDays },
   { key: "team", label: "Team", icon: Users },
+  { key: "exchanges", label: "Exchanges", icon: ArrowRightLeft },
   { key: "requests", label: "Requests", icon: ClipboardList },
 ];
 
@@ -133,6 +135,7 @@ export function StaffPageClient({
     overview: "Ready for today.",
     schedule: "A clearer week.",
     team: "Your people.",
+    exchanges: "Shift exchanges.",
     requests: "Time-off requests.",
     my: "Your next service.",
     myrequests: "Your requests.",
@@ -141,6 +144,7 @@ export function StaffPageClient({
     overview: "Overview of your team's schedule and upcoming shifts.",
     schedule: "Plan your shifts. Support your team. Be ready for service.",
     team: "Manage employees, assign positions, and control access.",
+    exchanges: "Review and manage shift swap requests between team members.",
     requests: "Review time off and keep your schedule in sync.",
     my: "Your upcoming published shifts.",
     myrequests: "Track your time-off requests.",
@@ -236,6 +240,14 @@ export function StaffPageClient({
       )}
       {page === "team" && (
         <StaffList slug={slug} members={members} />
+      )}
+      {page === "exchanges" && (
+        <ExchangeHistory
+          slug={slug}
+          exchanges={exchanges}
+          shifts={visibleShifts}
+          members={activeMembers}
+        />
       )}
       {page === "requests" && (
         <TimeOffRequests
