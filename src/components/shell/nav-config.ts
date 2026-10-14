@@ -12,18 +12,23 @@ export type NavIconName =
 
 export type NavItem = { label: string; href: string; icon: NavIconName };
 
-export function restaurantNavItems(slug: string): NavItem[] {
+export function restaurantNavItems(slug: string, opts?: { schedulingEnabled?: boolean }): NavItem[] {
   const base = `/r/${slug}`;
-  return [
+  const items: NavItem[] = [
     { label: "Dashboard", href: `${base}/dashboard`, icon: "LayoutDashboard" },
     { label: "Reservations", href: `${base}/reservations`, icon: "CalendarClock" },
     { label: "Waiting Area", href: `${base}/waitlist`, icon: "ListOrdered" },
     { label: "Floor Manager", href: `${base}/floor-manager`, icon: "Map" },
     { label: "Customers", href: `${base}/customers`, icon: "Users" },
-    { label: "Staff", href: `${base}/staff`, icon: "CalendarDays" },
+  ];
+  if (opts?.schedulingEnabled) {
+    items.push({ label: "Staff", href: `${base}/staff`, icon: "CalendarDays" });
+  }
+  items.push(
     { label: "Reports", href: `${base}/reports`, icon: "BarChart3" },
     { label: "Settings", href: `${base}/settings`, icon: "Settings" },
-  ];
+  );
+  return items;
 }
 
 export const adminNavItems: NavItem[] = [

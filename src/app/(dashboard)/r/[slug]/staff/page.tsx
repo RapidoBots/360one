@@ -1,6 +1,6 @@
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StaffPageClient } from "./staff-page-client";
-import { SchedulingLocked } from "./scheduling-locked";
 
 export default async function StaffPage({
   params,
@@ -14,9 +14,7 @@ export default async function StaffPage({
 
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
 
-  if (!restaurant.schedulingEnabled) {
-    return <SchedulingLocked />;
-  }
+  if (!restaurant.schedulingEnabled) notFound();
 
   const members = await prisma.user.findMany({
     where: { restaurantId: restaurant.id },

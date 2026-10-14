@@ -13,7 +13,7 @@ export default async function RestaurantLayout({
   const { slug } = await params;
   const { restaurant } = await requireRestaurantAccess(slug);
   return (
-    <ShellLayout title={restaurant.name} navItems={restaurantNavItems(slug)}>
+    <ShellLayout title={restaurant.name} navItems={restaurantNavItems(slug, { schedulingEnabled: restaurant.schedulingEnabled })}>
       {children}
     </ShellLayout>
   );
