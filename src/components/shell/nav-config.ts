@@ -4,6 +4,7 @@ export type NavIconName =
   | "ListOrdered"
   | "Map"
   | "Users"
+  | "CalendarDays"
   | "BarChart3"
   | "Settings"
   | "Building2"
@@ -19,6 +20,7 @@ export function restaurantNavItems(slug: string): NavItem[] {
     { label: "Waiting Area", href: `${base}/waitlist`, icon: "ListOrdered" },
     { label: "Floor Manager", href: `${base}/floor-manager`, icon: "Map" },
     { label: "Customers", href: `${base}/customers`, icon: "Users" },
+    { label: "Staff", href: `${base}/staff`, icon: "CalendarDays" },
     { label: "Reports", href: `${base}/reports`, icon: "BarChart3" },
     { label: "Settings", href: `${base}/settings`, icon: "Settings" },
   ];

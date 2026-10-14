@@ -21,6 +21,15 @@ enum RestaurantStatus {
   SUSPENDED
 }
 
+enum StaffPosition {
+  SERVER
+  HOST
+  CHEF
+  BARTENDER
+  MANAGER
+  OTHER
+}
+
 model Restaurant {
   id        String           @id @default(cuid())
   name      String
@@ -53,6 +62,7 @@ model Restaurant {
   businessHours BusinessHours[]
   closedDates   ClosedDate[]
   blockedSlots  BlockedSlot[]
+  shifts        Shift[]
 
   @@map("restaurant")
 }
@@ -126,12 +136,14 @@ model User {
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
-  role          Role        @default(STAFF)
-  active        Boolean     @default(true)
+  role          Role          @default(STAFF)
+  active        Boolean       @default(true)
+  position      StaffPosition?
   restaurantId  String?
-  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id])
   sessions      Session[]
   accounts      Account[]
+  shifts        Shift[]
 
   @@map("user")
 }
@@ -291,4 +303,21 @@ model Reservation {
   updatedAt       DateTime          @updatedAt
 
   @@map("reservation")
+}
+
+model Shift {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         String
+  startTime    String
+  endTime      String
+  position     StaffPosition
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  @@unique([userId, date, startTime])
+  @@map("shift")
 }

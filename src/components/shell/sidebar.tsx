@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   CalendarClock,
+  CalendarDays,
   ListOrdered,
   Map,
   Users,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<NavIconName, LucideIcon> = {
   LayoutDashboard,
   CalendarClock,
+  CalendarDays,
   ListOrdered,
   Map,
   Users,
