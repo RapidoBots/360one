@@ -220,31 +220,32 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
                   <Badge variant="outline">{u.active ? "Active" : "Inactive"}</Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="icon-sm" aria-label="Edit" onClick={() => setEditingStaff(u)}>
-                      <Pencil className="size-3.5" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" className="h-9 gap-1.5 px-3 text-sm" onClick={() => setEditingStaff(u)}>
+                      <Pencil className="size-4" />
+                      Edit
                     </Button>
-                    <Button variant="outline" size="icon-sm" aria-label="Reset password" onClick={() => setResettingStaff(u)}>
-                      <KeyRound className="size-3.5" />
+                    <Button variant="outline" className="h-9 gap-1.5 px-3 text-sm" onClick={() => setResettingStaff(u)}>
+                      <KeyRound className="size-4" />
+                      Reset Password
                     </Button>
                     <Button
                       variant="outline"
-                      size="icon-sm"
-                      aria-label={u.active ? "Deactivate" : "Reactivate"}
+                      className="h-9 gap-1.5 px-3 text-sm"
                       onClick={() => handleToggleStaffActive(u)}
                       disabled={togglingStaffId === u.id}
                     >
-                      <Power className="size-3.5" />
+                      <Power className="size-4" />
+                      {u.active ? "Deactivate" : "Reactivate"}
                     </Button>
                     <Button
                       variant="outline"
-                      size="icon-sm"
-                      className="text-destructive"
-                      aria-label="Delete"
+                      className="h-9 gap-1.5 px-3 text-sm text-destructive"
                       onClick={() => handleDeleteStaff(u)}
                       disabled={deletingStaffId === u.id}
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-4" />
+                      Delete
                     </Button>
                   </div>
                 </TableCell>

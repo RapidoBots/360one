@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,17 +74,19 @@ export function SuperAdmins({
                 <Badge variant="outline">{a.active ? "Active" : "Inactive"}</Badge>
               </TableCell>
               <TableCell>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="icon-sm" aria-label="Reset password" onClick={() => setResettingAdmin(a)}>
-                    <KeyRound className="size-3.5" />
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" className="h-9 gap-1.5 px-3 text-sm" onClick={() => setResettingAdmin(a)}>
+                    <KeyRound className="size-4" />
+                    Reset Password
                   </Button>
                   {a.id !== currentUserId && (
                     <Button
                       variant="outline"
-                      className="h-9"
+                      className="h-9 gap-1.5 px-3 text-sm"
                       onClick={() => handleToggle(a)}
                       disabled={togglingId === a.id}
                     >
+                      <Power className="size-4" />
                       {a.active ? "Deactivate" : "Reactivate"}
                     </Button>
                   )}
