@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { StaffPageClient } from "./staff-page-client";
+import { SchedulingLocked } from "./scheduling-locked";
 
 export default async function StaffPage({
   params,
@@ -13,9 +14,13 @@ export default async function StaffPage({
 
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
 
+  if (!restaurant.schedulingEnabled) {
+    return <SchedulingLocked />;
+  }
+
   const members = await prisma.user.findMany({
     where: { restaurantId: restaurant.id },
-    select: { id: true, name: true, email: true, role: true, position: true, active: true },
+    select: { id: true, name: true, email: true, role: true, position: true, customPosition: true, active: true },
     orderBy: { name: "asc" },
   });
 
@@ -31,11 +36,22 @@ export default async function StaffPage({
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
+  const exchanges = await prisma.shiftExchange.findMany({
+    where: { restaurantId: restaurant.id },
+    include: {
+      requesterShift: { include: { user: { select: { id: true, name: true } } } },
+      targetShift: { include: { user: { select: { id: true, name: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
   return (
     <StaffPageClient
       slug={slug}
       members={members}
       shifts={shifts}
+      exchanges={exchanges}
       weekStart={weekStart}
       timezone={restaurant.timezone}
     />

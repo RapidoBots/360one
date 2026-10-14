@@ -147,3 +147,13 @@ export async function deleteStaffMemberAction(restaurantId: string, userId: stri
   revalidatePath(`/admin/restaurants/${restaurantId}`);
   return { ok: true };
 }
+
+export async function toggleSchedulingAction(
+  restaurantId: string,
+  enabled: boolean
+): Promise<AdminActionResult> {
+  await assertSuperAdmin();
+  await prisma.restaurant.update({ where: { id: restaurantId }, data: { schedulingEnabled: enabled } });
+  revalidatePath(`/admin/restaurants/${restaurantId}`);
+  return { ok: true };
+}

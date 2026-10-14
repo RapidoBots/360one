@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Power, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
@@ -13,8 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { updateStaffPositionAction } from "./actions";
+import { updateStaffPositionAction, toggleStaffActiveAction, deleteStaffAction } from "./actions";
+import { AddEmployeeDialog } from "./add-employee-dialog";
 import { POSITION_LABELS, POSITION_COLORS } from "./constants";
+import { positionLabel } from "./position-utils";
 import type { StaffMember } from "./staff-page-client";
 import type { StaffPosition } from "@/generated/prisma/client";
 
@@ -23,6 +27,9 @@ const POSITIONS: StaffPosition[] = ["SERVER", "HOST", "CHEF", "BARTENDER", "MANA
 export function StaffList({ slug, members }: { slug: string; members: StaffMember[] }) {
   const router = useRouter();
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   async function handlePositionChange(userId: string, value: string) {
     setSavingId(userId);
@@ -37,13 +44,44 @@ export function StaffList({ slug, members }: { slug: string; members: StaffMembe
     }
   }
 
+  async function handleToggleActive(m: StaffMember) {
+    setTogglingId(m.id);
+    const result = await toggleStaffActiveAction(slug, m.id, !m.active);
+    setTogglingId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+    } else {
+      toast.success(m.active ? "Employee deactivated" : "Employee activated");
+      router.refresh();
+    }
+  }
+
+  async function handleDelete(m: StaffMember) {
+    if (!window.confirm(`Delete ${m.name}? This permanently removes their account and all shifts.`)) return;
+    setDeletingId(m.id);
+    const result = await deleteStaffAction(slug, m.id);
+    setDeletingId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+    } else {
+      toast.success("Employee deleted");
+      router.refresh();
+    }
+  }
+
   return (
     <div className="rounded-xl border border-border bg-card ring-1 ring-foreground/5">
-      <div className="border-b border-border px-5 py-4">
-        <h2 className="text-base font-semibold">Team members</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Assign positions to schedule staff on the right shifts.
-        </p>
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div>
+          <h2 className="text-base font-semibold">Team members</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Manage employees, assign positions, and control access.
+          </p>
+        </div>
+        <Button className="gap-2" onClick={() => setAddOpen(true)}>
+          <UserPlus className="size-4" />
+          Add employee
+        </Button>
       </div>
       <Table>
         <TableHeader>
@@ -52,6 +90,7 @@ export function StaffList({ slug, members }: { slug: string; members: StaffMembe
             <TableHead className="hidden sm:table-cell">Email</TableHead>
             <TableHead>Position</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -82,7 +121,7 @@ export function StaffList({ slug, members }: { slug: string; members: StaffMembe
                           <span className="text-muted-foreground">Unassigned</span>
                         ) : (
                           <span style={{ color: POSITION_COLORS[value as StaffPosition] }}>
-                            {POSITION_LABELS[value as StaffPosition]}
+                            {positionLabel(value as StaffPosition, m.customPosition)}
                           </span>
                         )
                       }
@@ -109,17 +148,41 @@ export function StaffList({ slug, members }: { slug: string; members: StaffMembe
                   {m.active ? "Active" : "Inactive"}
                 </Badge>
               </TableCell>
+              <TableCell>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={m.active ? "Deactivate" : "Activate"}
+                    onClick={() => handleToggleActive(m)}
+                    disabled={togglingId === m.id}
+                  >
+                    <Power className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    className="text-destructive"
+                    aria-label="Delete"
+                    onClick={() => handleDelete(m)}
+                    disabled={deletingId === m.id}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           ))}
           {members.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
-                No team members yet. Add staff from Settings.
+              <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                No team members yet. Click &quot;Add employee&quot; to get started.
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+      <AddEmployeeDialog slug={slug} open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }

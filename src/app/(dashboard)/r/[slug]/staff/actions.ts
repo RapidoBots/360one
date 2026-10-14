@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantOwner } from "@/lib/auth-guards";
+import { createUserAccount } from "@/lib/user-accounts";
 import type { StaffPosition } from "@/generated/prisma/client";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
+
+// ── Position ──
 
 export async function updateStaffPositionAction(
   slug: string,
@@ -22,6 +25,54 @@ export async function updateStaffPositionAction(
   return { ok: true };
 }
 
+// ── Employee management ──
+
+export async function addEmployeeAction(
+  slug: string,
+  input: { name: string; email: string; password: string }
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  let user;
+  try {
+    user = await createUserAccount({ name: input.name, email: input.email, password: input.password });
+  } catch {
+    return { ok: false, error: `Could not create account for "${input.email}" — it may already be in use.` };
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { role: "STAFF", restaurantId: restaurant.id } });
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+export async function toggleStaffActiveAction(
+  slug: string,
+  userId: string,
+  active: boolean
+): Promise<ActionResult> {
+  const { user, restaurant } = await assertRestaurantOwner(slug);
+  if (userId === user.id) return { ok: false, error: "You can't deactivate your own account." };
+  const { count } = await prisma.user.updateMany({
+    where: { id: userId, restaurantId: restaurant.id },
+    data: { active },
+  });
+  if (count === 0) return { ok: false, error: "Staff member not found." };
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+export async function deleteStaffAction(
+  slug: string,
+  userId: string
+): Promise<ActionResult> {
+  const { user, restaurant } = await assertRestaurantOwner(slug);
+  if (userId === user.id) return { ok: false, error: "You can't delete your own account." };
+  const { count } = await prisma.user.deleteMany({ where: { id: userId, restaurantId: restaurant.id } });
+  if (count === 0) return { ok: false, error: "Staff member not found." };
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+// ── Shifts ──
+
 export async function createShiftAction(
   slug: string,
   input: {
@@ -30,6 +81,7 @@ export async function createShiftAction(
     startTime: string;
     endTime: string;
     position: StaffPosition;
+    customPosition?: string;
     notes?: string;
   }
 ): Promise<ActionResult> {
@@ -50,12 +102,64 @@ export async function createShiftAction(
         startTime: input.startTime,
         endTime: input.endTime,
         position: input.position,
+        customPosition: input.position === "OTHER" ? (input.customPosition || null) : null,
         notes: input.notes || null,
       },
     });
   } catch {
     return { ok: false, error: "This person already has a shift starting at that time." };
   }
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+export async function createBulkShiftsAction(
+  slug: string,
+  input: {
+    userId: string;
+    dates: string[];
+    startTime: string;
+    endTime: string;
+    position: StaffPosition;
+    customPosition?: string;
+    notes?: string;
+  }
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const member = await prisma.user.findFirst({
+    where: { id: input.userId, restaurantId: restaurant.id },
+  });
+  if (!member) return { ok: false, error: "Staff member not found." };
+  if (input.startTime >= input.endTime) {
+    return { ok: false, error: "End time must be after start time." };
+  }
+
+  const customPos = input.position === "OTHER" ? (input.customPosition || null) : null;
+
+  const existing = await prisma.shift.findMany({
+    where: { userId: input.userId, date: { in: input.dates }, startTime: input.startTime },
+    select: { date: true },
+  });
+  const existingDates = new Set(existing.map((s) => s.date));
+
+  const toCreate = input.dates
+    .filter((d) => !existingDates.has(d))
+    .map((date) => ({
+      restaurantId: restaurant.id,
+      userId: input.userId,
+      date,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      position: input.position,
+      customPosition: customPos,
+      notes: input.notes || null,
+    }));
+
+  if (toCreate.length === 0) {
+    return { ok: false, error: "All selected days already have a shift at this time." };
+  }
+
+  await prisma.shift.createMany({ data: toCreate });
   revalidatePath(`/r/${slug}/staff`);
   return { ok: true };
 }
@@ -67,6 +171,7 @@ export async function updateShiftAction(
     startTime: string;
     endTime: string;
     position: StaffPosition;
+    customPosition?: string;
     notes?: string;
   }
 ): Promise<ActionResult> {
@@ -80,6 +185,7 @@ export async function updateShiftAction(
       startTime: input.startTime,
       endTime: input.endTime,
       position: input.position,
+      customPosition: input.position === "OTHER" ? (input.customPosition || null) : null,
       notes: input.notes || null,
     },
   });
@@ -136,12 +242,78 @@ export async function copyWeekScheduleAction(
       startTime: s.startTime,
       endTime: s.endTime,
       position: s.position,
+      customPosition: s.customPosition,
       notes: s.notes,
     }))
     .filter((s) => !existingKeys.has(`${s.userId}|${s.date}|${s.startTime}`));
 
   if (newShifts.length > 0) {
     await prisma.shift.createMany({ data: newShifts });
+  }
+
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+// ── Shift exchange ──
+
+export async function requestShiftExchangeAction(
+  slug: string,
+  input: { requesterShiftId: string; targetShiftId: string; note?: string }
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const [requester, target] = await Promise.all([
+    prisma.shift.findFirst({ where: { id: input.requesterShiftId, restaurantId: restaurant.id } }),
+    prisma.shift.findFirst({ where: { id: input.targetShiftId, restaurantId: restaurant.id } }),
+  ]);
+  if (!requester || !target) return { ok: false, error: "One or both shifts not found." };
+  if (requester.userId === target.userId) return { ok: false, error: "Can't exchange a shift with yourself." };
+
+  await prisma.shiftExchange.create({
+    data: {
+      restaurantId: restaurant.id,
+      requesterShiftId: input.requesterShiftId,
+      targetShiftId: input.targetShiftId,
+      note: input.note || null,
+    },
+  });
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+export async function reviewShiftExchangeAction(
+  slug: string,
+  exchangeId: string,
+  approve: boolean
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const exchange = await prisma.shiftExchange.findFirst({
+    where: { id: exchangeId, restaurantId: restaurant.id, status: "PENDING" },
+    include: { requesterShift: true, targetShift: true },
+  });
+  if (!exchange) return { ok: false, error: "Exchange request not found or already resolved." };
+
+  if (approve) {
+    // Swap the userId on both shifts
+    await prisma.$transaction([
+      prisma.shift.update({
+        where: { id: exchange.requesterShiftId },
+        data: { userId: exchange.targetShift.userId },
+      }),
+      prisma.shift.update({
+        where: { id: exchange.targetShiftId },
+        data: { userId: exchange.requesterShift.userId },
+      }),
+      prisma.shiftExchange.update({
+        where: { id: exchangeId },
+        data: { status: "APPROVED", reviewedAt: new Date() },
+      }),
+    ]);
+  } else {
+    await prisma.shiftExchange.update({
+      where: { id: exchangeId },
+      data: { status: "REJECTED", reviewedAt: new Date() },
+    });
   }
 
   revalidatePath(`/r/${slug}/staff`);

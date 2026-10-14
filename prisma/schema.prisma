@@ -53,6 +53,7 @@ model Restaurant {
   // {restaurant_name} token; both fall back to English defaults when null.
   successMessage    String?
   successButtonText String?
+  schedulingEnabled Boolean @default(false)
   users        User[]
   tables       Table[]
   floors       Floor[]
@@ -63,6 +64,7 @@ model Restaurant {
   closedDates   ClosedDate[]
   blockedSlots  BlockedSlot[]
   shifts        Shift[]
+  shiftExchanges ShiftExchange[]
 
   @@map("restaurant")
 }
@@ -138,7 +140,8 @@ model User {
   updatedAt     DateTime
   role          Role          @default(STAFF)
   active        Boolean       @default(true)
-  position      StaffPosition?
+  position       StaffPosition?
+  customPosition String?
   restaurantId  String?
   restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id])
   sessions      Session[]
@@ -306,18 +309,43 @@ model Reservation {
 }
 
 model Shift {
-  id           String        @id @default(cuid())
-  restaurantId String
-  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date         String
-  startTime    String
-  endTime      String
-  position     StaffPosition
-  notes        String?
-  createdAt    DateTime      @default(now())
+  id             String        @id @default(cuid())
+  restaurantId   String
+  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String
+  startTime      String
+  endTime        String
+  position       StaffPosition
+  customPosition String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  exchangesAs    ShiftExchange[] @relation("RequesterShift")
+  exchangesFor   ShiftExchange[] @relation("TargetShift")
 
   @@unique([userId, date, startTime])
   @@map("shift")
+}
+
+enum ExchangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ShiftExchange {
+  id               String         @id @default(cuid())
+  restaurantId     String
+  restaurant       Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  requesterShiftId String
+  requesterShift   Shift          @relation("RequesterShift", fields: [requesterShiftId], references: [id], onDelete: Cascade)
+  targetShiftId    String
+  targetShift      Shift          @relation("TargetShift", fields: [targetShiftId], references: [id], onDelete: Cascade)
+  status           ExchangeStatus @default(PENDING)
+  note             String?
+  reviewedAt       DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@map("shift_exchange")
 }

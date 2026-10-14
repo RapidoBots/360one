@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { POSITION_LABELS, POSITION_COLORS } from "./constants";
+import { positionLabel } from "./position-utils";
 import { copyWeekScheduleAction } from "./actions";
 import { ShiftDialog } from "./shift-dialog";
 import type { StaffMember, ShiftData } from "./staff-page-client";
@@ -61,7 +62,7 @@ export function WeeklySchedule({
   const [copying, setCopying] = useState(false);
   const [dialogState, setDialogState] = useState<
     | { mode: "closed" }
-    | { mode: "create"; userId: string; date: string }
+    | { mode: "create"; userId: string; date: string; weekDates: string[] }
     | { mode: "edit"; shift: ShiftData }
   >({ mode: "closed" });
 
@@ -227,12 +228,12 @@ export function WeeklySchedule({
                               {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
                             </div>
                             <div className="mt-0.5 text-[10px] leading-tight opacity-90">
-                              {POSITION_LABELS[shift.position]}
+                              {positionLabel(shift.position, shift.customPosition)}
                             </div>
                           </button>
                         ))}
                         <button
-                          onClick={() => setDialogState({ mode: "create", userId: member.id, date })}
+                          onClick={() => setDialogState({ mode: "create", userId: member.id, date, weekDates })}
                           className="flex w-full items-center justify-center rounded-lg border border-dashed border-transparent py-1 text-[10px] text-muted-foreground/0 transition-all group-hover:border-border group-hover:text-muted-foreground hover:!border-primary hover:!text-primary"
                         >
                           <Plus className="mr-0.5 size-3" />

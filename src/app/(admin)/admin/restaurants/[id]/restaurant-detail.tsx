@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Power, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import {
   updateGhlCredentialsAction,
   setStaffActiveAction,
   deleteStaffMemberAction,
+  toggleSchedulingAction,
 } from "../actions";
 import { AddStaffDialog } from "./add-staff-dialog";
 import { EditStaffDialog, type StaffMember } from "./edit-staff-dialog";
@@ -32,6 +33,7 @@ export type RestaurantWithUsers = {
   name: string;
   slug: string;
   status: RestaurantStatus;
+  schedulingEnabled: boolean;
   ghlLocationId: string | null;
   ghlApiKey: string | null;
   users: StaffMember[];
@@ -52,6 +54,7 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
   const [ghlApiKey, setGhlApiKey] = useState(restaurant.ghlApiKey ?? "");
   const [ghlSaving, setGhlSaving] = useState(false);
   const [ghlError, setGhlError] = useState<string | null>(null);
+  const [togglingScheduling, setTogglingScheduling] = useState(false);
 
   async function handleToggleStaffActive(member: StaffMember) {
     setTogglingStaffId(member.id);
@@ -160,6 +163,31 @@ export function RestaurantDetail({ restaurant }: { restaurant: RestaurantWithUse
           {ghlSaving ? "Saving..." : "Save GHL settings"}
         </Button>
       </form>
+
+      <div className="flex max-w-md items-center justify-between rounded-[5px] border border-border p-5">
+        <div className="flex items-center gap-3">
+          <CalendarDays className="size-5 text-muted-foreground" />
+          <div>
+            <h2 className="text-base font-semibold">Staff Scheduling</h2>
+            <p className="text-sm text-muted-foreground">
+              {restaurant.schedulingEnabled ? "Premium feature enabled" : "Premium feature disabled"}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant={restaurant.schedulingEnabled ? "outline" : "default"}
+          className="h-11 px-5 text-base"
+          disabled={togglingScheduling}
+          onClick={async () => {
+            setTogglingScheduling(true);
+            await toggleSchedulingAction(restaurant.id, !restaurant.schedulingEnabled);
+            setTogglingScheduling(false);
+            router.refresh();
+          }}
+        >
+          {restaurant.schedulingEnabled ? "Disable" : "Enable"}
+        </Button>
+      </div>
 
       <div className="rounded-[5px] border border-border">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
