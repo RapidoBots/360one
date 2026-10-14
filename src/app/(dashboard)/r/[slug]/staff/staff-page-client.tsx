@@ -6,9 +6,9 @@ import {
   Calendar, Clock, AlertTriangle,
 } from "lucide-react";
 import { WeeklySchedule } from "./weekly-schedule";
-import { StaffList } from "./staff-list";
 import { TimeOffRequests } from "./time-off-requests";
 import { ExchangeHistory } from "./exchange-history";
+import { AddEmployeeDialog } from "./add-employee-dialog";
 import { positionLabel } from "./position-utils";
 import type { Role, StaffPosition, ExchangeStatus, TimeOffStatus } from "@/generated/prisma/client";
 
@@ -239,7 +239,12 @@ export function StaffPageClient({
         />
       )}
       {page === "team" && (
-        <StaffList slug={slug} members={members} />
+        <TeamCards
+          slug={slug}
+          members={members}
+          shifts={visibleShifts}
+          isOwner={isOwner}
+        />
       )}
       {page === "exchanges" && (
         <ExchangeHistory
@@ -431,6 +436,88 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
     >
       {initials}
     </span>
+  );
+}
+
+function TeamCards({
+  slug, members, shifts, isOwner,
+}: {
+  slug: string;
+  members: StaffMember[];
+  shifts: ShiftData[];
+  isOwner: boolean;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+
+  function memberHours(id: string): number {
+    return shifts
+      .filter((s) => s.userId === id)
+      .reduce((sum, s) => sum + shiftDuration(s), 0);
+  }
+
+  return (
+    <>
+      {isOwner && (
+        <div className="mb-5 flex justify-end">
+          <button
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Users className="size-4" />
+            Add employee
+          </button>
+        </div>
+      )}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {members.map((m) => {
+          const hrs = Math.round(memberHours(m.id) * 10) / 10;
+          const isDark = m.position === "CHEF";
+          const initials = m.name
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+
+          return (
+            <div
+              key={m.id}
+              className="rounded-xl border border-border bg-card p-5"
+            >
+              <span
+                className={`inline-flex size-11 items-center justify-center rounded-full text-xs font-bold ${
+                  isDark
+                    ? "bg-[#20242d] text-white"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                {initials}
+              </span>
+              <h3 className="mt-4 text-lg font-bold tracking-tight">{m.name}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {m.position ? positionLabel(m.position, m.customPosition) : "Unassigned"}
+                {" · "}
+                {m.active ? "Active" : "Inactive"}
+              </p>
+              <div className="mt-5 flex items-center justify-between border-t border-border pt-5 text-sm">
+                <span>{hrs} hrs scheduled</span>
+                <span className="text-xs font-medium text-primary">
+                  Availability &rarr;
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {members.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No team members yet. Click &quot;Add employee&quot; to get started.
+        </p>
+      )}
+      {isOwner && (
+        <AddEmployeeDialog slug={slug} open={addOpen} onOpenChange={setAddOpen} />
+      )}
+    </>
   );
 }
 
