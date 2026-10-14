@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantOwner } from "@/lib/auth-guards";
+import { assertRestaurantOwner, assertRestaurantMember } from "@/lib/auth-guards";
 import { createUserAccount } from "@/lib/user-accounts";
 import type { StaffPosition } from "@/generated/prisma/client";
 
@@ -316,6 +316,77 @@ export async function reviewShiftExchangeAction(
     });
   }
 
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+// ── Publish ──
+
+export async function publishWeekAction(
+  slug: string,
+  weekStart: string
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const dates = weekDates(weekStart);
+  await prisma.shift.updateMany({
+    where: { restaurantId: restaurant.id, date: { in: dates }, draft: true },
+    data: { draft: false },
+  });
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+// ── Time off ──
+
+export async function createTimeOffRequestAction(
+  slug: string,
+  input: { fromDate: string; toDate: string; reason?: string }
+): Promise<ActionResult> {
+  const { user, restaurant } = await assertRestaurantMember(slug);
+  if (input.fromDate > input.toDate) {
+    return { ok: false, error: "End date must be on or after start date." };
+  }
+  await prisma.timeOffRequest.create({
+    data: {
+      restaurantId: restaurant.id,
+      userId: user.id,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      reason: input.reason || null,
+    },
+  });
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+export async function reviewTimeOffRequestAction(
+  slug: string,
+  requestId: string,
+  approve: boolean
+): Promise<ActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const { count } = await prisma.timeOffRequest.updateMany({
+    where: { id: requestId, restaurantId: restaurant.id, status: "PENDING" },
+    data: { status: approve ? "APPROVED" : "DECLINED", reviewedAt: new Date() },
+  });
+  if (count === 0) return { ok: false, error: "Request not found or already resolved." };
+  revalidatePath(`/r/${slug}/staff`);
+  return { ok: true };
+}
+
+// ── Availability ──
+
+export async function updateAvailabilityAction(
+  slug: string,
+  daysOff: number[]
+): Promise<ActionResult> {
+  const { user, restaurant } = await assertRestaurantMember(slug);
+  const valid = daysOff.every((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  if (!valid) return { ok: false, error: "Invalid day values." };
+  await prisma.user.updateMany({
+    where: { id: user.id, restaurantId: restaurant.id },
+    data: { availabilityOff: daysOff },
+  });
   revalidatePath(`/r/${slug}/staff`);
   return { ok: true };
 }

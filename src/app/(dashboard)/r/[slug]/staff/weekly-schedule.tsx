@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { POSITION_LABELS, POSITION_COLORS } from "./constants";
+import { SHIFT_STYLES } from "./constants";
 import { positionLabel } from "./position-utils";
-import { copyWeekScheduleAction } from "./actions";
+import { copyWeekScheduleAction, publishWeekAction } from "./actions";
 import { ShiftDialog } from "./shift-dialog";
 import type { StaffMember, ShiftData } from "./staff-page-client";
-import type { StaffPosition } from "@/generated/prisma/client";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -19,25 +17,6 @@ function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-}
-
-function formatDayHeader(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00Z");
-  return d.getUTCDate().toString();
-}
-
-function formatMonthYear(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00Z");
-  return d.toLocaleDateString([], { month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-function formatTime(t: string): string {
-  const parts = t.split(":").map(Number);
-  const h = parts[0] ?? 0;
-  const m = parts[1] ?? 0;
-  const ampm = h >= 12 ? "pm" : "am";
-  const h12 = h % 12 || 12;
-  return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
 }
 
 function isToday(dateStr: string): boolean {
@@ -50,16 +29,21 @@ export function WeeklySchedule({
   shifts,
   weekStart,
   timezone: _tz,
+  isOwner,
 }: {
   slug: string;
   members: StaffMember[];
   shifts: ShiftData[];
   weekStart: string;
   timezone: string;
+  isOwner: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [copying, setCopying] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [dialogState, setDialogState] = useState<
     | { mode: "closed" }
     | { mode: "create"; userId: string; date: string; weekDates: string[] }
@@ -67,6 +51,13 @@ export function WeeklySchedule({
   >({ mode: "closed" });
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const hasDrafts = shifts.some((s) => s.draft);
+
+  const filteredMembers = members.filter((m) => {
+    if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (roleFilter !== "all" && m.position !== roleFilter) return false;
+    return true;
+  });
 
   const shiftsByCell = new Map<string, ShiftData[]>();
   for (const s of shifts) {
@@ -109,162 +100,252 @@ export function WeeklySchedule({
     }
   }
 
-  const totalShifts = shifts.length;
-  const positionCounts = new Map<StaffPosition, number>();
-  for (const s of shifts) {
-    positionCounts.set(s.position, (positionCounts.get(s.position) ?? 0) + 1);
+  async function handlePublish() {
+    if (!hasDrafts) {
+      toast.info("No draft shifts to publish this week.");
+      return;
+    }
+    setPublishing(true);
+    const tid = toast.loading("Publishing schedule...");
+    const result = await publishWeekAction(slug, weekStart);
+    setPublishing(false);
+    if (!result.ok) {
+      toast.error(result.error, { id: tid });
+    } else {
+      toast.success("Schedule published — your team can now see it.", { id: tid });
+      router.refresh();
+    }
+  }
+
+  function weekLabel(): string {
+    const start = new Date(weekStart + "T12:00:00Z");
+    const end = new Date(addDays(weekStart, 6) + "T12:00:00Z");
+    const s = start.toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
+    const e = end.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    return `${s} – ${e}`;
+  }
+
+  function memberHours(memberId: string): number {
+    return shifts
+      .filter((s) => s.userId === memberId)
+      .reduce((sum, s) => {
+        const [sh, sm] = s.startTime.split(":").map(Number);
+        const [eh, em] = s.endTime.split(":").map(Number);
+        let mins = (eh! * 60 + em!) - (sh! * 60 + sm!);
+        if (mins <= 0) mins += 1440;
+        return sum + mins / 60;
+      }, 0);
   }
 
   return (
     <div className="space-y-4">
-      {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
-            <ChevronLeft className="size-4" />
-          </Button>
-          <button
-            onClick={goThisWeek}
-            className="min-w-[160px] text-center text-sm font-semibold hover:text-primary"
-          >
-            {formatMonthYear(weekStart)}
-          </button>
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week">
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-9 gap-2 px-3 text-sm"
-            onClick={handleCopyWeek}
-            disabled={copying || totalShifts === 0}
-          >
-            <Copy className="size-3.5" />
-            Copy to next week
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats ribbon */}
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="outline" className="gap-1.5 px-2.5 py-1 text-xs">
-          {totalShifts} shift{totalShifts !== 1 ? "s" : ""} this week
-        </Badge>
-        {Array.from(positionCounts.entries()).map(([pos, count]) => (
-          <Badge
-            key={pos}
-            variant="outline"
-            className="gap-1.5 px-2.5 py-1 text-xs"
-          >
-            <span className="inline-block size-2 rounded-full" style={{ backgroundColor: POSITION_COLORS[pos] }} />
-            {count} {POSITION_LABELS[pos]}
-          </Badge>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card ring-1 ring-foreground/5">
-        <table className="w-full min-w-[800px] border-collapse">
-          <thead>
-            <tr>
-              <th className="sticky left-0 z-10 w-40 border-b border-r border-border bg-muted/50 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                Team Member
-              </th>
-              {weekDates.map((date, i) => (
-                <th
-                  key={date}
-                  className={`border-b border-border px-2 py-2.5 text-center text-xs font-medium ${
-                    isToday(date) ? "bg-primary/5 text-primary" : "text-muted-foreground"
-                  } ${i < 6 ? "border-r" : ""}`}
+      {/* Panel */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-semibold">{weekLabel()}</h3>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week">
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" className="text-xs" onClick={goThisWeek}>
+              This week
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {isOwner && (
+              <>
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={handleCopyWeek} disabled={copying || shifts.length === 0}
                 >
-                  <div className="font-medium">{DAY_NAMES[i]}</div>
-                  <div className={`mt-0.5 text-lg font-bold ${isToday(date) ? "text-primary" : "text-foreground"}`}>
-                    {formatDayHeader(date)}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member, mi) => (
-              <tr key={member.id} className={mi % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                <td className="sticky left-0 z-10 border-r border-border bg-inherit px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                      style={{ backgroundColor: member.position ? POSITION_COLORS[member.position] : "#94a3b8" }}
-                    >
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{member.name}</div>
-                      {member.position && (
-                        <div className="text-[10px] text-muted-foreground">
-                          {POSITION_LABELS[member.position]}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                {weekDates.map((date, di) => {
-                  const cellShifts = shiftsByCell.get(`${member.id}|${date}`) ?? [];
-                  return (
-                    <td
-                      key={date}
-                      className={`group relative border-border px-1 py-1 align-top ${
-                        isToday(date) ? "bg-primary/5" : ""
-                      } ${di < 6 ? "border-r" : ""} ${mi < members.length - 1 ? "border-b" : ""}`}
-                    >
-                      <div className="flex min-h-[52px] flex-col gap-1">
-                        {cellShifts.map((shift) => (
-                          <button
-                            key={shift.id}
-                            onClick={() => setDialogState({ mode: "edit", shift })}
-                            className="w-full rounded-lg px-2 py-1 text-left text-[11px] font-medium text-white transition-all hover:scale-[1.02] hover:shadow-md"
-                            style={{ backgroundColor: POSITION_COLORS[shift.position] }}
-                          >
-                            <div className="font-semibold leading-tight">
-                              {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
-                            </div>
-                            <div className="mt-0.5 text-[10px] leading-tight opacity-90">
-                              {positionLabel(shift.position, shift.customPosition)}
-                            </div>
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setDialogState({ mode: "create", userId: member.id, date, weekDates })}
-                          className="flex w-full items-center justify-center rounded-lg border border-dashed border-transparent py-1 text-[10px] text-muted-foreground/0 transition-all group-hover:border-border group-hover:text-muted-foreground hover:!border-primary hover:!text-primary"
-                        >
-                          <Plus className="mr-0.5 size-3" />
-                          Add
-                        </button>
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {members.length === 0 && (
-              <tr>
-                <td colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
-                  No active staff. Add team members from Settings first.
-                </td>
-              </tr>
+                  <Copy className="size-3.5" />
+                  Copy last week
+                </Button>
+                <Button
+                  size="sm" className="gap-1.5 text-xs"
+                  onClick={handlePublish} disabled={publishing || !hasDrafts}
+                >
+                  <Check className="size-3.5" />
+                  Publish week
+                </Button>
+              </>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
 
-      {/* Position legend */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span className="font-medium">Positions:</span>
-        {(Object.keys(POSITION_LABELS) as StaffPosition[]).map((pos) => (
-          <span key={pos} className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: POSITION_COLORS[pos] }} />
-            {POSITION_LABELS[pos]}
+        {/* Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search team members..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 rounded-md border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="h-8 rounded-md border border-border bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="all">All roles</option>
+              <option value="SERVER">Server</option>
+              <option value="HOST">Host</option>
+              <option value="CHEF">Chef</option>
+              <option value="BARTENDER">Bartender</option>
+              <option value="MANAGER">Manager</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-2 rounded-sm" style={{ background: "#2855ee" }} />
+              Service
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-2 rounded-sm" style={{ background: "#222d47" }} />
+              Kitchen
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-2 rounded-sm" style={{ background: "#8296bf" }} />
+              Host
+            </span>
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] border-collapse">
+            <thead>
+              <tr>
+                <th className="w-[180px] border-b border-r border-border bg-muted/30 px-5 py-3 text-left text-[11px] font-medium tracking-wide text-muted-foreground">
+                  TEAM MEMBER <span className="ml-1 text-muted-foreground/60">{filteredMembers.length} people</span>
+                </th>
+                {weekDates.map((date, i) => (
+                  <th
+                    key={date}
+                    className={`border-b border-border px-2 py-3 text-center text-[11px] font-medium tracking-wide text-muted-foreground ${
+                      i < 6 ? "border-r" : ""
+                    } ${isToday(date) ? "bg-primary/5" : "bg-muted/30"}`}
+                  >
+                    {DAY_NAMES[i]?.toUpperCase()}
+                    <br />
+                    <span className={`mt-1 inline-flex size-7 items-center justify-center text-base font-semibold ${
+                      isToday(date)
+                        ? "rounded-full bg-primary text-primary-foreground"
+                        : "text-foreground"
+                    }`}>
+                      {new Date(date + "T12:00:00Z").getUTCDate()}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMembers.map((member) => (
+                <tr key={member.id}>
+                  <td className="border-b border-r border-border px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        {member.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold">{member.name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {member.position ? positionLabel(member.position, member.customPosition) : "Unassigned"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground/70">
+                          {Math.round(memberHours(member.id) * 10) / 10} hrs this week
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  {weekDates.map((date, di) => {
+                    const cellShifts = shiftsByCell.get(`${member.id}|${date}`) ?? [];
+                    const dayOff = (member.availabilityOff ?? []).includes(dayIndex(date));
+                    return (
+                      <td
+                        key={date}
+                        className={`group border-b border-border px-1.5 py-1.5 align-middle ${
+                          isToday(date) ? "bg-primary/[0.03]" : ""
+                        } ${di < 6 ? "border-r" : ""}`}
+                        style={{ height: 80 }}
+                      >
+                        {cellShifts.length > 0 ? (
+                          cellShifts.map((shift) => {
+                            const style = SHIFT_STYLES[shift.position];
+                            return (
+                              <button
+                                key={shift.id}
+                                onClick={() => setDialogState({ mode: "edit", shift })}
+                                className="relative mb-1 block w-full rounded-[5px] border-l-[3px] px-2 py-2.5 text-left transition-shadow hover:shadow-md"
+                                style={{
+                                  borderColor: style.border,
+                                  backgroundColor: style.bg,
+                                  color: style.text,
+                                }}
+                              >
+                                <span className="block text-xs font-semibold">
+                                  {shift.startTime}–{shift.endTime}
+                                </span>
+                                <span className="mt-1 block text-[11px] opacity-80">
+                                  {positionLabel(shift.position, shift.customPosition)}
+                                </span>
+                                {shift.draft && (
+                                  <span
+                                    className="absolute right-1.5 top-1.5 size-[6px] rounded-full border border-current"
+                                    title="Draft — not yet published"
+                                  />
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : dayOff ? (
+                          <div className="text-center text-[11px] text-muted-foreground/60">
+                            Unavailable
+                          </div>
+                        ) : isOwner ? (
+                          <button
+                            onClick={() =>
+                              setDialogState({ mode: "create", userId: member.id, date, weekDates })
+                            }
+                            className="flex h-[60px] w-full items-center justify-center rounded-[5px] border border-dashed border-transparent text-lg text-muted-foreground/30 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary"
+                          >
+                            +
+                          </button>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {filteredMembers.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    No team members match these filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
+          <span>
+            <span
+              className={`mr-1.5 inline-block size-1.5 rounded-full ${hasDrafts ? "bg-amber-500" : "bg-emerald-500"}`}
+            />
+            {hasDrafts ? "Unpublished changes" : "Published schedule"} &middot; {shifts.length} shifts
           </span>
-        ))}
+          <span>Times shown in restaurant timezone</span>
+        </div>
       </div>
 
       <ShiftDialog
@@ -275,4 +356,9 @@ export function WeeklySchedule({
       />
     </div>
   );
+}
+
+function dayIndex(dateStr: string): number {
+  const d = new Date(dateStr + "T12:00:00Z");
+  return (d.getUTCDay() + 6) % 7;
 }

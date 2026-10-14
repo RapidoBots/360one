@@ -65,6 +65,7 @@ model Restaurant {
   blockedSlots  BlockedSlot[]
   shifts        Shift[]
   shiftExchanges ShiftExchange[]
+  timeOffRequests TimeOffRequest[]
 
   @@map("restaurant")
 }
@@ -147,6 +148,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
   shifts        Shift[]
+  timeOffRequests TimeOffRequest[]
+  availabilityOff Int[]          @default([])
 
   @@map("user")
 }
@@ -320,6 +323,7 @@ model Shift {
   position       StaffPosition
   customPosition String?
   notes          String?
+  draft          Boolean       @default(true)
   createdAt      DateTime      @default(now())
   exchangesAs    ShiftExchange[] @relation("RequesterShift")
   exchangesFor   ShiftExchange[] @relation("TargetShift")
@@ -332,6 +336,12 @@ enum ExchangeStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  DECLINED
 }
 
 model ShiftExchange {
@@ -348,4 +358,20 @@ model ShiftExchange {
   createdAt        DateTime       @default(now())
 
   @@map("shift_exchange")
+}
+
+model TimeOffRequest {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromDate     String
+  toDate       String
+  reason       String?
+  status       TimeOffStatus @default(PENDING)
+  reviewedAt   DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@map("time_off_request")
 }

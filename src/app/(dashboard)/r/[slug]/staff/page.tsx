@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth-guards";
 import { StaffPageClient } from "./staff-page-client";
 
 export default async function StaffPage({
@@ -7,7 +8,7 @@ export default async function StaffPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; tab?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -16,9 +17,14 @@ export default async function StaffPage({
 
   if (!restaurant.schedulingEnabled) notFound();
 
+  const sessionUser = await getSessionUser();
+
   const members = await prisma.user.findMany({
     where: { restaurantId: restaurant.id },
-    select: { id: true, name: true, email: true, role: true, position: true, customPosition: true, active: true },
+    select: {
+      id: true, name: true, email: true, role: true,
+      position: true, customPosition: true, active: true, availabilityOff: true,
+    },
     orderBy: { name: "asc" },
   });
 
@@ -44,14 +50,25 @@ export default async function StaffPage({
     take: 50,
   });
 
+  const timeOffRequests = await prisma.timeOffRequest.findMany({
+    where: { restaurantId: restaurant.id },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
   return (
     <StaffPageClient
       slug={slug}
       members={members}
       shifts={shifts}
       exchanges={exchanges}
+      timeOffRequests={timeOffRequests}
       weekStart={weekStart}
       timezone={restaurant.timezone}
+      currentUserId={sessionUser?.id ?? ""}
+      currentUserRole={sessionUser?.role ?? "STAFF"}
+      initialTab={sp.tab}
     />
   );
 }
