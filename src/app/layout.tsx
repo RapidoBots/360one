@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PageTransition } from "@/components/shell/page-transition";
+import { TopLoader } from "@/components/shell/top-loader";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <TopLoader />
         <PageTransition>{children}</PageTransition>
         <Toaster />
       </body>

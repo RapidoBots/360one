@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,19 +16,23 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setLoading(true);
     try {
       const { error: signInError } = await authClient.signIn.email({ email, password });
       if (signInError) {
         setError(signInError.message ?? "Sign in failed");
+        setLoading(false);
         return;
       }
       router.push("/");
     } catch {
       setError("Could not reach the server -- please check your connection and try again.");
+      setLoading(false);
     }
   }
 
@@ -76,7 +80,9 @@ export default function SignInPage() {
           )}
         </div>
         {error && <p className="text-base text-destructive">{error}</p>}
-        <Button type="submit" className="h-12 w-full text-base">Sign in</Button>
+        <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
+          {loading ? <><Loader2 className="mr-2 size-4 animate-spin" />Signing in...</> : "Sign in"}
+        </Button>
       </form>
     </div>
   );
