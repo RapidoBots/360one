@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Mail, MessageCircle, ArrowLeft } from "lucide-react";
+import { User, Mail, MessageCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -154,7 +154,7 @@ export function ContactForm({
           Back
         </Button>
         <Button type="submit" className="h-11 px-6 text-base" disabled={saving}>
-          {saving ? "Submitting..." : "Submit"}
+          {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit"}
         </Button>
       </div>
     </form>

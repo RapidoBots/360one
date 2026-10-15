@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +73,7 @@ export function AddSuperAdminDialog({
           </div>
           {error && <p className="text-base text-destructive">{error}</p>}
           <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
-            {saving ? "Adding..." : "Add Super Admin"}
+            {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Adding...</> : "Add Super Admin"}
           </Button>
         </form>
       </DialogContent>

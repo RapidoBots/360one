@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -426,7 +427,7 @@ export function ReservationModal({
 
           <div className="flex gap-3">
             <Button type="submit" className="h-12 flex-1 text-base" disabled={saving || deleting}>
-              {saving ? "Saving..." : reservation ? "Save changes" : "Confirm reservation"}
+              {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : reservation ? "Save changes" : "Confirm reservation"}
             </Button>
             {reservation && (
               <Button

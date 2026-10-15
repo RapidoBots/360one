@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -224,7 +225,7 @@ export function TablesManagerDialog({
           </div>
           {error && <p className="col-span-full text-base text-destructive">{error}</p>}
           <Button type="submit" className="col-span-full h-11 text-base" disabled={saving}>
-            {saving ? "Adding..." : "Add table"}
+            {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Adding...</> : "Add table"}
           </Button>
         </form>
       </DialogContent>

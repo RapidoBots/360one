@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,7 +151,7 @@ function AddTimeOffDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={saving} className="h-10 px-5">
-              {saving ? "Submitting..." : "Submit request"}
+              {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit request"}
             </Button>
           </DialogFooter>
         </form>

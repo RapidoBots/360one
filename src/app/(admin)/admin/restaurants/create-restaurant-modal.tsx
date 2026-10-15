@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +102,7 @@ export function CreateRestaurantModal({
           {/* Distinct from the toolbar's "Create restaurant" trigger button
               so getByRole doesn't match both while the dialog is open. */}
           <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
-            {saving ? "Creating..." : "Create"}
+            {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Creating...</> : "Create"}
           </Button>
         </form>
       </DialogContent>

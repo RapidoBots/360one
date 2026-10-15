@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +79,7 @@ export function AddEmployeeDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={saving} className="h-10 px-5">
-              {saving ? "Adding..." : "Add employee"}
+              {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Adding...</> : "Add employee"}
             </Button>
           </DialogFooter>
         </form>

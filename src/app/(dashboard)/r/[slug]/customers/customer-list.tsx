@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -140,7 +141,7 @@ export function CustomerList({ slug, customers }: { slug: string; customers: Cus
                 {error && <p className="text-base text-destructive">{error}</p>}
                 <div className="flex gap-3">
                   <Button className="h-11 flex-1 text-base" disabled={saving} onClick={handleSave}>
-                    {saving ? "Saving..." : "Save changes"}
+                    {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : "Save changes"}
                   </Button>
                   <Button variant="outline" className="h-11 text-base" disabled={saving} onClick={() => setEditing(false)}>
                     Cancel

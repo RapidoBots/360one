@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightLeft, Check, X } from "lucide-react";
+import { ArrowRightLeft, Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -156,7 +156,7 @@ export function ExchangeHistory({
           <div className="sm:col-span-2">
             <Button type="submit" disabled={submitting} className="h-10 gap-2 px-5">
               <ArrowRightLeft className="size-3.5" />
-              {submitting ? "Submitting..." : "Submit exchange request"}
+              {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit exchange request"}
             </Button>
           </div>
         </form>

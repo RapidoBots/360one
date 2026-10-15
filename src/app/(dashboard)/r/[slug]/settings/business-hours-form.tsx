@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,7 +136,7 @@ export function BusinessHoursForm({
       </div>
       {error && <p className="text-base text-destructive">{error}</p>}
       <Button type="submit" className="h-11 px-5 text-base" disabled={saving}>
-        {saving ? "Saving..." : saved ? "Saved" : "Save business settings"}
+        {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save business settings"}
       </Button>
     </form>
   );

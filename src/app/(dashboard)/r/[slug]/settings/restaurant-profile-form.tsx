@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -310,7 +311,7 @@ export function RestaurantProfileForm({
 
         {error && <p className="text-base text-destructive">{error}</p>}
         <Button type="submit" className="h-11 px-5 text-base" disabled={saving}>
-          {saving ? "Saving..." : saved ? "Saved" : "Save profile"}
+          {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save profile"}
         </Button>
       </form>
     </div>

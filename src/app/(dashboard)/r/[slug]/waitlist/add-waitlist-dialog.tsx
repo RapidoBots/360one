@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ export function AddWaitlistDialog({
             {/* Distinct from the page's "Add to Waiting Area" trigger button --
                 see Global Constraints. */}
             <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
-              {saving ? "Adding..." : "Add"}
+              {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Adding...</> : "Add"}
             </Button>
           </form>
         )}

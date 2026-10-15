@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -298,7 +298,7 @@ export function ShiftDialog({
             </Button>
           )}
           <Button onClick={handleSave} disabled={saving || deleting} className="h-10 px-5">
-            {saving ? "Saving..." : state.mode === "edit" ? "Save changes" : `Add shift${selectedDays.filter(Boolean).length > 1 ? "s" : ""}`}
+            {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : state.mode === "edit" ? "Save changes" : `Add shift${selectedDays.filter(Boolean).length > 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>

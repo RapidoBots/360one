@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -96,7 +96,7 @@ export function ResetPasswordDialog({
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
-            {saving ? "Resetting..." : "Reset password"}
+            {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Resetting...</> : "Reset password"}
           </Button>
         </form>
       </DialogContent>
