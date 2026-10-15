@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,7 +79,7 @@ export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) 
         {emailError && <p className="text-base text-destructive">{emailError}</p>}
         {emailSaved && <p className="text-base text-muted-foreground">Email updated.</p>}
         <Button type="submit" className="h-11 w-full text-base" disabled={emailSaving}>
-          {emailSaving ? "Updating..." : "Update email"}
+          {emailSaving ? <><Loader2 className="mr-2 size-4 animate-spin" />Updating...</> : "Update email"}
         </Button>
       </form>
 
@@ -107,7 +108,7 @@ export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) 
         {passwordError && <p className="text-base text-destructive">{passwordError}</p>}
         {passwordSaved && <p className="text-base text-muted-foreground">Password updated.</p>}
         <Button type="submit" className="h-11 w-full text-base" disabled={passwordSaving}>
-          {passwordSaving ? "Updating..." : "Update password"}
+          {passwordSaving ? <><Loader2 className="mr-2 size-4 animate-spin" />Updating...</> : "Update password"}
         </Button>
       </form>
     </div>

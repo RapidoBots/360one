@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { setReservationStatusAction } from "../reservations/actions";
@@ -53,7 +54,7 @@ export function SeatedInfoDialog({
               )}
             </div>
             <Button className="h-11 w-full text-base" onClick={handleFree} disabled={freeing}>
-              {freeing ? "Freeing..." : "Free table"}
+              {freeing ? <><Loader2 className="mr-2 size-4 animate-spin" />Freeing...</> : "Free table"}
             </Button>
           </div>
         )}

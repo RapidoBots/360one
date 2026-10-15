@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Power } from "lucide-react";
+import { KeyRound, Loader2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -86,8 +86,8 @@ export function SuperAdmins({
                       onClick={() => handleToggle(a)}
                       disabled={togglingId === a.id}
                     >
-                      <Power className="size-4" />
-                      {a.active ? "Deactivate" : "Reactivate"}
+                      {togglingId === a.id ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+                      {togglingId === a.id ? "Updating..." : a.active ? "Deactivate" : "Reactivate"}
                     </Button>
                   )}
                 </div>

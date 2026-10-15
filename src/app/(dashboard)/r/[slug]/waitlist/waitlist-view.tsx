@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AddWaitlistDialog } from "./add-waitlist-dialog";
@@ -51,6 +52,7 @@ export function WaitlistView({
   const [now, setNow] = useState(() => new Date());
   const [addOpen, setAddOpen] = useState(false);
   const [seating, setSeating] = useState<{ id: string; name: string; partySize: number } | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
@@ -58,7 +60,9 @@ export function WaitlistView({
   }, []);
 
   async function handleStatusChange(id: string, status: "CANCELLED" | "NO_SHOW") {
+    setActingId(id);
     await updateWaitlistStatusAction(slug, id, status);
+    setActingId(null);
     router.refresh();
   }
 
@@ -95,11 +99,11 @@ export function WaitlistView({
                 >
                   Seat
                 </Button>
-                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "NO_SHOW")}>
-                  No-show
+                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "NO_SHOW")} disabled={actingId === entry.id}>
+                  {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "No-show"}
                 </Button>
-                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "CANCELLED")}>
-                  Cancel
+                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "CANCELLED")} disabled={actingId === entry.id}>
+                  {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "Cancel"}
                 </Button>
               </div>
             </li>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Power, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -109,7 +109,7 @@ export function TeamMembers({
                         onClick={() => handleToggle(m)}
                         disabled={togglingId === m.id}
                       >
-                        <Power className="size-3.5" />
+                        {togglingId === m.id ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
                       </Button>
                       <Button
                         variant="outline"
@@ -119,7 +119,7 @@ export function TeamMembers({
                         onClick={() => handleDelete(m)}
                         disabled={deletingId === m.id}
                       >
-                        <Trash2 className="size-3.5" />
+                        {deletingId === m.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                       </Button>
                     </>
                   )}
