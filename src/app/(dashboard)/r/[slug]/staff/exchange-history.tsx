@@ -140,7 +140,7 @@ export function ExchangeHistory({
               </SelectTrigger>
               <SelectContent>
                 {fromShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
+                  <SelectItem key={s.id} value={s.id} label={shiftOptionLabel(s)}>
                     {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
@@ -155,7 +155,7 @@ export function ExchangeHistory({
               </SelectTrigger>
               <SelectContent>
                 {toShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
+                  <SelectItem key={s.id} value={s.id} label={shiftOptionLabel(s)}>
                     {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
