@@ -74,7 +74,7 @@ export type TimeOffRequestData = {
   user: { id: string; name: string };
 };
 
-type SubPage = "overview" | "schedule" | "team" | "requests" | "exchanges" | "my" | "myrequests";
+type SubPage = "overview" | "schedule" | "team" | "requests" | "exchanges" | "my" | "myrequests" | "myexchanges";
 
 const OWNER_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
   { key: "overview", label: "Overview", icon: LayoutGrid },
@@ -86,6 +86,7 @@ const OWNER_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
 
 const STAFF_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
   { key: "my", label: "My Schedule", icon: CalendarDays },
+  { key: "myexchanges", label: "Exchanges", icon: ArrowRightLeft },
   { key: "myrequests", label: "My Requests", icon: ClipboardList },
 ];
 
@@ -126,6 +127,9 @@ export function StaffPageClient({
     : timeOffRequests.filter((r) => r.userId === currentUserId);
 
   const pendingRequests = (isOwner ? timeOffRequests : myRequests).filter((r) => r.status === "PENDING").length;
+  const pendingExchanges = isOwner
+    ? exchanges.filter((e) => e.status === "PENDING").length
+    : exchanges.filter((e) => e.status === "PENDING" && e.targetShift.user.id === currentUserId).length;
   const activeMembers = members.filter((m) => m.active);
   const scheduledCount = new Set(visibleShifts.map((s) => s.userId)).size;
   const totalHours = visibleShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
@@ -138,6 +142,7 @@ export function StaffPageClient({
     exchanges: "Shift exchanges.",
     requests: "Time-off requests.",
     my: "Your next service.",
+    myexchanges: "Shift swaps.",
     myrequests: "Your requests.",
   };
   const pageDesc: Record<SubPage, string> = {
@@ -147,6 +152,7 @@ export function StaffPageClient({
     exchanges: "Review and manage shift swap requests between team members.",
     requests: "Review time off and keep your schedule in sync.",
     my: "Your upcoming published shifts.",
+    myexchanges: "Request swaps and respond to incoming exchange requests.",
     myrequests: "Track your time-off requests.",
   };
 
@@ -177,6 +183,11 @@ export function StaffPageClient({
           >
             <Icon className="size-4" />
             {label}
+            {(key === "exchanges" || key === "myexchanges") && pendingExchanges > 0 && (
+              <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
+                {pendingExchanges}
+              </span>
+            )}
             {(key === "requests" || key === "myrequests") && pendingRequests > 0 && (
               <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                 {pendingRequests}
@@ -252,6 +263,7 @@ export function StaffPageClient({
           exchanges={exchanges}
           shifts={visibleShifts}
           members={activeMembers}
+          currentUserId={currentUserId}
         />
       )}
       {page === "requests" && (
@@ -259,6 +271,16 @@ export function StaffPageClient({
           slug={slug}
           requests={timeOffRequests}
           isOwner={isOwner}
+        />
+      )}
+      {page === "myexchanges" && (
+        <ExchangeHistory
+          slug={slug}
+          exchanges={exchanges}
+          shifts={visibleShifts}
+          members={activeMembers}
+          currentUserId={currentUserId}
+          isStaffView
         />
       )}
       {page === "my" && (

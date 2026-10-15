@@ -261,13 +261,16 @@ export async function requestShiftExchangeAction(
   slug: string,
   input: { requesterShiftId: string; targetShiftId: string; note?: string }
 ): Promise<ActionResult> {
-  const { restaurant } = await assertRestaurantOwner(slug);
+  const { user, restaurant } = await assertRestaurantMember(slug);
   const [requester, target] = await Promise.all([
     prisma.shift.findFirst({ where: { id: input.requesterShiftId, restaurantId: restaurant.id } }),
     prisma.shift.findFirst({ where: { id: input.targetShiftId, restaurantId: restaurant.id } }),
   ]);
   if (!requester || !target) return { ok: false, error: "One or both shifts not found." };
   if (requester.userId === target.userId) return { ok: false, error: "Can't exchange a shift with yourself." };
+  // Staff can only request swaps for their own shifts
+  if (user.role === "STAFF" && requester.userId !== user.id)
+    return { ok: false, error: "You can only swap your own shifts." };
 
   await prisma.shiftExchange.create({
     data: {
@@ -286,15 +289,17 @@ export async function reviewShiftExchangeAction(
   exchangeId: string,
   approve: boolean
 ): Promise<ActionResult> {
-  const { restaurant } = await assertRestaurantOwner(slug);
+  const { user, restaurant } = await assertRestaurantMember(slug);
   const exchange = await prisma.shiftExchange.findFirst({
     where: { id: exchangeId, restaurantId: restaurant.id, status: "PENDING" },
     include: { requesterShift: true, targetShift: true },
   });
   if (!exchange) return { ok: false, error: "Exchange request not found or already resolved." };
+  // Staff can only approve/reject exchanges targeting their own shift
+  if (user.role === "STAFF" && exchange.targetShift.userId !== user.id)
+    return { ok: false, error: "You can only review exchanges for your own shifts." };
 
   if (approve) {
-    // Swap the userId on both shifts
     await prisma.$transaction([
       prisma.shift.update({
         where: { id: exchange.requesterShiftId },

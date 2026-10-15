@@ -18,8 +18,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requestShiftExchangeAction, reviewShiftExchangeAction } from "./actions";
-import { positionLabel } from "./position-utils";
-import { POSITION_COLORS } from "./constants";
 import type { StaffMember, ShiftData, ExchangeData } from "./staff-page-client";
 
 function formatDate(dateStr: string): string {
@@ -47,11 +45,15 @@ export function ExchangeHistory({
   exchanges,
   shifts,
   members,
+  currentUserId,
+  isStaffView,
 }: {
   slug: string;
   exchanges: ExchangeData[];
   shifts: ShiftData[];
   members: StaffMember[];
+  currentUserId?: string;
+  isStaffView?: boolean;
 }) {
   const router = useRouter();
   const [fromShiftId, setFromShiftId] = useState("");
@@ -96,6 +98,21 @@ export function ExchangeHistory({
     router.refresh();
   }
 
+  // Staff can only offer their own shifts; owners see all
+  const fromShifts = isStaffView && currentUserId
+    ? shifts.filter((s) => s.userId === currentUserId)
+    : shifts;
+  // "To" shows other people's shifts (excluding the selected "from" shift)
+  const toShifts = isStaffView && currentUserId
+    ? shifts.filter((s) => s.id !== fromShiftId && s.userId !== currentUserId)
+    : shifts.filter((s) => s.id !== fromShiftId);
+  // Staff sees only their own exchanges; owners see all
+  const visibleExchanges = isStaffView && currentUserId
+    ? exchanges.filter(
+        (e) => e.requesterShift.user.id === currentUserId || e.targetShift.user.id === currentUserId
+      )
+    : exchanges;
+
   function shiftOptionLabel(s: ShiftData): string {
     const member = members.find((m) => m.id === s.userId);
     return `${member?.name ?? "?"} — ${formatDate(s.date)} ${formatTime(s.startTime)}–${formatTime(s.endTime)}`;
@@ -110,40 +127,36 @@ export function ExchangeHistory({
           Request Shift Exchange
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Swap two shifts between staff members. The owner reviews and approves.
+          {isStaffView
+            ? "Pick one of your shifts and a colleague's shift to swap. They'll review your request."
+            : "Swap two shifts between staff members. The owner reviews and approves."}
         </p>
         <form onSubmit={handleRequest} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>From shift</Label>
+            <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
             <Select value={fromShiftId} onValueChange={(v) => v && setFromShiftId(v)}>
               <SelectTrigger className="h-10 text-xs">
-                <SelectValue placeholder="Select shift to give up" />
+                <SelectValue placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"} />
               </SelectTrigger>
               <SelectContent>
-                {shifts.map((s) => (
+                {fromShifts.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-2 rounded-full" style={{ backgroundColor: POSITION_COLORS[s.position] }} />
-                      {shiftOptionLabel(s)}
-                    </span>
+                    {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>To shift</Label>
+            <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
             <Select value={toShiftId} onValueChange={(v) => v && setToShiftId(v)}>
               <SelectTrigger className="h-10 text-xs">
-                <SelectValue placeholder="Select shift to receive" />
+                <SelectValue placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"} />
               </SelectTrigger>
               <SelectContent>
-                {shifts.filter((s) => s.id !== fromShiftId).map((s) => (
+                {toShifts.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-2 rounded-full" style={{ backgroundColor: POSITION_COLORS[s.position] }} />
-                      {shiftOptionLabel(s)}
-                    </span>
+                    {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -181,7 +194,12 @@ export function ExchangeHistory({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {exchanges.map((ex) => (
+            {visibleExchanges.map((ex) => {
+              // Staff can only approve/reject exchanges targeting their shift
+              const canReview = isStaffView
+                ? currentUserId === ex.targetShift.user.id
+                : true;
+              return (
               <TableRow key={ex.id}>
                 <TableCell>
                   <div className="text-sm font-medium">{ex.requesterShift.user.name}</div>
@@ -204,7 +222,7 @@ export function ExchangeHistory({
                   {new Date(ex.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  {ex.status === "PENDING" && (
+                  {ex.status === "PENDING" && canReview && (
                     <div className="flex gap-1">
                       <Button
                         variant="outline"
@@ -226,10 +244,14 @@ export function ExchangeHistory({
                       </Button>
                     </div>
                   )}
+                  {ex.status === "PENDING" && !canReview && isStaffView && (
+                    <span className="text-xs text-muted-foreground">Awaiting response</span>
+                  )}
                 </TableCell>
               </TableRow>
-            ))}
-            {exchanges.length === 0 && (
+              );
+            })}
+            {visibleExchanges.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
                   No exchange requests yet.
