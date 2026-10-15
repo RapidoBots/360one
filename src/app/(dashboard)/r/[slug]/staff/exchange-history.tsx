@@ -135,12 +135,17 @@ export function ExchangeHistory({
           <div className="space-y-1.5">
             <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
             <Select value={fromShiftId} onValueChange={(v) => v && setFromShiftId(v)}>
-              <SelectTrigger className="h-10 text-xs">
-                <SelectValue placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"} />
+              <SelectTrigger className="h-10 w-full text-xs">
+                <SelectValue placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"}>
+                  {(value: string) => {
+                    const s = fromShifts.find((sh) => sh.id === value);
+                    return s ? shiftOptionLabel(s) : value;
+                  }}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-[min(90vw,24rem)]">
                 {fromShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id} label={shiftOptionLabel(s)}>
+                  <SelectItem key={s.id} value={s.id}>
                     {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
@@ -150,12 +155,17 @@ export function ExchangeHistory({
           <div className="space-y-1.5">
             <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
             <Select value={toShiftId} onValueChange={(v) => v && setToShiftId(v)}>
-              <SelectTrigger className="h-10 text-xs">
-                <SelectValue placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"} />
+              <SelectTrigger className="h-10 w-full text-xs">
+                <SelectValue placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"}>
+                  {(value: string) => {
+                    const s = toShifts.find((sh) => sh.id === value);
+                    return s ? shiftOptionLabel(s) : value;
+                  }}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-[min(90vw,24rem)]">
                 {toShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id} label={shiftOptionLabel(s)}>
+                  <SelectItem key={s.id} value={s.id}>
                     {shiftOptionLabel(s)}
                   </SelectItem>
                 ))}
