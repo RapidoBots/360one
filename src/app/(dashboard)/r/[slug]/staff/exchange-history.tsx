@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requestShiftExchangeAction, reviewShiftExchangeAction } from "./actions";
+import { POSITION_COLORS } from "./constants";
 import type { StaffMember, ShiftData, ExchangeData } from "./staff-page-client";
 
 function formatDate(dateStr: string): string {
@@ -56,8 +57,8 @@ export function ExchangeHistory({
   isStaffView?: boolean;
 }) {
   const router = useRouter();
-  const [fromShiftId, setFromShiftId] = useState("");
-  const [toShiftId, setToShiftId] = useState("");
+  const [fromShiftId, setFromShiftId] = useState<string | null>(null);
+  const [toShiftId, setToShiftId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -80,8 +81,8 @@ export function ExchangeHistory({
       return;
     }
     toast.success("Exchange request submitted");
-    setFromShiftId("");
-    setToShiftId("");
+    setFromShiftId(null);
+    setToShiftId(null);
     setNote("");
     router.refresh();
   }
@@ -118,6 +119,18 @@ export function ExchangeHistory({
     return `${member?.name ?? "?"} — ${formatDate(s.date)} ${formatTime(s.startTime)}–${formatTime(s.endTime)}`;
   }
 
+  function ShiftOption({ s }: { s: ShiftData }) {
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        <span
+          className="size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: POSITION_COLORS[s.position] }}
+        />
+        <span className="truncate">{shiftOptionLabel(s)}</span>
+      </span>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* New exchange request */}
@@ -131,57 +144,92 @@ export function ExchangeHistory({
             ? "Pick one of your shifts and a colleague's shift to swap. They'll review your request."
             : "Swap two shifts between staff members. The owner reviews and approves."}
         </p>
-        <form onSubmit={handleRequest} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
-            <Select value={fromShiftId} onValueChange={(v) => v && setFromShiftId(v)}>
-              <SelectTrigger className="h-10 w-full text-xs">
-                <SelectValue placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"}>
-                  {(value: string) => {
-                    const s = fromShifts.find((sh) => sh.id === value);
-                    return s ? shiftOptionLabel(s) : value;
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-[min(90vw,24rem)]">
-                {fromShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {shiftOptionLabel(s)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleRequest} className="mt-4 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+            <div className="min-w-0 space-y-1.5">
+              <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
+              <Select
+                value={fromShiftId}
+                onValueChange={(v) => {
+                  setFromShiftId(v);
+                  // the colleague-shift list depends on which shift is "from" —
+                  // clear it so a stale, no-longer-valid selection can't be submitted
+                  setToShiftId(null);
+                }}
+              >
+                <SelectTrigger className="h-10 w-full text-sm">
+                  <SelectValue
+                    className="truncate"
+                    placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"}
+                  >
+                    {(value: string | null) => {
+                      const s = fromShifts.find((sh) => sh.id === value);
+                      return s
+                        ? <ShiftOption s={s} />
+                        : (isStaffView ? "Select your shift to give up" : "Select shift to give up");
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="w-[min(90vw,24rem)]">
+                  {fromShifts.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <ShiftOption s={s} />
+                    </SelectItem>
+                  ))}
+                  {fromShifts.length === 0 && (
+                    <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      No shifts available.
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="hidden items-center justify-center pb-2.5 text-muted-foreground sm:flex">
+              <ArrowRightLeft className="size-4" />
+            </div>
+
+            <div className="min-w-0 space-y-1.5">
+              <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
+              <Select value={toShiftId} onValueChange={setToShiftId}>
+                <SelectTrigger className="h-10 w-full text-sm">
+                  <SelectValue
+                    className="truncate"
+                    placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"}
+                  >
+                    {(value: string | null) => {
+                      const s = toShifts.find((sh) => sh.id === value);
+                      return s
+                        ? <ShiftOption s={s} />
+                        : (isStaffView ? "Select colleague's shift to receive" : "Select shift to receive");
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="w-[min(90vw,24rem)]">
+                  {toShifts.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <ShiftOption s={s} />
+                    </SelectItem>
+                  ))}
+                  {toShifts.length === 0 && (
+                    <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      {fromShiftId ? "No other shifts to swap with." : "Select your shift first."}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <div className="space-y-1.5">
-            <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
-            <Select value={toShiftId} onValueChange={(v) => v && setToShiftId(v)}>
-              <SelectTrigger className="h-10 w-full text-xs">
-                <SelectValue placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"}>
-                  {(value: string) => {
-                    const s = toShifts.find((sh) => sh.id === value);
-                    return s ? shiftOptionLabel(s) : value;
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-[min(90vw,24rem)]">
-                {toShifts.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {shiftOptionLabel(s)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
             <Label>Note (optional)</Label>
             <Input className="h-10 text-sm" placeholder="Reason for the swap..." value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
-          <div className="sm:col-span-2">
-            <Button type="submit" disabled={submitting} className="h-10 gap-2 px-5">
-              <ArrowRightLeft className="size-3.5" />
-              {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit exchange request"}
-            </Button>
-          </div>
+
+          <Button type="submit" disabled={submitting} className="h-10 gap-2 px-5">
+            <ArrowRightLeft className="size-3.5" />
+            {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit exchange request"}
+          </Button>
         </form>
       </div>
 
