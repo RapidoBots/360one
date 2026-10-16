@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { CalendarClock } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { SectionCard, SectionCardBody, FieldLabel } from "@/components/ui/section-card";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import {
   getAvailabilityForDateAction,
@@ -12,6 +11,9 @@ import {
   toggleBlockedSlotAction,
   type DateAvailability,
 } from "./availability-actions";
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 function formatSlotLabel(time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -54,72 +56,95 @@ export function AvailabilityForm({ slug, timezone }: { slug: string; timezone: s
     setTogglingTime(null);
   }
 
+  let dateLabel = "this day";
+  try {
+    dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  } catch {
+    // keep fallback
+  }
+
+  const total = availability?.slotTimes.length ?? 0;
+  const blockedCount = availability?.blockedTimes.length ?? 0;
+  const openCount = total - blockedCount;
+
   return (
-    <div className="space-y-4 rounded-[5px] border border-border p-5">
-      <h2 className="text-base font-semibold">Availability overrides</h2>
-      <p className="text-sm text-muted-foreground">
-        Block off specific times or an entire day -- for holidays, private events, or anything outside your regular
-        weekly hours. Blocked slots show up greyed out and unselectable on the reservation widget.
-      </p>
+    <SectionCard
+      id="overrides"
+      icon={CalendarClock}
+      title="Availability overrides"
+      description="Block specific times or a whole day for holidays, private events or anything outside your regular hours. Blocked slots appear greyed out and can't be selected in the widget."
+    >
+      <SectionCardBody>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <label className="flex max-w-[260px] flex-1 flex-col gap-2">
+            <FieldLabel>Date</FieldLabel>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={fieldClass} />
+          </label>
+          {availability && !loading && (
+            <button
+              type="button"
+              onClick={handleToggleClosed}
+              disabled={togglingClosed}
+              className="flex h-11 items-center gap-2 rounded-xl border border-[#D5DAEA] bg-white px-4.5 text-sm font-semibold text-ink hover:bg-[#F8F9FD] disabled:opacity-60"
+            >
+              {availability.closed ? "Reopen entire day" : "Close entire day"}
+            </button>
+          )}
+        </div>
 
-      <div className="max-w-xs space-y-2">
-        <Label htmlFor="availabilityDate">Date</Label>
-        <Input
-          id="availabilityDate"
-          type="date"
-          className="h-11 text-base"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-      </div>
-
-      {loading || !availability ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : (
-        <>
-          <Button
-            type="button"
-            variant={availability.closed ? "default" : "outline"}
-            className={cn("h-11 px-5 text-base", availability.closed && "bg-destructive hover:bg-destructive/90")}
-            disabled={togglingClosed}
-            onClick={handleToggleClosed}
-          >
-            {availability.closed ? "Closed all day -- click to reopen" : "Close entire day"}
-          </Button>
-
-          {availability.closed ? (
-            <p className="text-sm text-muted-foreground">
-              This date is fully closed to reservations. Reopen it to manage individual slots.
-            </p>
-          ) : availability.slotTimes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              This date falls outside your business hours, so there are no slots to block.
-            </p>
-          ) : (
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
+        {loading || !availability ? (
+          <p className="text-sm text-ink-muted">Loading...</p>
+        ) : availability.closed ? (
+          <p className="text-sm text-ink-muted">
+            This date is fully closed to reservations. Reopen it to manage individual slots.
+          </p>
+        ) : total === 0 ? (
+          <p className="text-sm text-ink-muted">
+            This date falls outside your business hours, so there are no slots to block.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-ink">
+                {openCount} of {total} time slots open on {dateLabel}
+              </div>
+              <div className="flex items-center gap-4 text-[12.5px] text-ink-muted">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-[4px] border border-primary bg-primary/10" />
+                  Open
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3 rounded-[4px] border border-[#CBD5E1] bg-neutral-soft" />
+                  Blocked
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2.5">
               {availability.slotTimes.map((time) => {
                 const blocked = availability.blockedTimes.includes(time);
                 return (
-                  <Button
+                  <button
                     key={time}
                     type="button"
+                    aria-pressed={blocked}
+                    aria-label={`${formatSlotLabel(time)}, ${blocked ? "blocked" : "open"}`}
                     disabled={togglingTime === time}
-                    className={cn(
-                      "h-auto whitespace-normal px-2 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm",
-                      blocked
-                        ? "bg-destructive/10 text-destructive line-through hover:bg-destructive/20"
-                        : "bg-primary/90 text-primary-foreground hover:bg-primary"
-                    )}
                     onClick={() => handleToggleSlot(time)}
+                    className={`h-[42px] rounded-[10px] border text-[13px] font-semibold transition-colors disabled:opacity-60 ${
+                      blocked
+                        ? "border-[#CBD5E1] bg-neutral-soft text-ink-muted line-through"
+                        : "border-transparent bg-primary/10 text-primary hover:border-primary"
+                    }`}
                   >
                     {formatSlotLabel(time)}
-                  </Button>
+                  </button>
                 );
               })}
             </div>
-          )}
-        </>
-      )}
-    </div>
+            <p className="text-[12.5px] text-ink-muted">Select a time to block or unblock it for this date.</p>
+          </>
+        )}
+      </SectionCardBody>
+    </SectionCard>
   );
 }

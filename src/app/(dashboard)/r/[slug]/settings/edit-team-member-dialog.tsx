@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Eye, EyeOff, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldLabel, FieldHint } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -18,6 +18,9 @@ import type { Role } from "@/generated/prisma/client";
 import type { TeamMember } from "./team-members";
 
 const ROLE_OPTIONS: Role[] = ["OWNER", "STAFF"];
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 export function EditTeamMemberDialog({
   open,
@@ -36,6 +39,7 @@ export function EditTeamMemberDialog({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("STAFF");
   const [newPassword, setNewPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -45,13 +49,15 @@ export function EditTeamMemberDialog({
       setEmail(member.email);
       setRole(member.role);
       setNewPassword("");
+      setShowPw(false);
       setError(null);
     }
   }, [member]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!member) return;
+  const cantSave = !name.trim() || !email.trim();
+
+  async function handleSubmit() {
+    if (!member || cantSave) return;
     setSaving(true);
     setError(null);
     const result = await updateTeamMemberAction(slug, member.id, {
@@ -71,29 +77,31 @@ export function EditTeamMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit team member</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="editTeamMemberName">Staff name</Label>
-            <Input id="editTeamMemberName" value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="editTeamMemberEmail">Email</Label>
-            <Input
-              id="editTeamMemberEmail"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="editTeamMemberRole">Role</Label>
+      <DialogContent showCloseButton={false} className="max-w-[480px] gap-0 rounded-[20px] p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line-divider px-6 py-5.5">
+          <DialogTitle className="text-lg font-bold tracking-tight text-ink">Edit team member</DialogTitle>
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={() => onOpenChange(false)}
+            className="flex size-9 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-5 p-6">
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Staff name</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} />
+          </label>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Email</FieldLabel>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={fieldClass} />
+          </label>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Role</FieldLabel>
             <Select value={role} onValueChange={(v) => v && setRole(v as Role)}>
-              <SelectTrigger id="editTeamMemberRole">
+              <SelectTrigger className={fieldClass}>
                 <SelectValue>{(value: string) => value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -104,22 +112,48 @@ export function EditTeamMemberDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="editTeamMemberPassword">New password (leave blank to keep current)</Label>
-            <Input
-              id="editTeamMemberPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          {error && <p className="text-base text-destructive">{error}</p>}
-          <Button type="submit" className="h-12 w-full text-base" disabled={saving}>
+          </label>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>New password</FieldLabel>
+            <div className="relative flex items-center">
+              <Input
+                type={showPw ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                className={`${fieldClass} pr-11`}
+              />
+              <button
+                type="button"
+                aria-label={showPw ? "Hide password" : "Show password"}
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-1.5 flex size-9 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+              >
+                {showPw ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+              </button>
+            </div>
+            <FieldHint>Leave blank to keep the current password.</FieldHint>
+          </label>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+        <div className="flex justify-end gap-2.5 rounded-b-[20px] border-t border-line-divider bg-surface-footer px-6 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="h-11 rounded-xl border-[#D5DAEA] px-5 text-sm font-semibold text-ink"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={cantSave || saving}
+            className="h-11 rounded-xl bg-primary px-5.5 text-sm font-bold text-primary-foreground shadow-[0_6px_16px_-6px_var(--primary)] hover:bg-primary disabled:opacity-50"
+          >
             {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : "Save changes"}
           </Button>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

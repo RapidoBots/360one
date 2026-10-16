@@ -2,12 +2,12 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, ImageIcon, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SectionCard, SectionCardBody, FieldLabel, FieldHint } from "@/components/ui/section-card";
 import {
   updateRestaurantProfileAction,
   uploadRestaurantLogoAction,
@@ -17,18 +17,17 @@ import {
 
 const TIMEZONES = Intl.supportedValuesOf("timeZone");
 
-function ImageUploadField({
-  label,
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink placeholder:text-ink-placeholder focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
+const textareaClass =
+  "w-full resize-y rounded-xl border-line-input bg-white px-3.5 py-3 text-sm font-medium text-ink placeholder:text-ink-placeholder focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
+
+function BannerUpload({
   currentUrl,
   upload,
-  previewClassName,
-  emptyLabel,
 }: {
-  label: string;
   currentUrl: string | null;
   upload: (formData: FormData) => Promise<ProfileActionResult>;
-  previewClassName: string;
-  emptyLabel: string;
 }) {
   const [url, setUrl] = useState(currentUrl);
   const [uploading, setUploading] = useState(false);
@@ -48,8 +47,6 @@ function ImageUploadField({
         setError(result.error);
         return;
       }
-      // The action doesn't return the new URL, so read back the object URL
-      // for an instant preview -- the real URL lands on the next server render.
       setUrl(URL.createObjectURL(file));
     } catch {
       setError("Upload failed -- please try a smaller image or try again.");
@@ -60,32 +57,76 @@ function ImageUploadField({
   }
 
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex items-center gap-4">
-        {url ? (
-          <Image src={url} alt={label} width={128} height={64} className={previewClassName} unoptimized />
-        ) : (
-          <div
-            className={`flex items-center justify-center rounded-[5px] border border-dashed border-border text-xs text-muted-foreground ${previewClassName}`}
-          >
-            {emptyLabel}
-          </div>
-        )}
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleChange}
-            disabled={uploading}
-            className="text-sm"
-          />
-          {uploading && <p className="mt-1 text-sm text-muted-foreground">Uploading...</p>}
-          {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
-        </div>
-      </div>
+    <div className="relative h-44 overflow-hidden rounded-2xl border-[1.5px] border-dashed border-[#BAC3E0] bg-[#EEF1FA]">
+      {url && <Image src={url} alt="Banner" fill unoptimized className="object-cover" />}
+      <label className="up absolute right-3 bottom-3 flex h-10 w-fit cursor-pointer items-center gap-2 rounded-xl border border-[#D5DAEA] bg-white px-4 text-[13.5px] font-semibold whitespace-nowrap text-ink shadow-[0_1px_2px_rgba(15,23,42,.06)]">
+        {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+        {uploading ? "Uploading..." : url ? "Replace banner" : "Upload banner"}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          aria-label="Upload banner image"
+          onChange={handleChange}
+          disabled={uploading}
+          className="absolute inset-0 size-full cursor-pointer opacity-0"
+        />
+      </label>
+      {error && (
+        <p className="absolute top-2 left-2 rounded-md bg-white/90 px-2 py-1 text-xs text-destructive">{error}</p>
+      )}
     </div>
+  );
+}
+
+function LogoUpload({
+  currentUrl,
+  upload,
+}: {
+  currentUrl: string | null;
+  upload: (formData: FormData) => Promise<ProfileActionResult>;
+}) {
+  const [url, setUrl] = useState(currentUrl);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      const result = await upload(formData);
+      if (result.ok) setUrl(URL.createObjectURL(file));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <label className="up absolute bottom-[-46px] left-6 flex size-24 cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-[26px] border-[1.5px] border-dashed border-[#AEB8DA] bg-white text-[12px] font-semibold text-[#475569] shadow-[0_8px_20px_-8px_rgba(15,23,42,.25)]">
+      {url ? (
+        <Image src={url} alt="Logo" fill unoptimized className="object-cover" />
+      ) : uploading ? (
+        <Loader2 className="size-[22px] animate-spin" />
+      ) : (
+        <>
+          <ImageIcon className="size-[22px]" strokeWidth={1.8} />
+          Logo
+        </>
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        aria-label="Upload logo"
+        onChange={handleChange}
+        disabled={uploading}
+        className="absolute inset-0 size-full cursor-pointer opacity-0"
+      />
+    </label>
   );
 }
 
@@ -129,8 +170,7 @@ export function RestaurantProfileForm({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -159,161 +199,157 @@ export function RestaurantProfileForm({
   }
 
   return (
-    <div className="space-y-4 rounded-[5px] border border-border p-5">
-      <h2 className="text-base font-semibold">Restaurant profile</h2>
-
-      <ImageUploadField
-        label="Logo"
-        currentUrl={logoUrl}
-        upload={(fd) => uploadRestaurantLogoAction(slug, fd)}
-        previewClassName="size-16 rounded-[5px] border border-border object-cover"
-        emptyLabel="No logo"
-      />
-
-      <ImageUploadField
-        label="Banner"
-        currentUrl={bannerUrl}
-        upload={(fd) => uploadRestaurantBannerAction(slug, fd)}
-        previewClassName="h-16 w-32 rounded-[5px] border border-border object-cover"
-        emptyLabel="No banner"
-      />
-      <p className="text-sm text-muted-foreground">
-        A wide hero image shown across the top of the reservation widget.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="timezone">Time zone</Label>
-          <Select value={tz} onValueChange={(v) => v && setTz(v)}>
-            <SelectTrigger id="timezone" className="h-11 w-full text-base">
-              <SelectValue>{(value: string) => value}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {TIMEZONES.map((z) => (
-                <SelectItem key={z} value={z}>
-                  {z}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
-            Used for reservation times, business hours, and the dashboard&apos;s &quot;today&quot;.
-          </p>
+    <SectionCard
+      id="profile"
+      icon={Store}
+      title="Restaurant profile"
+      description="What guests see on your booking widget."
+      footer={
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving}
+          className="h-11 rounded-xl bg-primary px-5.5 text-sm font-bold text-primary-foreground shadow-[0_6px_16px_-6px_var(--primary)] hover:bg-primary"
+        >
+          {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save profile"}
+        </Button>
+      }
+    >
+      <SectionCardBody label="Branding">
+        <div className="relative mb-12">
+          <BannerUpload currentUrl={bannerUrl} upload={(fd) => uploadRestaurantBannerAction(slug, fd)} />
+          <LogoUpload currentUrl={logoUrl} upload={(fd) => uploadRestaurantLogoAction(slug, fd)} />
         </div>
+        <FieldHint>
+          The banner is a wide hero image shown across the top of the reservation widget.
+        </FieldHint>
+      </SectionCardBody>
 
-        <div className="space-y-2">
-          <Label htmlFor="mapsEmbedUrl">Google Maps embed URL</Label>
-          <Input
-            id="mapsEmbedUrl"
-            className="h-11 text-base"
-            placeholder="https://www.google.com/maps/embed?..."
-            value={maps}
-            onChange={(e) => setMaps(e.target.value)}
-          />
-          <p className="text-sm text-muted-foreground">
-            In Google Maps, find your restaurant &rarr; Share &rarr; Embed a map &rarr; copy the URL inside{" "}
-            <code>src=&quot;...&quot;</code> and paste it here.
-          </p>
+      <SectionCardBody label="Location and contact">
+        <div className="grid grid-cols-1 gap-5 [@media(min-width:580px)]:grid-cols-2">
+          <label className="flex min-w-0 flex-col gap-2">
+            <FieldLabel>Time zone</FieldLabel>
+            <Select value={tz} onValueChange={(v) => v && setTz(v)}>
+              <SelectTrigger className={fieldClass}>
+                <SelectValue>{(value: string) => value}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((z) => (
+                  <SelectItem key={z} value={z}>
+                    {z}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldHint>Used for reservation times, business hours and the dashboard&apos;s &quot;Today&quot;.</FieldHint>
+          </label>
+          <label className="flex min-w-0 flex-col gap-2">
+            <FieldLabel>Phone number</FieldLabel>
+            <Input
+              type="tel"
+              className={fieldClass}
+              placeholder="(555) 123-4567"
+              value={phoneValue}
+              onChange={(e) => setPhoneValue(e.target.value)}
+            />
+            <FieldHint>Powers the &quot;Call now&quot; button shown to customers.</FieldHint>
+          </label>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
+        <label className="flex min-w-0 flex-col gap-2">
+          <FieldLabel>Address</FieldLabel>
           <Input
-            id="address"
-            className="h-11 text-base"
+            type="text"
+            className={fieldClass}
             placeholder="123 Main St, Toronto, ON"
             value={addressValue}
             onChange={(e) => setAddressValue(e.target.value)}
           />
-          <p className="text-sm text-muted-foreground">
-            Shown as clickable text under the map, linking to Google Maps.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone number</Label>
+          <FieldHint>Shown as clickable text under the map, linking to Google Maps.</FieldHint>
+        </label>
+        <label className="flex min-w-0 flex-col gap-2">
+          <FieldLabel>Google Maps embed URL</FieldLabel>
           <Input
-            id="phone"
-            type="tel"
-            className="h-11 text-base"
-            placeholder="(555) 123-4567"
-            value={phoneValue}
-            onChange={(e) => setPhoneValue(e.target.value)}
+            type="url"
+            className={fieldClass}
+            placeholder="https://www.google.com/maps/embed?..."
+            value={maps}
+            onChange={(e) => setMaps(e.target.value)}
           />
-          <p className="text-sm text-muted-foreground">Powers the &quot;Call Now&quot; button shown to customers.</p>
-        </div>
+          <FieldHint>
+            In Google Maps, find your restaurant, then Share, Embed a map. Copy the URL inside{" "}
+            <code className="rounded-md bg-[#F1F3F9] px-1.5 py-px font-mono text-[#334155]">src=&quot;...&quot;</code> and paste it
+            here.
+          </FieldHint>
+        </label>
+      </SectionCardBody>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="facebookUrl">Facebook page URL</Label>
+      <SectionCardBody label="Social profiles">
+        <div className="grid grid-cols-1 gap-5 [@media(min-width:580px)]:grid-cols-2">
+          <label className="flex min-w-0 flex-col gap-2">
+            <FieldLabel>Facebook page URL</FieldLabel>
             <Input
-              id="facebookUrl"
               type="url"
-              className="h-11 text-base"
+              className={fieldClass}
               placeholder="https://facebook.com/..."
               value={facebookValue}
               onChange={(e) => setFacebookValue(e.target.value)}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="instagramUrl">Instagram profile URL</Label>
+          </label>
+          <label className="flex min-w-0 flex-col gap-2">
+            <FieldLabel>Instagram profile URL</FieldLabel>
             <Input
-              id="instagramUrl"
               type="url"
-              className="h-11 text-base"
+              className={fieldClass}
               placeholder="https://instagram.com/..."
               value={instagramValue}
               onChange={(e) => setInstagramValue(e.target.value)}
             />
-          </div>
+          </label>
         </div>
+      </SectionCardBody>
 
-        <div className="space-y-2">
-          <Label htmlFor="notes">Customer-facing notes</Label>
+      <SectionCardBody label="Guest messages">
+        <label className="flex min-w-0 flex-col gap-2">
+          <FieldLabel>Customer-facing notes</FieldLabel>
           <Textarea
-            id="notes"
-            className="text-base"
+            rows={3}
+            className={textareaClass}
             placeholder="Parking, dress code, allergy policy..."
             value={notesValue}
             onChange={(e) => setNotesValue(e.target.value)}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="successMessage">Widget confirmation message</Label>
+        </label>
+        <label className="flex min-w-0 flex-col gap-2">
+          <FieldLabel>Widget confirmation message</FieldLabel>
           <Textarea
-            id="successMessage"
-            className="text-base"
+            rows={3}
+            className={textareaClass}
             placeholder="Your request has been sent to {restaurant_name}. We'll notify you once confirmed."
             value={successMessageValue}
             onChange={(e) => setSuccessMessageValue(e.target.value)}
           />
-          <p className="text-sm text-muted-foreground">
-            Shown to guests right after they submit a booking on your widget. Use{" "}
-            <code>{"{restaurant_name}"}</code>, <code>{"{date}"}</code>, and <code>{"{time}"}</code> anywhere you
-            want those inserted. Leave blank to use the default English text.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="successButtonText">Widget confirmation button text</Label>
+          <FieldHint>
+            Shown to guests right after they submit a booking. Use{" "}
+            <code className="rounded-md bg-[#F1F3F9] px-1.5 py-px font-mono text-[#334155]">{"{restaurant_name}"}</code>,{" "}
+            <code className="rounded-md bg-[#F1F3F9] px-1.5 py-px font-mono text-[#334155]">{"{date}"}</code> and{" "}
+            <code className="rounded-md bg-[#F1F3F9] px-1.5 py-px font-mono text-[#334155]">{"{time}"}</code> wherever you
+            want them inserted. Leave blank to use the default English text.
+          </FieldHint>
+        </label>
+        <label className="flex min-w-0 flex-col gap-2">
+          <FieldLabel>Widget confirmation button text</FieldLabel>
           <Input
-            id="successButtonText"
-            className="h-11 text-base"
+            type="text"
+            className={fieldClass}
             placeholder="Book another reservation"
             value={successButtonTextValue}
             onChange={(e) => setSuccessButtonTextValue(e.target.value)}
           />
-          <p className="text-sm text-muted-foreground">
-            The button below the confirmation message. Leave blank for the default.
-          </p>
-        </div>
+          <FieldHint>The button below the confirmation message. Leave blank for the default.</FieldHint>
+        </label>
+      </SectionCardBody>
 
-        {error && <p className="text-base text-destructive">{error}</p>}
-        <Button type="submit" className="h-11 px-5 text-base" disabled={saving}>
-          {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save profile"}
-        </Button>
-      </form>
-    </div>
+      {error && <p className="px-7 pb-2 text-sm text-destructive">{error}</p>}
+    </SectionCard>
   );
 }

@@ -5,6 +5,6 @@ export function Brand({ className }: { className?: string }) {
   // priority skips lazy-loading's IntersectionObserver/hydration dependency
   // entirely, so it can't silently fail to ever trigger on a static page.
   return (
-    <Image src="/logo.png" alt="360One" width={2000} height={1003} className={className} unoptimized priority />
+    <Image src="/logo.png" alt="360One" width={400} height={201} className={className} unoptimized priority />
   );
 }

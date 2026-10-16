@@ -31,13 +31,13 @@ export function ShellLayout({
     <div className="flex h-screen flex-col">
       <TopNav title={title} userName={userName} userRole={userRole} onMenuClick={() => setMobileNavOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-border bg-background md:block">
+        <aside className="hidden w-[248px] shrink-0 overflow-y-auto border-r border-line-card bg-white [@media(min-width:821px)]:block">
           <Sidebar items={navItems} />
         </aside>
 
         <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-          <SheetContent side="left" className="w-72 gap-0 p-0">
-            <SheetHeader className="border-b border-border">
+          <SheetContent side="left" className="w-[280px] gap-0 p-0">
+            <SheetHeader className="border-b border-line-card">
               <SheetTitle>{title}</SheetTitle>
             </SheetHeader>
             <div className="overflow-y-auto">
@@ -46,7 +46,7 @@ export function ShellLayout({
           </SheetContent>
         </Sheet>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

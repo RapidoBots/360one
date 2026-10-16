@@ -1,21 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SectionCard, FieldLabel } from "@/components/ui/section-card";
 import { getHoursForDay, type DayHours } from "@/lib/business-hours";
 import { updateBusinessSettingsAction, type BusinessHoursInput } from "./actions";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 function minutesToTime(totalMinutes: number): string {
   const h = Math.floor(totalMinutes / 60);
@@ -55,8 +51,7 @@ export function BusinessHoursForm({
     setSaved(false);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setSaving(true);
     setError(null);
     const result = await updateBusinessSettingsAction(slug, {
@@ -72,72 +67,98 @@ export function BusinessHoursForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-[5px] border border-border p-5">
-      <h2 className="text-base font-semibold">Business hours & reservation rules</h2>
-      <div className="space-y-3">
+    <SectionCard
+      id="hours"
+      icon={Clock}
+      title="Business hours and reservation rules"
+      description="Set when guests can book. A closing time earlier than the opening time runs past midnight."
+      footer={
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving}
+          className="h-11 rounded-xl bg-primary px-5.5 text-sm font-bold text-primary-foreground shadow-[0_6px_16px_-6px_var(--primary)] hover:bg-primary"
+        >
+          {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save business settings"}
+        </Button>
+      }
+    >
+      <div className="px-7">
         {rows.map((row) => (
           <div
             key={row.dayOfWeek}
-            className="grid grid-cols-2 gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0 sm:grid-cols-[7rem_7rem_1fr_1fr] sm:items-center sm:border-none sm:pb-0"
+            className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-divider py-3.5 last:border-b-0"
           >
-            <span className="text-base font-medium">{DAY_NAMES[row.dayOfWeek]}</span>
-            <Select
-              value={row.isOpen ? "open" : "closed"}
-              onValueChange={(v) =>
-                updateRow(row.dayOfWeek, {
-                  isOpen: v === "open",
-                  openTime: v === "open" ? (row.openTime ?? "07:00") : null,
-                  closeTime: v === "open" ? (row.closeTime ?? "23:00") : null,
-                })
-              }
-            >
-              <SelectTrigger className="h-10 w-full text-base" aria-label={`${DAY_NAMES[row.dayOfWeek]} status`}>
-                <SelectValue>{(value: string) => (value === "open" ? "Open" : "Closed")}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="time"
-              className="h-10 w-full text-base"
-              aria-label={`${DAY_NAMES[row.dayOfWeek]} opens`}
-              value={row.openTime ?? "07:00"}
-              onChange={(e) => updateRow(row.dayOfWeek, { openTime: e.target.value })}
-              disabled={!row.isOpen}
-            />
-            <Input
-              type="time"
-              className="h-10 w-full text-base"
-              aria-label={`${DAY_NAMES[row.dayOfWeek]} closes`}
-              value={row.closeTime ?? "23:00"}
-              onChange={(e) => updateRow(row.dayOfWeek, { closeTime: e.target.value })}
-              disabled={!row.isOpen}
-            />
+            <div className="min-w-[110px] flex-1 text-sm font-semibold text-ink">{DAY_NAMES[row.dayOfWeek]}</div>
+            <div className="flex min-w-[130px] flex-1 items-center gap-2.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={row.isOpen}
+                aria-label={`${DAY_NAMES[row.dayOfWeek]} open`}
+                onClick={() =>
+                  updateRow(row.dayOfWeek, {
+                    isOpen: !row.isOpen,
+                    openTime: !row.isOpen ? (row.openTime ?? "07:00") : null,
+                    closeTime: !row.isOpen ? (row.closeTime ?? "23:00") : null,
+                  })
+                }
+                className="flex h-[26px] w-11 shrink-0 cursor-pointer items-center rounded-full border-0 p-[3px] transition-colors"
+                style={{
+                  justifyContent: row.isOpen ? "flex-end" : "flex-start",
+                  backgroundColor: row.isOpen ? "var(--primary)" : "#CBD5E1",
+                }}
+              >
+                <span className="size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(15,23,42,.3)]" />
+              </button>
+              <span className={`text-[13px] font-semibold ${row.isOpen ? "text-success" : "text-ink-muted"}`}>
+                {row.isOpen ? "Open" : "Closed"}
+              </span>
+            </div>
+            <div className="flex min-w-[300px] flex-[2] items-center gap-2.5" style={{ opacity: row.isOpen ? 1 : 0.5 }}>
+              <Input
+                type="time"
+                aria-label={`${DAY_NAMES[row.dayOfWeek]} opening time`}
+                value={row.openTime ?? "07:00"}
+                disabled={!row.isOpen}
+                onChange={(e) => updateRow(row.dayOfWeek, { openTime: e.target.value })}
+                className={`${fieldClass} min-w-[120px] flex-1`}
+              />
+              <span className="text-[13px] text-ink-muted">to</span>
+              <Input
+                type="time"
+                aria-label={`${DAY_NAMES[row.dayOfWeek]} closing time`}
+                value={row.closeTime ?? "23:00"}
+                disabled={!row.isOpen}
+                onChange={(e) => updateRow(row.dayOfWeek, { closeTime: e.target.value })}
+                className={`${fieldClass} min-w-[120px] flex-1`}
+              />
+            </div>
           </div>
         ))}
       </div>
-      <div className="max-w-xs space-y-2">
-        <Label htmlFor="defaultDuration">Default reservation duration (minutes)</Label>
-        <Input
-          id="defaultDuration"
-          type="number"
-          min={15}
-          step={15}
-          className="h-11 text-base"
-          value={duration}
-          onChange={(e) => {
-            setDuration(Number(e.target.value));
-            setSaved(false);
-          }}
-          required
-        />
+
+      <div className="px-7 pt-5 pb-7">
+        <label className="flex max-w-[260px] flex-col gap-2">
+          <FieldLabel>Default reservation duration</FieldLabel>
+          <div className="relative flex items-center">
+            <Input
+              type="number"
+              min={15}
+              step={15}
+              value={duration}
+              onChange={(e) => {
+                setDuration(Number(e.target.value));
+                setSaved(false);
+              }}
+              className={`${fieldClass} pr-[60px]`}
+            />
+            <span className="pointer-events-none absolute right-3.5 text-[13px] text-ink-muted">minutes</span>
+          </div>
+        </label>
       </div>
-      {error && <p className="text-base text-destructive">{error}</p>}
-      <Button type="submit" className="h-11 px-5 text-base" disabled={saving}>
-        {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : saved ? "Saved" : "Save business settings"}
-      </Button>
-    </form>
+
+      {error && <p className="px-7 pb-5 text-sm text-destructive">{error}</p>}
+    </SectionCard>
   );
 }
