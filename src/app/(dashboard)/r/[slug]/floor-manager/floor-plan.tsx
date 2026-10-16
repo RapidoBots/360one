@@ -62,6 +62,7 @@ export function FloorPlan({
   currentFloorId,
   reservations,
   timeZone,
+  canEdit = true,
 }: {
   slug: string;
   tables: FloorTable[];
@@ -69,6 +70,7 @@ export function FloorPlan({
   currentFloorId: string;
   reservations: TableStatusReservation[];
   timeZone: string;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -161,7 +163,7 @@ export function FloorPlan({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Floor Manager</h1>
-        <FloorSwitcher slug={slug} floors={floors} currentFloorId={currentFloorId} />
+        <FloorSwitcher slug={slug} floors={floors} currentFloorId={currentFloorId} canEdit={canEdit} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -207,17 +209,19 @@ export function FloorPlan({
               +
             </Button>
           </div>
-          <Button
-            variant={editMode ? "default" : "outline"}
-            className="h-11 px-5 text-base"
-            onClick={() => setEditMode((v) => !v)}
-          >
-            {editMode ? "Done" : "Edit Layout"}
-          </Button>
+          {canEdit && (
+            <Button
+              variant={editMode ? "default" : "outline"}
+              className="h-11 px-5 text-base"
+              onClick={() => setEditMode((v) => !v)}
+            >
+              {editMode ? "Done" : "Edit Layout"}
+            </Button>
+          )}
         </div>
       </div>
 
-      {unplaced.length > 0 && !editMode && (
+      {canEdit && unplaced.length > 0 && !editMode && (
         <div className="flex items-center justify-between rounded-[5px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-base">
           <span>{unplaced.length} table{unplaced.length === 1 ? "" : "s"} aren&apos;t on the floor plan yet.</span>
           <Button variant="outline" className="h-9" onClick={() => setEditMode(true)}>
@@ -271,7 +275,7 @@ export function FloorPlan({
                   onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
                   onSettingsChange={(next) => handleSettingsChange(table.id, next)}
                   onClick={() => {
-                    if (status === "AVAILABLE") setQuickSeat({ id: table.id, number: table.number });
+                    if (status === "AVAILABLE" && canEdit) setQuickSeat({ id: table.id, number: table.number });
                     if (status === "SEATED" && reservation) setSeatedInfo({ number: table.number, reservation });
                   }}
                 />
@@ -318,6 +322,7 @@ export function FloorPlan({
         tableNumber={seatedInfo?.number ?? ""}
         reservation={seatedInfo?.reservation ?? null}
         onFreed={() => router.refresh()}
+        canEdit={canEdit}
       />
     </div>
   );

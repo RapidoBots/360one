@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireFeatureAccess } from "@/lib/auth-guards";
 import { getDayRange } from "@/lib/reservation-dates";
 import { sortTablesByNumber } from "@/lib/sort-tables";
 import { WaitlistView } from "./waitlist-view";
@@ -9,6 +10,7 @@ export default async function WaitlistPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const { access } = await requireFeatureAccess(slug, "waitlist", "VIEW");
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
   const { start, end } = getDayRange(new Date(), restaurant.timezone);
 
@@ -48,6 +50,7 @@ export default async function WaitlistPage({
       todayHistory={todayHistory}
       tables={sortTablesByNumber(rawTables)}
       reservations={reservations}
+      canEdit={access === "EDIT"}
     />
   );
 }

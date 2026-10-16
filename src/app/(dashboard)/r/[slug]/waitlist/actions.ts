@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantMember } from "@/lib/auth-guards";
+import { assertFeatureAccess } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { syncContactToGhl } from "@/lib/ghl-sync";
 import type { WaitlistStatus } from "@/generated/prisma/client";
@@ -20,7 +20,7 @@ export async function addToWaitlistAction(
     notes: string;
   }
 ): Promise<WaitlistActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "waitlist", "EDIT");
 
   const customer = await findOrCreateCustomer(restaurant.id, {
     name: input.guestName,
@@ -47,7 +47,7 @@ export async function seatFromWaitlistAction(
   waitlistEntryId: string,
   tableId: string
 ): Promise<WaitlistActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "waitlist", "EDIT");
 
   const entry = await prisma.waitlistEntry.findFirst({
     where: { id: waitlistEntryId, restaurantId: restaurant.id },
@@ -106,7 +106,7 @@ export async function updateWaitlistStatusAction(
   waitlistEntryId: string,
   status: Extract<WaitlistStatus, "CANCELLED" | "NO_SHOW">
 ): Promise<WaitlistActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "waitlist", "EDIT");
   const { count } = await prisma.waitlistEntry.updateMany({
     where: { id: waitlistEntryId, restaurantId: restaurant.id },
     data: { status },

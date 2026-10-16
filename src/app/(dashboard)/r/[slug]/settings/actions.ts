@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantOwner } from "@/lib/auth-guards";
+import { assertRestaurantOwner, FEATURE_COLUMNS, type FeatureKey } from "@/lib/auth-guards";
 import { createUserAccount, setUserPassword } from "@/lib/user-accounts";
-import type { Role } from "@/generated/prisma/client";
+import type { Role, FeatureAccess } from "@/generated/prisma/client";
 
 export type SettingsActionResult = { ok: true } | { ok: false; error: string };
 
@@ -212,6 +212,22 @@ export async function deleteTeamMemberAction(slug: string, userId: string): Prom
   }
   const { count } = await prisma.user.deleteMany({ where: { id: userId, restaurantId: restaurant.id } });
   if (count === 0) return { ok: false, error: "Team member not found." };
+  revalidatePath(`/r/${slug}/settings`);
+  return { ok: true };
+}
+
+export async function updateStaffFeatureAccessAction(
+  slug: string,
+  userId: string,
+  feature: FeatureKey,
+  access: FeatureAccess
+): Promise<SettingsActionResult> {
+  const { restaurant } = await assertRestaurantOwner(slug);
+  const { count } = await prisma.user.updateMany({
+    where: { id: userId, restaurantId: restaurant.id, role: "STAFF" },
+    data: { [FEATURE_COLUMNS[feature]]: access },
+  });
+  if (count === 0) return { ok: false, error: "Staff member not found." };
   revalidatePath(`/r/${slug}/settings`);
   return { ok: true };
 }

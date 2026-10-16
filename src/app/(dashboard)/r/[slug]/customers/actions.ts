@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantMember } from "@/lib/auth-guards";
+import { assertFeatureAccess } from "@/lib/auth-guards";
 
 export type CustomerActionResult = { ok: true } | { ok: false; error: string };
 
@@ -17,7 +17,7 @@ export async function updateCustomerAction(
   customerId: string,
   input: CustomerInput
 ): Promise<CustomerActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "customers", "EDIT");
 
   const { count } = await prisma.customer.updateMany({
     where: { id: customerId, restaurantId: restaurant.id },
@@ -39,7 +39,7 @@ export async function updateCustomerAction(
 // foreign-key error -- deleting a customer means removing them from the
 // system, so their reservation/waitlist history goes with them.
 export async function deleteCustomerAction(slug: string, customerId: string): Promise<CustomerActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "customers", "EDIT");
 
   const count = await prisma.$transaction(async (tx) => {
     await tx.reservation.deleteMany({ where: { customerId, restaurantId: restaurant.id } });

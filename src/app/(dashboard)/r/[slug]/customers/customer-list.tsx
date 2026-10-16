@@ -34,7 +34,7 @@ export type CustomerRow = {
   }[];
 };
 
-export function CustomerList({ slug, customers }: { slug: string; customers: CustomerRow[] }) {
+export function CustomerList({ slug, customers, canEdit = true }: { slug: string; customers: CustomerRow[]; canEdit?: boolean }) {
   const router = useRouter();
   const [selected, setSelected] = useState<CustomerRow | null>(null);
   const [editing, setEditing] = useState(false);
@@ -149,19 +149,21 @@ export function CustomerList({ slug, customers }: { slug: string; customers: Cus
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <Button variant="outline" className="h-9 text-base" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-9 text-base text-destructive"
-                  disabled={deleting}
-                  onClick={handleDelete}
-                >
-                  {deleting ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
+              canEdit && (
+                <div className="flex gap-3">
+                  <Button variant="outline" className="h-9 text-base" onClick={() => setEditing(true)}>
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-9 text-base text-destructive"
+                    disabled={deleting}
+                    onClick={handleDelete}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
+              )
             )}
 
             {!editing && error && <p className="text-base text-destructive">{error}</p>}

@@ -1,5 +1,6 @@
 export type SessionUser = {
   id: string;
+  name: string;
   role: "SUPER_ADMIN" | "OWNER" | "STAFF";
   restaurantSlug: string | null;
 };

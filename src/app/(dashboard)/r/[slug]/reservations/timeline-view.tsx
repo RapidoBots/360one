@@ -30,7 +30,7 @@ export function TimelineView({
   date: Date;
   dayHours: { isOpen: boolean; startHour: number; endHour: number };
   onReservationClick: (id: string) => void;
-  onSlotClick: (tableId: string, time: string) => void;
+  onSlotClick?: (tableId: string, time: string) => void;
 }) {
   if (tables.length === 0) {
     return <p className="py-16 text-center text-base text-muted-foreground">Add a table to see the timeline.</p>;
@@ -66,6 +66,7 @@ export function TimelineView({
   }
 
   function handleTrackClick(tableId: string, e: React.MouseEvent<HTMLDivElement>) {
+    if (!onSlotClick) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const rawMinutes = startHour * 60 + percent * totalMinutes;

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireFeatureAccess } from "@/lib/auth-guards";
 import { getDayRange, getWeekRange, getZonedDayOfWeek, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { sortTablesByNumber } from "@/lib/sort-tables";
 import { getHoursForDay } from "@/lib/business-hours";
@@ -14,6 +15,7 @@ export default async function ReservationsPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const { access } = await requireFeatureAccess(slug, "reservations", "VIEW");
   const view: CalendarView = sp.view === "day" || sp.view === "week" ? sp.view : "timeline";
   const statusFilter = sp.status ? (sp.status.split(",").filter(Boolean) as ReservationStatus[]) : [];
 
@@ -61,6 +63,7 @@ export default async function ReservationsPage({
       dayHours={dayHours}
       defaultDurationMinutes={restaurant.defaultReservationDurationMinutes}
       timeZone={restaurant.timezone}
+      canEdit={access === "EDIT"}
     />
   );
 }

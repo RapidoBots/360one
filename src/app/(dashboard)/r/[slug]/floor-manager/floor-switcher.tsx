@@ -14,10 +14,12 @@ export function FloorSwitcher({
   slug,
   floors,
   currentFloorId,
+  canEdit = true,
 }: {
   slug: string;
   floors: FloorOption[];
   currentFloorId: string;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -127,19 +129,21 @@ export function FloorSwitcher({
               >
                 {floor.name}
               </button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Rename ${floor.name}`}
-                onClick={() => {
-                  setRenamingId(floor.id);
-                  setRenameValue(floor.name);
-                }}
-              >
-                <Pencil className="size-3" />
-              </Button>
-              {floors.length > 1 && (
+              {canEdit && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Rename ${floor.name}`}
+                  onClick={() => {
+                    setRenamingId(floor.id);
+                    setRenameValue(floor.name);
+                  }}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+              )}
+              {canEdit && floors.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -155,7 +159,7 @@ export function FloorSwitcher({
           )
         )}
 
-        {adding ? (
+        {canEdit && (adding ? (
           <form onSubmit={handleAdd} className="flex items-center gap-1">
             <Input
               aria-label="New floor name"
@@ -185,7 +189,7 @@ export function FloorSwitcher({
           <Button type="button" variant="outline" size="icon-sm" aria-label="Add floor" onClick={() => setAdding(true)}>
             <Plus className="size-3.5" />
           </Button>
-        )}
+        ))}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireFeatureAccess } from "@/lib/auth-guards";
 import { toLocalDateInput, getDayRange, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ export default async function ReportsPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const { access } = await requireFeatureAccess(slug, "reports", "VIEW");
   const restaurant = await prisma.restaurant.findUnique({ where: { slug } });
   if (!restaurant) notFound();
 
@@ -83,7 +85,7 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Reports</h1>
-        <ExportCsvButton slug={slug} start={startInput} end={endInput} />
+        {access === "EDIT" && <ExportCsvButton slug={slug} start={startInput} end={endInput} />}
       </div>
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-[5px] border border-border p-4">

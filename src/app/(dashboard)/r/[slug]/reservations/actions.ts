@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, findCustomerByPhone, hasTableConflict } from "@/lib/reservations-data";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
-import { assertRestaurantMember } from "@/lib/auth-guards";
+import { assertFeatureAccess } from "@/lib/auth-guards";
 import { syncContactToGhl, shouldSyncOnStatusChange } from "@/lib/ghl-sync";
 import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
 
@@ -30,7 +30,7 @@ export type CustomerLookup = { name: string; email: string | null; phone: string
 // walk-in, Waiting Area) -- staff type a phone number first, and a
 // returning guest's name/email auto-fill instead of being retyped.
 export async function findCustomerByPhoneAction(slug: string, phone: string): Promise<CustomerLookup> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "VIEW");
   const customer = await findCustomerByPhone(restaurant.id, phone);
   if (!customer) return null;
   return { name: customer.name, email: customer.email, phone: customer.phone };
@@ -40,7 +40,7 @@ export async function createReservationAction(
   slug: string,
   input: ReservationInput
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
   const startsAt = zonedDateTimeToUtc(input.date, input.time, restaurant.timezone);
 
   if (input.tableId) {
@@ -92,7 +92,7 @@ export async function updateReservationAction(
   reservationId: string,
   input: ReservationInput
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
 
   const current = await prisma.reservation.findFirst({
     where: { id: reservationId, restaurantId: restaurant.id },
@@ -164,7 +164,7 @@ export async function deleteReservationAction(
   slug: string,
   reservationId: string
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
   const { count } = await prisma.reservation.deleteMany({
     where: { id: reservationId, restaurantId: restaurant.id },
   });
@@ -181,7 +181,11 @@ export async function setReservationStatusAction(
   reservationId: string,
   status: ReservationStatus
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  // Called from both the Reservations calendar and the Floor Manager's
+  // "Free table" action, so either feature's EDIT access is sufficient.
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT").catch(() =>
+    assertFeatureAccess(slug, "reservations", "EDIT")
+  );
   const { count } = await prisma.reservation.updateMany({
     where: { id: reservationId, restaurantId: restaurant.id },
     data: { status },
@@ -197,7 +201,7 @@ export async function createTableAction(
   slug: string,
   input: { number: string; capacity: number; area: string; floorId: string }
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
   try {
     await prisma.table.create({
       data: {
@@ -224,7 +228,7 @@ export async function updateTableAction(
   tableId: string,
   input: { number: string; capacity: number; area: string; floorId: string }
 ): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
   try {
     const { count } = await prisma.table.updateMany({
       where: { id: tableId, restaurantId: restaurant.id },
@@ -252,7 +256,7 @@ export async function updateTableAction(
 // reservations rather than blocking. That's the desired behavior: nothing
 // about the reservation is lost, it just needs a new table.
 export async function deleteTableAction(slug: string, tableId: string): Promise<ReservationActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
   const { count } = await prisma.table.deleteMany({
     where: { id: tableId, restaurantId: restaurant.id },
   });

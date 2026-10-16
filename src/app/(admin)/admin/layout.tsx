@@ -4,9 +4,9 @@ import { ShellLayout } from "@/components/shell/shell-layout";
 import { adminNavItems } from "@/components/shell/nav-config";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  await requireSuperAdmin();
+  const user = await requireSuperAdmin();
   return (
-    <ShellLayout title="Super Admin" navItems={adminNavItems}>
+    <ShellLayout title="Super Admin" userName={user.name} userRole={user.role} navItems={adminNavItems}>
       {children}
     </ShellLayout>
   );

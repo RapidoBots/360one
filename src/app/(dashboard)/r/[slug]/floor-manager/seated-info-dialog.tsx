@@ -14,6 +14,7 @@ export function SeatedInfoDialog({
   tableNumber,
   reservation,
   onFreed,
+  canEdit = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,6 +22,7 @@ export function SeatedInfoDialog({
   tableNumber: string;
   reservation: TableStatusReservation | null;
   onFreed: () => void;
+  canEdit?: boolean;
 }) {
   const [freeing, setFreeing] = useState(false);
 
@@ -53,9 +55,11 @@ export function SeatedInfoDialog({
                 </p>
               )}
             </div>
-            <Button className="h-11 w-full text-base" onClick={handleFree} disabled={freeing}>
-              {freeing ? <><Loader2 className="mr-2 size-4 animate-spin" />Freeing...</> : "Free table"}
-            </Button>
+            {canEdit && (
+              <Button className="h-11 w-full text-base" onClick={handleFree} disabled={freeing}>
+                {freeing ? <><Loader2 className="mr-2 size-4 animate-spin" />Freeing...</> : "Free table"}
+              </Button>
+            )}
           </div>
         )}
       </DialogContent>

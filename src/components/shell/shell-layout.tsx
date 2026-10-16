@@ -9,10 +9,14 @@ import type { NavItem } from "./nav-config";
 
 export function ShellLayout({
   title,
+  userName,
+  userRole,
   navItems,
   children,
 }: {
   title: string;
+  userName: string;
+  userRole: string;
   navItems: NavItem[];
   children: ReactNode;
 }) {
@@ -25,7 +29,7 @@ export function ShellLayout({
 
   return (
     <div className="flex h-screen flex-col">
-      <TopNav title={title} onMenuClick={() => setMobileNavOpen(true)} />
+      <TopNav title={title} userName={userName} userRole={userRole} onMenuClick={() => setMobileNavOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-border bg-background md:block">
           <Sidebar items={navItems} />

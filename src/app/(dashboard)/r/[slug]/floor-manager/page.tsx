@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireFeatureAccess } from "@/lib/auth-guards";
 import { getDayRange } from "@/lib/reservation-dates";
 import { sortTablesByNumber } from "@/lib/sort-tables";
 import { FloorPlan } from "./floor-plan";
@@ -12,6 +13,7 @@ export default async function FloorManagerPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const { access } = await requireFeatureAccess(slug, "floorManager", "VIEW");
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
   const { start, end } = getDayRange(new Date(), restaurant.timezone);
 
@@ -63,6 +65,7 @@ export default async function FloorManagerPage({
       currentFloorId={currentFloor.id}
       reservations={floorReservations}
       timeZone={restaurant.timezone}
+      canEdit={access === "EDIT"}
     />
   );
 }

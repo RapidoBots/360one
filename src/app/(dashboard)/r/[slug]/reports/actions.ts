@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantMember } from "@/lib/auth-guards";
+import { assertFeatureAccess } from "@/lib/auth-guards";
 import { buildReservationsCsv } from "@/lib/report-metrics";
 import { getDayRange, toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 
@@ -11,7 +11,7 @@ export async function exportReservationsCsvAction(
   slug: string,
   input: { start: string; end: string }
 ): Promise<ReportsActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "reports", "EDIT");
 
   // Anchored at noon so it's unambiguously within the intended calendar day
   // once viewed in the restaurant's timezone.

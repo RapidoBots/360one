@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { assertRestaurantMember } from "@/lib/auth-guards";
+import { assertFeatureAccess } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { syncContactToGhl } from "@/lib/ghl-sync";
@@ -11,7 +11,7 @@ import { Prisma, type TableShape } from "@/generated/prisma/client";
 export type FloorActionResult = { ok: true } | { ok: false; error: string };
 
 export async function createFloorAction(slug: string, name: string): Promise<FloorActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
   try {
     const maxOrder = await prisma.floor.aggregate({
       where: { restaurantId: restaurant.id },
@@ -32,7 +32,7 @@ export async function createFloorAction(slug: string, name: string): Promise<Flo
 }
 
 export async function renameFloorAction(slug: string, floorId: string, name: string): Promise<FloorActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
   try {
     const { count } = await prisma.floor.updateMany({
       where: { id: floorId, restaurantId: restaurant.id },
@@ -51,7 +51,7 @@ export async function renameFloorAction(slug: string, floorId: string, name: str
 }
 
 export async function deleteFloorAction(slug: string, floorId: string): Promise<FloorActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
 
   const floorCount = await prisma.floor.count({ where: { restaurantId: restaurant.id } });
   if (floorCount <= 1) return { ok: false, error: "Can't delete the only floor -- add another one first." };
@@ -88,7 +88,7 @@ export async function updateTableLayoutAction(
   tableId: string,
   input: TableLayoutInput
 ): Promise<FloorActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
   const { count } = await prisma.table.updateMany({
     where: { id: tableId, restaurantId: restaurant.id },
     data: input,
@@ -103,7 +103,7 @@ export async function quickSeatWalkInAction(
   tableId: string,
   input: { partySize: number; time: string; guestName: string; guestPhone: string }
 ): Promise<FloorActionResult> {
-  const { restaurant } = await assertRestaurantMember(slug);
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
   const startsAt = zonedDateTimeToUtc(toLocalDateInput(new Date(), restaurant.timezone), input.time, restaurant.timezone);
 
   const conflict = await hasTableConflict(

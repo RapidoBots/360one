@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { requireRestaurantAccess } from "@/lib/auth-guards";
+import { requireRestaurantAccess, getAllFeatureAccess } from "@/lib/auth-guards";
 import { ShellLayout } from "@/components/shell/shell-layout";
 import { restaurantNavItems } from "@/components/shell/nav-config";
 
@@ -11,9 +11,20 @@ export default async function RestaurantLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const { restaurant } = await requireRestaurantAccess(slug);
+  const { user, restaurant } = await requireRestaurantAccess(slug);
+  const featureAccess = await getAllFeatureAccess(user);
+  const canAccessSettings = user.role === "OWNER" || user.role === "SUPER_ADMIN";
   return (
-    <ShellLayout title={restaurant.name} navItems={restaurantNavItems(slug, { schedulingEnabled: restaurant.schedulingEnabled })}>
+    <ShellLayout
+      title={restaurant.name}
+      userName={user.name}
+      userRole={user.role}
+      navItems={restaurantNavItems(slug, {
+        schedulingEnabled: restaurant.schedulingEnabled,
+        canAccessSettings,
+        featureAccess,
+      })}
+    >
       {children}
     </ShellLayout>
   );

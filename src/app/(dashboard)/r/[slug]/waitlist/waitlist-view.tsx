@@ -41,12 +41,14 @@ export function WaitlistView({
   todayHistory,
   tables,
   reservations,
+  canEdit = true,
 }: {
   slug: string;
   waiting: WaitlistEntryItem[];
   todayHistory: WaitlistEntryItem[];
   tables: SeatableTable[];
   reservations: ReservationForAvailability[];
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [now, setNow] = useState(() => new Date());
@@ -70,9 +72,11 @@ export function WaitlistView({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Waiting Area</h1>
-        <Button className="h-11 px-5 text-base" onClick={() => setAddOpen(true)}>
-          Add to Waiting Area
-        </Button>
+        {canEdit && (
+          <Button className="h-11 px-5 text-base" onClick={() => setAddOpen(true)}>
+            Add to Waiting Area
+          </Button>
+        )}
       </div>
 
       {waiting.length === 0 ? (
@@ -92,20 +96,22 @@ export function WaitlistView({
                 </p>
                 {entry.notes && <p className="text-sm text-muted-foreground">{entry.notes}</p>}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  className="h-9"
-                  onClick={() => setSeating({ id: entry.id, name: entry.customer.name, partySize: entry.partySize })}
-                >
-                  Seat
-                </Button>
-                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "NO_SHOW")} disabled={actingId === entry.id}>
-                  {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "No-show"}
-                </Button>
-                <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "CANCELLED")} disabled={actingId === entry.id}>
-                  {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "Cancel"}
-                </Button>
-              </div>
+              {canEdit && (
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    className="h-9"
+                    onClick={() => setSeating({ id: entry.id, name: entry.customer.name, partySize: entry.partySize })}
+                  >
+                    Seat
+                  </Button>
+                  <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "NO_SHOW")} disabled={actingId === entry.id}>
+                    {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "No-show"}
+                  </Button>
+                  <Button variant="outline" className="h-9" onClick={() => handleStatusChange(entry.id, "CANCELLED")} disabled={actingId === entry.id}>
+                    {actingId === entry.id ? <Loader2 className="size-4 animate-spin" /> : "Cancel"}
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

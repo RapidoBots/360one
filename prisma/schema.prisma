@@ -30,6 +30,12 @@ enum StaffPosition {
   OTHER
 }
 
+enum FeatureAccess {
+  NONE
+  VIEW
+  EDIT
+}
+
 model Restaurant {
   id        String           @id @default(cuid())
   name      String
@@ -143,6 +149,11 @@ model User {
   active        Boolean       @default(true)
   position       StaffPosition?
   customPosition String?
+  reservationsAccess FeatureAccess @default(EDIT)
+  waitlistAccess     FeatureAccess @default(EDIT)
+  floorManagerAccess FeatureAccess @default(EDIT)
+  customersAccess    FeatureAccess @default(EDIT)
+  reportsAccess      FeatureAccess @default(EDIT)
   restaurantId  String?
   restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id])
   sessions      Session[]

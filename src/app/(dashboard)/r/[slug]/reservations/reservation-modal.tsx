@@ -68,6 +68,7 @@ export function ReservationModal({
   defaultDurationMinutes,
   timeZone,
   onSaved,
+  canEdit = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -79,6 +80,7 @@ export function ReservationModal({
   defaultDurationMinutes: number;
   timeZone: string;
   onSaved: () => void;
+  canEdit?: boolean;
 }) {
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -244,7 +246,13 @@ export function ReservationModal({
             </Button>
           </form>
         ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit}>
+        <fieldset disabled={!canEdit} className="space-y-6">
+          {!canEdit && (
+            <p className="rounded-[5px] border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              You have view-only access to reservations.
+            </p>
+          )}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground">Guest information</h3>
@@ -441,6 +449,7 @@ export function ReservationModal({
               </Button>
             )}
           </div>
+        </fieldset>
         </form>
         )}
       </DialogContent>

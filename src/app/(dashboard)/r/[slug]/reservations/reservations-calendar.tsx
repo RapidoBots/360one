@@ -29,6 +29,7 @@ export function ReservationsCalendar({
   dayHours,
   defaultDurationMinutes,
   timeZone,
+  canEdit = true,
 }: {
   slug: string;
   view: CalendarView;
@@ -39,6 +40,7 @@ export function ReservationsCalendar({
   dayHours: { isOpen: boolean; startHour: number; endHour: number };
   defaultDurationMinutes: number;
   timeZone: string;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -132,19 +134,23 @@ export function ReservationsCalendar({
             className="h-11 w-full text-base sm:w-64"
             onChange={(e) => updateParams({ q: e.target.value })}
           />
-          <Button variant="outline" className="h-11 flex-1 px-5 text-base sm:flex-none" onClick={() => setTablesOpen(true)}>
-            Manage tables
-          </Button>
-          <Button
-            className="h-11 flex-1 px-5 text-base sm:flex-none"
-            onClick={() => {
-              setEditingId(null);
-              setPrefill(undefined);
-              setModalOpen(true);
-            }}
-          >
-            New reservation
-          </Button>
+          {canEdit && (
+            <>
+              <Button variant="outline" className="h-11 flex-1 px-5 text-base sm:flex-none" onClick={() => setTablesOpen(true)}>
+                Manage tables
+              </Button>
+              <Button
+                className="h-11 flex-1 px-5 text-base sm:flex-none"
+                onClick={() => {
+                  setEditingId(null);
+                  setPrefill(undefined);
+                  setModalOpen(true);
+                }}
+              >
+                New reservation
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -178,11 +184,11 @@ export function ReservationsCalendar({
             setEditingId(id);
             setModalOpen(true);
           }}
-          onSlotClick={(tableId, time) => {
+          onSlotClick={canEdit ? (tableId, time) => {
             setEditingId(null);
             setPrefill({ tableId, date: toLocalDateInput(date, timeZone), time });
             setModalOpen(true);
-          }}
+          } : undefined}
         />
       )}
 
@@ -197,15 +203,18 @@ export function ReservationsCalendar({
         defaultDurationMinutes={defaultDurationMinutes}
         timeZone={timeZone}
         onSaved={() => router.refresh()}
+        canEdit={canEdit}
       />
-      <TablesManagerDialog
-        open={tablesOpen}
-        onOpenChange={setTablesOpen}
-        slug={slug}
-        tables={tables}
-        floors={floors}
-        onSaved={() => router.refresh()}
-      />
+      {canEdit && (
+        <TablesManagerDialog
+          open={tablesOpen}
+          onOpenChange={setTablesOpen}
+          slug={slug}
+          tables={tables}
+          floors={floors}
+          onSaved={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }
