@@ -41,6 +41,16 @@ export function toLocalDateInput(date: Date, timeZone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+// Same reasoning as toLocalDateInput, for the HH:mm half of a stored (UTC)
+// startsAt -- e.g. to pre-fill a <input type="time"> with the restaurant's
+// wall-clock time rather than the server's.
+export function toLocalTimeInput(date: Date, timeZone: string): string {
+  const zoned = toZonedTime(date, timeZone);
+  const hours = String(zoned.getHours()).padStart(2, "0");
+  const minutes = String(zoned.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
 // Returns the day-of-week (0 = Sunday ... 6 = Saturday) that `date` falls on
 // as observed in `timeZone` -- for business-hours lookups against a stored
 // (UTC) startsAt.

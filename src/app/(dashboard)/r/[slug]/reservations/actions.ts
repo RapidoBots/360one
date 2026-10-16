@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { findOrCreateCustomer, findCustomerByPhone, hasTableConflict } from "@/lib/reservations-data";
 import { zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { assertFeatureAccess } from "@/lib/auth-guards";
-import { syncContactToGhl, shouldSyncOnStatusChange } from "@/lib/ghl-sync";
+import { syncContactToGhl, shouldSyncOnStatusChange, buildReservationManageUrl } from "@/lib/ghl-sync";
 import { Prisma, type ReservationStatus } from "@/generated/prisma/client";
 
 export type ReservationInput = {
@@ -54,7 +54,7 @@ export async function createReservationAction(
     phone: input.guestPhone || null,
   });
 
-  await prisma.reservation.create({
+  const reservation = await prisma.reservation.create({
     data: {
       restaurantId: restaurant.id,
       customerId: customer.id,
@@ -79,6 +79,7 @@ export async function createReservationAction(
       timeZone: restaurant.timezone,
       preferredContact: customer.preferredContact,
       marketingConsent: customer.marketingConsent,
+      manageUrl: buildReservationManageUrl(reservation.manageToken),
     }
   );
 
@@ -96,7 +97,7 @@ export async function updateReservationAction(
 
   const current = await prisma.reservation.findFirst({
     where: { id: reservationId, restaurantId: restaurant.id },
-    select: { customerId: true, status: true },
+    select: { customerId: true, status: true, manageToken: true },
   });
   if (!current) return { ok: false, error: "Reservation not found." };
 
@@ -151,6 +152,7 @@ export async function updateReservationAction(
         timeZone: restaurant.timezone,
         preferredContact: customer.preferredContact,
         marketingConsent: customer.marketingConsent,
+        manageUrl: buildReservationManageUrl(current.manageToken),
       }
     );
   }

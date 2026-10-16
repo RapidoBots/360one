@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertFeatureAccess } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
 import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
-import { syncContactToGhl } from "@/lib/ghl-sync";
+import { syncContactToGhl, buildReservationManageUrl } from "@/lib/ghl-sync";
 import { Prisma, type TableShape } from "@/generated/prisma/client";
 
 export type FloorActionResult = { ok: true } | { ok: false; error: string };
@@ -119,7 +119,7 @@ export async function quickSeatWalkInAction(
     phone: input.guestPhone || null,
   });
 
-  await prisma.reservation.create({
+  const reservation = await prisma.reservation.create({
     data: {
       restaurantId: restaurant.id,
       customerId: customer.id,
@@ -145,6 +145,7 @@ export async function quickSeatWalkInAction(
       timeZone: restaurant.timezone,
       preferredContact: customer.preferredContact,
       marketingConsent: customer.marketingConsent,
+      manageUrl: buildReservationManageUrl(reservation.manageToken),
     }
   );
 

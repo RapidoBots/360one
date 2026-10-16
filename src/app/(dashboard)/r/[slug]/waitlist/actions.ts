@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertFeatureAccess } from "@/lib/auth-guards";
 import { findOrCreateCustomer, hasTableConflict } from "@/lib/reservations-data";
-import { syncContactToGhl } from "@/lib/ghl-sync";
+import { syncContactToGhl, buildReservationManageUrl } from "@/lib/ghl-sync";
 import type { WaitlistStatus } from "@/generated/prisma/client";
 
 export type WaitlistActionResult = { ok: true } | { ok: false; error: string };
@@ -64,7 +64,7 @@ export async function seatFromWaitlistAction(
   );
   if (conflict) return { ok: false, error: "That table is already booked for this time." };
 
-  await prisma.reservation.create({
+  const reservation = await prisma.reservation.create({
     data: {
       restaurantId: restaurant.id,
       customerId: entry.customerId,
@@ -88,6 +88,7 @@ export async function seatFromWaitlistAction(
       timeZone: restaurant.timezone,
       preferredContact: entry.customer.preferredContact,
       marketingConsent: entry.customer.marketingConsent,
+      manageUrl: buildReservationManageUrl(reservation.manageToken),
     }
   );
 

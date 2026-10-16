@@ -11,6 +11,7 @@ const RESERVATION_GUEST = {
   timeZone: "America/Toronto",
   preferredContact: "BOTH" as const,
   marketingConsent: false,
+  manageUrl: "http://localhost:3000/reservations/manage/test-token",
 };
 
 describe("buildGhlContactPayload", () => {
@@ -40,6 +41,7 @@ describe("buildGhlContactPayload", () => {
       { key: "restaurant_name", field_value: "The Blue Fork" },
       { key: "reservation_date", field_value: "2026-08-01" },
       { key: "reservation_datetime", field_value: "2026-08-01T23:00:00.000Z" },
+      { key: "manage_url", field_value: "http://localhost:3000/reservations/manage/test-token" },
     ]);
   });
 });
@@ -123,6 +125,7 @@ describe("syncContactToGhl", () => {
         { key: "restaurant_name", field_value: "The Blue Fork" },
         { key: "reservation_date", field_value: "2026-08-01" },
         { key: "reservation_datetime", field_value: "2026-08-01T23:00:00.000Z" },
+        { key: "manage_url", field_value: "http://localhost:3000/reservations/manage/test-token" },
       ],
     });
   });

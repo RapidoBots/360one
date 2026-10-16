@@ -316,6 +316,11 @@ model Reservation {
   status          ReservationStatus @default(CONFIRMED)
   specialRequests String?
   internalNote    String?
+  // Unguessable token for the guest-facing "manage your reservation" link
+  // sent in confirmation/reminder emails -- possession of the token is the
+  // only auth for that public page, so it must never be derivable from the
+  // reservation id.
+  manageToken     String            @unique @default(cuid())
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

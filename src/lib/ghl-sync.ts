@@ -3,6 +3,10 @@ import { toLocalDateInput } from "@/lib/reservation-dates";
 
 export type GhlCredentials = { ghlLocationId: string | null; ghlApiKey: string | null };
 
+export function buildReservationManageUrl(manageToken: string): string {
+  return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/reservations/manage/${manageToken}`;
+}
+
 // The GHL contact (and the confirmation automation it triggers) should only
 // be created once staff confirm a reservation, not when a guest submits it
 // -- this is the one transition that means "confirm".
@@ -19,6 +23,9 @@ export type GhlGuest = {
   timeZone: string;
   preferredContact: ContactChannel;
   marketingConsent: boolean;
+  // The guest's self-service "manage your reservation" link (cancel or
+  // request a new time) -- see src/app/(public)/reservations/manage.
+  manageUrl: string;
 };
 
 function formatReservationDate(startsAt: Date, timeZone: string): string {
@@ -48,6 +55,10 @@ export function buildGhlContactPayload(guest: GhlGuest): Record<string, unknown>
       // sent only for that purpose (not meant to be shown to the guest).
       { key: "reservation_date", field_value: toLocalDateInput(guest.startsAt, guest.timeZone) },
       { key: "reservation_datetime", field_value: guest.startsAt.toISOString() },
+      // Merge this into email templates as {{contact.manage_url}} -- GHL's
+      // own {{appointment.*}} merge tags don't apply here, since reservations
+      // live in our database, not as GHL Calendar Appointments.
+      { key: "manage_url", field_value: guest.manageUrl },
     ],
   };
 }
