@@ -22,7 +22,7 @@ import type { StaffMember, ShiftData, ExchangeData } from "./staff-page-client";
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00Z");
-  return d.toLocaleDateString([], { month: "short", day: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function formatTime(t: string): string {
@@ -40,6 +40,102 @@ const STATUS_VARIANT: Record<string, "default" | "outline" | "destructive"> = {
   REJECTED: "destructive",
 };
 
+// One side of the exchange: pick a team member, then pick one of their
+// shifts. Staff requesting their own side skip straight to the shift list
+// (fixedPersonId) -- they can only give up their own shifts.
+function PersonShiftPicker({
+  label,
+  members,
+  shifts,
+  excludePersonId,
+  fixedPersonId,
+  personId,
+  onPersonChange,
+  shiftId,
+  onShiftChange,
+}: {
+  label: string;
+  members: StaffMember[];
+  shifts: ShiftData[];
+  excludePersonId?: string | null;
+  fixedPersonId?: string;
+  personId: string | null;
+  onPersonChange: (id: string | null) => void;
+  shiftId: string | null;
+  onShiftChange: (id: string | null) => void;
+}) {
+  const effectivePersonId = fixedPersonId ?? personId;
+  const personShifts = effectivePersonId ? shifts.filter((s) => s.userId === effectivePersonId) : [];
+  const fixedMember = fixedPersonId ? members.find((m) => m.id === fixedPersonId) : undefined;
+
+  return (
+    <div className="min-w-0 flex-1 space-y-2.5 rounded-lg border border-border p-3.5">
+      <Label className="text-xs font-semibold text-muted-foreground uppercase">{label}</Label>
+
+      {fixedPersonId ? (
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+            {(fixedMember?.name ?? "You").slice(0, 2).toUpperCase()}
+          </span>
+          {fixedMember?.name ?? "You"}
+        </div>
+      ) : (
+        <NativeSelect
+          className="h-10 text-sm"
+          value={personId ?? ""}
+          onChange={(e) => {
+            onPersonChange(e.target.value || null);
+            onShiftChange(null);
+          }}
+        >
+          <option value="" disabled>
+            Select a team member
+          </option>
+          {members
+            .filter((m) => m.id !== excludePersonId)
+            .map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+        </NativeSelect>
+      )}
+
+      {effectivePersonId && (
+        <div className="max-h-56 space-y-1.5 overflow-y-auto">
+          {personShifts.length === 0 ? (
+            <p className="py-3 text-center text-xs text-muted-foreground">
+              {fixedPersonId ? "You have no shifts to offer." : "This person has no shifts."}
+            </p>
+          ) : (
+            personShifts.map((s) => {
+              const selected = s.id === shiftId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => onShiftChange(s.id)}
+                  className={`block w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-border hover:bg-muted/50"
+                  }`}
+                >
+                  <span className="block font-medium">{formatDate(s.date)}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatTime(s.startTime)}–{formatTime(s.endTime)}
+                    {s.draft && " · Draft"}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ExchangeHistory({
   slug,
   exchanges,
@@ -56,11 +152,16 @@ export function ExchangeHistory({
   isStaffView?: boolean;
 }) {
   const router = useRouter();
+  const [fromPersonId, setFromPersonId] = useState<string | null>(null);
   const [fromShiftId, setFromShiftId] = useState<string | null>(null);
+  const [toPersonId, setToPersonId] = useState<string | null>(null);
   const [toShiftId, setToShiftId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  const fixedFromPersonId = isStaffView ? currentUserId : undefined;
+  const effectiveFromPersonId = fixedFromPersonId ?? fromPersonId;
 
   async function handleRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +181,9 @@ export function ExchangeHistory({
       return;
     }
     toast.success("Exchange request submitted");
+    setFromPersonId(null);
     setFromShiftId(null);
+    setToPersonId(null);
     setToShiftId(null);
     setNote("");
     router.refresh();
@@ -98,25 +201,12 @@ export function ExchangeHistory({
     router.refresh();
   }
 
-  // Staff can only offer their own shifts; owners see all
-  const fromShifts = isStaffView && currentUserId
-    ? shifts.filter((s) => s.userId === currentUserId)
-    : shifts;
-  // "To" shows other people's shifts (excluding the selected "from" shift)
-  const toShifts = isStaffView && currentUserId
-    ? shifts.filter((s) => s.id !== fromShiftId && s.userId !== currentUserId)
-    : shifts.filter((s) => s.id !== fromShiftId);
   // Staff sees only their own exchanges; owners see all
   const visibleExchanges = isStaffView && currentUserId
     ? exchanges.filter(
         (e) => e.requesterShift.user.id === currentUserId || e.targetShift.user.id === currentUserId
       )
     : exchanges;
-
-  function shiftOptionLabel(s: ShiftData): string {
-    const member = members.find((m) => m.id === s.userId);
-    return `${member?.name ?? "?"} — ${formatDate(s.date)} ${formatTime(s.startTime)}–${formatTime(s.endTime)}`;
-  }
 
   return (
     <div className="space-y-6">
@@ -128,67 +218,35 @@ export function ExchangeHistory({
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           {isStaffView
-            ? "Pick one of your shifts and a colleague's shift to swap. They'll review your request."
-            : "Swap two shifts between staff members. The owner reviews and approves."}
+            ? "Pick one of your shifts, then a colleague and one of their shifts to swap with."
+            : "Pick a team member and shift on each side to swap. The owner reviews and approves."}
         </p>
         <form onSubmit={handleRequest} className="mt-4 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-            <div className="min-w-0 space-y-1.5">
-              <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
-              <NativeSelect
-                className="h-10 text-sm"
-                value={fromShiftId ?? ""}
-                disabled={fromShifts.length === 0}
-                onChange={(e) => {
-                  setFromShiftId(e.target.value || null);
-                  // the colleague-shift list depends on which shift is "from" —
-                  // clear it so a stale, no-longer-valid selection can't be submitted
-                  setToShiftId(null);
-                }}
-              >
-                <option value="" disabled>
-                  {fromShifts.length === 0
-                    ? "No shifts available."
-                    : isStaffView
-                      ? "Select your shift to give up"
-                      : "Select shift to give up"}
-                </option>
-                {fromShifts.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {shiftOptionLabel(s)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-
-            <div className="hidden items-center justify-center pb-2.5 text-muted-foreground sm:flex">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <PersonShiftPicker
+              label={isStaffView ? "Giving up" : "From"}
+              members={members}
+              shifts={shifts}
+              excludePersonId={toPersonId}
+              fixedPersonId={fixedFromPersonId}
+              personId={fromPersonId}
+              onPersonChange={setFromPersonId}
+              shiftId={fromShiftId}
+              onShiftChange={setFromShiftId}
+            />
+            <div className="hidden items-center justify-center pt-8 text-muted-foreground sm:flex">
               <ArrowRightLeft className="size-4" />
             </div>
-
-            <div className="min-w-0 space-y-1.5">
-              <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
-              <NativeSelect
-                className="h-10 text-sm"
-                value={toShiftId ?? ""}
-                disabled={toShifts.length === 0}
-                onChange={(e) => setToShiftId(e.target.value || null)}
-              >
-                <option value="" disabled>
-                  {toShifts.length > 0
-                    ? isStaffView
-                      ? "Select colleague's shift to receive"
-                      : "Select shift to receive"
-                    : fromShiftId
-                      ? "No other shifts to swap with."
-                      : "Select your shift first."}
-                </option>
-                {toShifts.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {shiftOptionLabel(s)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
+            <PersonShiftPicker
+              label={isStaffView ? "Receiving" : "To"}
+              members={members}
+              shifts={shifts}
+              excludePersonId={effectiveFromPersonId}
+              personId={toPersonId}
+              onPersonChange={setToPersonId}
+              shiftId={toShiftId}
+              onShiftChange={setToShiftId}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -196,7 +254,7 @@ export function ExchangeHistory({
             <Input className="h-10 text-sm" placeholder="Reason for the swap..." value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
-          <Button type="submit" disabled={submitting} className="h-10 gap-2 px-5">
+          <Button type="submit" disabled={submitting || !fromShiftId || !toShiftId} className="h-10 gap-2 px-5">
             <ArrowRightLeft className="size-3.5" />
             {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit exchange request"}
           </Button>
