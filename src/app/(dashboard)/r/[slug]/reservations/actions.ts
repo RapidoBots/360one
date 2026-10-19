@@ -64,6 +64,7 @@ export async function createReservationAction(
       durationMinutes: input.durationMinutes,
       specialRequests: input.specialRequests || null,
       internalNote: input.internalNote || null,
+      status: input.status ?? "CONFIRMED",
     },
   });
 
