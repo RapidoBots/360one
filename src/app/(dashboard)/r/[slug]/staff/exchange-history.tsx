@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,7 +18,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requestShiftExchangeAction, reviewShiftExchangeAction } from "./actions";
-import { POSITION_COLORS } from "./constants";
 import type { StaffMember, ShiftData, ExchangeData } from "./staff-page-client";
 
 function formatDate(dateStr: string): string {
@@ -119,18 +118,6 @@ export function ExchangeHistory({
     return `${member?.name ?? "?"} — ${formatDate(s.date)} ${formatTime(s.startTime)}–${formatTime(s.endTime)}`;
   }
 
-  function ShiftOption({ s }: { s: ShiftData }) {
-    return (
-      <span className="flex min-w-0 items-center gap-2">
-        <span
-          className="size-2 shrink-0 rounded-full"
-          style={{ backgroundColor: POSITION_COLORS[s.position] }}
-        />
-        <span className="truncate">{shiftOptionLabel(s)}</span>
-      </span>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* New exchange request */}
@@ -148,41 +135,30 @@ export function ExchangeHistory({
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
             <div className="min-w-0 space-y-1.5">
               <Label>{isStaffView ? "Your shift" : "From shift"}</Label>
-              <Select
-                value={fromShiftId}
-                onValueChange={(v) => {
-                  setFromShiftId(v);
+              <NativeSelect
+                className="h-10 text-sm"
+                value={fromShiftId ?? ""}
+                disabled={fromShifts.length === 0}
+                onChange={(e) => {
+                  setFromShiftId(e.target.value || null);
                   // the colleague-shift list depends on which shift is "from" —
                   // clear it so a stale, no-longer-valid selection can't be submitted
                   setToShiftId(null);
                 }}
               >
-                <SelectTrigger className="h-10 w-full text-sm">
-                  <SelectValue
-                    className="truncate"
-                    placeholder={isStaffView ? "Select your shift to give up" : "Select shift to give up"}
-                  >
-                    {(value: string | null) => {
-                      const s = fromShifts.find((sh) => sh.id === value);
-                      return s
-                        ? <ShiftOption s={s} />
-                        : (isStaffView ? "Select your shift to give up" : "Select shift to give up");
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="w-[min(90vw,24rem)]">
-                  {fromShifts.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <ShiftOption s={s} />
-                    </SelectItem>
-                  ))}
-                  {fromShifts.length === 0 && (
-                    <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                      No shifts available.
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+                <option value="" disabled>
+                  {fromShifts.length === 0
+                    ? "No shifts available."
+                    : isStaffView
+                      ? "Select your shift to give up"
+                      : "Select shift to give up"}
+                </option>
+                {fromShifts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {shiftOptionLabel(s)}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
 
             <div className="hidden items-center justify-center pb-2.5 text-muted-foreground sm:flex">
@@ -191,33 +167,27 @@ export function ExchangeHistory({
 
             <div className="min-w-0 space-y-1.5">
               <Label>{isStaffView ? "Colleague's shift" : "To shift"}</Label>
-              <Select value={toShiftId} onValueChange={setToShiftId}>
-                <SelectTrigger className="h-10 w-full text-sm">
-                  <SelectValue
-                    className="truncate"
-                    placeholder={isStaffView ? "Select colleague's shift to receive" : "Select shift to receive"}
-                  >
-                    {(value: string | null) => {
-                      const s = toShifts.find((sh) => sh.id === value);
-                      return s
-                        ? <ShiftOption s={s} />
-                        : (isStaffView ? "Select colleague's shift to receive" : "Select shift to receive");
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="w-[min(90vw,24rem)]">
-                  {toShifts.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <ShiftOption s={s} />
-                    </SelectItem>
-                  ))}
-                  {toShifts.length === 0 && (
-                    <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                      {fromShiftId ? "No other shifts to swap with." : "Select your shift first."}
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                className="h-10 text-sm"
+                value={toShiftId ?? ""}
+                disabled={toShifts.length === 0}
+                onChange={(e) => setToShiftId(e.target.value || null)}
+              >
+                <option value="" disabled>
+                  {toShifts.length > 0
+                    ? isStaffView
+                      ? "Select colleague's shift to receive"
+                      : "Select shift to receive"
+                    : fromShiftId
+                      ? "No other shifts to swap with."
+                      : "Select your shift first."}
+                </option>
+                {toShifts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {shiftOptionLabel(s)}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
           </div>
 

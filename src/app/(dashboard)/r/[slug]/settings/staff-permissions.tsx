@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { SectionCard } from "@/components/ui/section-card";
 import { Button } from "@/components/ui/button";
 import { updateStaffFeatureAccessAction } from "./actions";
@@ -204,21 +204,18 @@ export function StaffPermissions({
                     const style = ACCESS_STYLE[value];
                     return (
                       <TableCell key={f.key} className="px-3 py-4">
-                        <Select value={value} onValueChange={(v) => v && setPendingValue(m.id, f.key, v as FeatureAccess)}>
-                          <SelectTrigger
-                            className="h-10 w-full min-w-[130px] rounded-[10px] border text-[13px] font-semibold"
-                            style={{ backgroundColor: style.bg, color: style.color, borderColor: style.border }}
-                          >
-                            <SelectValue aria-label={`${m.name} ${f.label} access`}>
-                              {(v: FeatureAccess) => ACCESS_LABELS[v]}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NONE">No access</SelectItem>
-                            <SelectItem value="VIEW">View only</SelectItem>
-                            <SelectItem value="EDIT">Can edit</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <NativeSelect
+                          compact
+                          className="min-w-[130px]"
+                          style={{ backgroundColor: style.bg, color: style.color, borderColor: style.border }}
+                          aria-label={`${m.name} ${f.label} access`}
+                          value={value}
+                          onChange={(e) => setPendingValue(m.id, f.key, e.target.value as FeatureAccess)}
+                        >
+                          <option value="NONE">{ACCESS_LABELS.NONE}</option>
+                          <option value="VIEW">{ACCESS_LABELS.VIEW}</option>
+                          <option value="EDIT">{ACCESS_LABELS.EDIT}</option>
+                        </NativeSelect>
                       </TableCell>
                     );
                   })}

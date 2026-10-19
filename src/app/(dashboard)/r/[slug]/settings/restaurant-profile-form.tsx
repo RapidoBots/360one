@@ -6,8 +6,9 @@ import { Loader2, Upload, ImageIcon, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { SectionCard, SectionCardBody, FieldLabel, FieldHint } from "@/components/ui/section-card";
+import { cn } from "@/lib/utils";
 import {
   updateRestaurantProfileAction,
   uploadRestaurantLogoAction,
@@ -229,18 +230,13 @@ export function RestaurantProfileForm({
         <div className="grid grid-cols-1 gap-5 [@media(min-width:580px)]:grid-cols-2">
           <label className="flex min-w-0 flex-col gap-2">
             <FieldLabel>Time zone</FieldLabel>
-            <Select value={tz} onValueChange={(v) => v && setTz(v)}>
-              <SelectTrigger className={fieldClass}>
-                <SelectValue>{(value: string) => value}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONES.map((z) => (
-                  <SelectItem key={z} value={z}>
-                    {z}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect className={cn(fieldClass, "pl-3.5 pr-9")} value={tz} onChange={(e) => setTz(e.target.value)}>
+              {TIMEZONES.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </NativeSelect>
             <FieldHint>Used for reservation times, business hours and the dashboard&apos;s &quot;Today&quot;.</FieldHint>
           </label>
           <label className="flex min-w-0 flex-col gap-2">

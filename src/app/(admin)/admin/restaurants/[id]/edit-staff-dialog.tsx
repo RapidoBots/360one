@@ -6,13 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { updateStaffMemberAction } from "../actions";
 import type { Role } from "@/generated/prisma/client";
 
@@ -93,18 +87,13 @@ export function EditStaffDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="editStaffRole">Role</Label>
-            <Select value={role} onValueChange={(v) => v && setRole(v as Role)}>
-              <SelectTrigger id="editStaffRole">
-                <SelectValue>{(value: string) => value}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect id="editStaffRole" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
           <div className="space-y-2">
             <Label htmlFor="editStaffPassword">New password (leave blank to keep current)</Label>

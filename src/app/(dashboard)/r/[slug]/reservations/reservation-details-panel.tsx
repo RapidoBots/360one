@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { setReservationStatusAction, setReservationTableAction } from "./actions";
 import { formatZonedDate, formatZonedTime } from "@/lib/reservation-dates";
 import { STATUS_COLORS, STATUS_LABELS } from "./reservation-badge";
@@ -131,25 +131,18 @@ export function ReservationDetailsPanel({
 
           <label className="mt-6 flex flex-col gap-2">
             <span className="text-[13px] font-semibold text-ink">Table</span>
-            <Select value={reservation.tableId ?? "none"} onValueChange={changeTable} disabled={!canEdit || saving !== null}>
-              <SelectTrigger className="h-11 w-full text-base">
-                <SelectValue>
-                  {(value: string) => {
-                    if (value === "none") return "Unassigned";
-                    const t = tables.find((table) => table.id === value);
-                    return t ? `Table ${t.number} (seats ${t.capacity})` : "Unassigned";
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
-                {tables.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    Table {t.number} (seats {t.capacity})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect
+              value={reservation.tableId ?? "none"}
+              onChange={(e) => changeTable(e.target.value)}
+              disabled={!canEdit || saving !== null}
+            >
+              <option value="none">Unassigned</option>
+              {tables.map((t) => (
+                <option key={t.id} value={t.id}>
+                  Table {t.number} (seats {t.capacity})
+                </option>
+              ))}
+            </NativeSelect>
             <span className="text-[12.5px] leading-relaxed text-ink-muted">
               Assigning a table moves the reservation out of the Unassigned row.
             </span>

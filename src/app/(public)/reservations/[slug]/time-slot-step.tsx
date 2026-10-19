@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toLocalDateInput } from "@/lib/reservation-dates";
@@ -232,18 +232,18 @@ export function TimeSlotStep({
         <Label htmlFor="widgetPartySize">Number of Guests</Label>
         <div className="relative">
           <Users className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Select value={String(value.partySize)} onValueChange={(v) => v && onPartySizeChange(Number(v))}>
-            <SelectTrigger id="widgetPartySize" className="h-11 w-full pl-9 text-base">
-              <SelectValue>{(v: string) => `${v} Guest${v === "1" ? "" : "s"}`}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {PARTY_SIZES.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <NativeSelect
+            id="widgetPartySize"
+            className="pl-9 text-base"
+            value={String(value.partySize)}
+            onChange={(e) => onPartySizeChange(Number(e.target.value))}
+          >
+            {PARTY_SIZES.map((n) => (
+              <option key={n} value={String(n)}>
+                {n} Guest{n === 1 ? "" : "s"}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
       </div>
 

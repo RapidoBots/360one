@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Calendar, Users, MapPin, Phone, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { toLocalDateInput } from "@/lib/reservation-dates";
 import {
   cancelReservationByTokenAction,
@@ -145,26 +145,20 @@ export function ManageReservationView({
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Party size</label>
-              <Select
+              <NativeSelect
                 value={String(partySize)}
-                onValueChange={(v) => {
-                  if (!v) return;
-                  const n = Number(v);
+                onChange={(e) => {
+                  const n = Number(e.target.value);
                   setPartySize(n);
                   loadSlots(date, n);
                 }}
               >
-                <SelectTrigger className="h-11 w-full">
-                  <SelectValue>{(v: string) => `${v} guest${v === "1" ? "" : "s"}`}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PARTY_SIZES.map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {PARTY_SIZES.map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n} guest{n === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
           </div>
 

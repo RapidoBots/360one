@@ -6,13 +6,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldLabel, FieldHint } from "@/components/ui/section-card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
+import { cn } from "@/lib/utils";
 import { addTeamMemberAction } from "./actions";
 import type { Role } from "@/generated/prisma/client";
 
@@ -86,18 +81,13 @@ export function AddTeamMemberDialog({
           </label>
           <label className="flex flex-col gap-2">
             <FieldLabel>Role</FieldLabel>
-            <Select value={role} onValueChange={(v) => v && setRole(v as Role)}>
-              <SelectTrigger className={fieldClass}>
-                <SelectValue>{(value: string) => value}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect className={cn(fieldClass, "pl-3.5 pr-9")} value={role} onChange={(e) => setRole(e.target.value as Role)}>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </NativeSelect>
           </label>
           <label className="flex flex-col gap-2">
             <FieldLabel>Password</FieldLabel>

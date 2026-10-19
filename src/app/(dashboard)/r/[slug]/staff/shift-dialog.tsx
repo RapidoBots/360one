@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createShiftAction, createBulkShiftsAction, updateShiftAction, deleteShiftAction } from "./actions";
-import { POSITION_LABELS, POSITION_COLORS } from "./constants";
-import { positionLabel } from "./position-utils";
+import { POSITION_LABELS } from "./constants";
 import type { StaffMember, ShiftData } from "./staff-page-client";
 import type { StaffPosition } from "@/generated/prisma/client";
 
@@ -230,34 +229,18 @@ export function ShiftDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="shiftPosition">Position</Label>
-            <Select value={position} onValueChange={(v) => v && setPosition(v as StaffPosition)}>
-              <SelectTrigger id="shiftPosition" className="h-10 text-sm">
-                <SelectValue>
-                  {(value: string) => (
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="inline-block size-2.5 rounded-full"
-                        style={{ backgroundColor: POSITION_COLORS[value as StaffPosition] }}
-                      />
-                      {positionLabel(value as StaffPosition, value === "OTHER" ? customPosition : null)}
-                    </span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {POSITIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="inline-block size-2 rounded-full"
-                        style={{ backgroundColor: POSITION_COLORS[p] }}
-                      />
-                      {POSITION_LABELS[p]}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect
+              id="shiftPosition"
+              className="h-10 text-sm"
+              value={position}
+              onChange={(e) => setPosition(e.target.value as StaffPosition)}
+            >
+              {POSITIONS.map((p) => (
+                <option key={p} value={p}>
+                  {POSITION_LABELS[p]}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
 
           {position === "OTHER" && (

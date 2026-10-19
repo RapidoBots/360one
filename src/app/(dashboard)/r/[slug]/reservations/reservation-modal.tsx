@@ -12,13 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   createReservationAction,
   updateReservationAction,
@@ -345,18 +339,13 @@ export function ReservationModal({
               </div>
               <div className="space-y-2">
                 <Label>Duration</Label>
-                <Select value={String(durationMinutes)} onValueChange={(v) => setDurationMinutes(Number(v))}>
-                  <SelectTrigger className="h-11 w-full text-base">
-                    <SelectValue>{(value: string) => `${value} min`}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATION_OPTIONS.map((d) => (
-                      <SelectItem key={d} value={String(d)}>
-                        {d} min
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect value={String(durationMinutes)} onChange={(e) => setDurationMinutes(Number(e.target.value))}>
+                  {DURATION_OPTIONS.map((d) => (
+                    <option key={d} value={String(d)}>
+                      {d} min
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
             </div>
             <div className="space-y-2">
@@ -383,51 +372,34 @@ export function ReservationModal({
 
           <div className="space-y-2">
             <Label htmlFor="tableId">Assigned table</Label>
-            <Select
+            <NativeSelect
+              id="tableId"
               value={effectiveTableId ?? "none"}
-              onValueChange={(v) => {
+              onChange={(e) => {
                 setTableTouched(true);
-                setTableId(v === "none" ? null : v);
+                setTableId(e.target.value === "none" ? null : e.target.value);
               }}
             >
-              <SelectTrigger id="tableId" className="h-11 w-full text-base">
-                <SelectValue placeholder="No table assigned">
-                  {(value: string | null) => {
-                    if (!value || value === "none") return "No table assigned";
-                    const t = tables.find((table) => table.id === value);
-                    if (!t) return "No table assigned";
-                    const recommended = value === recommendedId && !tableTouched ? " — Recommended" : "";
-                    return `Table ${t.number} (seats ${t.capacity})${recommended}`;
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No table assigned</SelectItem>
-                {availableTables.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    Table {t.number} (seats {t.capacity})
-                    {t.id === recommendedId ? " — Recommended" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="none">No table assigned</option>
+              {availableTables.map((t) => (
+                <option key={t.id} value={t.id}>
+                  Table {t.number} (seats {t.capacity})
+                  {t.id === recommendedId && !tableTouched ? " — Recommended" : ""}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
 
           {reservation && (
             <div className="space-y-2">
               <Label htmlFor="status">Reservation status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as ReservationStatus)}>
-                <SelectTrigger id="status" className="h-11 w-full text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect id="status" value={status} onChange={(e) => setStatus(e.target.value as ReservationStatus)}>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
           )}
 

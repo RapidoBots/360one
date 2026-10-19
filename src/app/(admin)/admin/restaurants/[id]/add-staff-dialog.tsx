@@ -6,13 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { addStaffMemberAction } from "../actions";
 import type { Role } from "@/generated/prisma/client";
 
@@ -85,18 +79,13 @@ export function AddStaffDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="staffRole">Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-              <SelectTrigger id="staffRole">
-                <SelectValue>{(value: string) => value}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_OPTIONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect id="staffRole" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
           {error && <p className="text-base text-destructive">{error}</p>}
           {/* Distinct from the "Add staff member" trigger button. */}

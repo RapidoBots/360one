@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { getEffectiveSize, getChairCounts } from "@/lib/table-layout";
 import type { TableShape } from "@/generated/prisma/client";
 import type { TableFloorStatus, TableStatusReservation } from "@/lib/table-status";
@@ -130,18 +130,18 @@ function SettingsPanel({
       <PopoverContent className="w-64 space-y-3 p-3" onPointerDown={(e) => e.stopPropagation()}>
         <div className="space-y-1.5">
           <Label htmlFor="tableShape">Shape</Label>
-          <Select value={shape} onValueChange={(v) => v && setShape(v as TableShape)}>
-            <SelectTrigger id="tableShape" className="h-9 w-full text-sm">
-              <SelectValue>{(value: TableShape) => SHAPE_LABELS[value]}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(SHAPE_LABELS) as TableShape[]).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {SHAPE_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <NativeSelect
+            id="tableShape"
+            className="h-9 text-sm"
+            value={shape}
+            onChange={(e) => setShape(e.target.value as TableShape)}
+          >
+            {(Object.keys(SHAPE_LABELS) as TableShape[]).map((s) => (
+              <option key={s} value={s}>
+                {SHAPE_LABELS[s]}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
 
         <div className="space-y-1.5">

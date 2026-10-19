@@ -6,7 +6,7 @@ import { Power, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Table,
   TableBody,
@@ -18,7 +18,6 @@ import {
 import { updateStaffPositionAction, toggleStaffActiveAction, deleteStaffAction } from "./actions";
 import { AddEmployeeDialog } from "./add-employee-dialog";
 import { POSITION_LABELS, POSITION_COLORS } from "./constants";
-import { positionLabel } from "./position-utils";
 import type { StaffMember } from "./staff-page-client";
 import type { StaffPosition } from "@/generated/prisma/client";
 
@@ -109,39 +108,19 @@ export function StaffList({ slug, members }: { slug: string; members: StaffMembe
               </TableCell>
               <TableCell className="hidden text-muted-foreground sm:table-cell">{m.email}</TableCell>
               <TableCell>
-                <Select
+                <NativeSelect
+                  className="h-8 w-36 text-xs"
                   value={m.position ?? "NONE"}
-                  onValueChange={(v) => v && handlePositionChange(m.id, v)}
+                  onChange={(e) => handlePositionChange(m.id, e.target.value)}
                   disabled={savingId === m.id}
                 >
-                  <SelectTrigger className="h-8 w-36 text-xs">
-                    <SelectValue>
-                      {(value: string) =>
-                        value === "NONE" ? (
-                          <span className="text-muted-foreground">Unassigned</span>
-                        ) : (
-                          <span style={{ color: POSITION_COLORS[value as StaffPosition] }}>
-                            {positionLabel(value as StaffPosition, m.customPosition)}
-                          </span>
-                        )
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NONE">Unassigned</SelectItem>
-                    {POSITIONS.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="inline-block size-2 rounded-full"
-                            style={{ backgroundColor: POSITION_COLORS[p] }}
-                          />
-                          {POSITION_LABELS[p]}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="NONE">Unassigned</option>
+                  {POSITIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {POSITION_LABELS[p]}
+                    </option>
+                  ))}
+                </NativeSelect>
               </TableCell>
               <TableCell>
                 <Badge variant={m.active ? "default" : "outline"}>

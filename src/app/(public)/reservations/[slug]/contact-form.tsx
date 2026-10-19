@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { createWidgetReservationAction } from "./actions";
 import type { ContactChannel } from "@/generated/prisma/client";
 import type { Country } from "react-phone-number-input";
@@ -108,18 +108,18 @@ export function ContactForm({
         <Label htmlFor="widgetPreferredContact">Preferred Way of Communication</Label>
         <div className="relative">
           <MessageCircle className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Select value={preferredContact} onValueChange={(v) => setPreferredContact(v as ContactChannel)}>
-            <SelectTrigger id="widgetPreferredContact" className="h-11 w-full pl-9 text-base md:text-sm">
-              <SelectValue>{(value: string) => CHANNEL_LABELS[value as ContactChannel]}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {CHANNEL_OPTIONS.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CHANNEL_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <NativeSelect
+            id="widgetPreferredContact"
+            className="pl-9 text-base md:text-sm"
+            value={preferredContact}
+            onChange={(e) => setPreferredContact(e.target.value as ContactChannel)}
+          >
+            {CHANNEL_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {CHANNEL_LABELS[c]}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
       </div>
 

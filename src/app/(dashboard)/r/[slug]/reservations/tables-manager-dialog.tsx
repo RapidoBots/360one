@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { createTableAction, updateTableAction, deleteTableAction } from "./actions";
 
 export type TableRow = { id: string; number: string; capacity: number; area: string | null; floorId: string };
@@ -135,18 +135,18 @@ export function TablesManagerDialog({
                   />
                   <Input aria-label="Edit table area" value={editArea} onChange={(e) => setEditArea(e.target.value)} />
                 </div>
-                <Select value={editFloorId} onValueChange={(v) => v && setEditFloorId(v)}>
-                  <SelectTrigger aria-label="Edit table floor" className="h-9 w-full text-base">
-                    <SelectValue>{(value: string) => floorName(value) || "Select a floor"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {floors.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  aria-label="Edit table floor"
+                  className="h-9"
+                  value={editFloorId}
+                  onChange={(e) => setEditFloorId(e.target.value)}
+                >
+                  {floors.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </NativeSelect>
                 {editError && <p className="text-base text-destructive">{editError}</p>}
                 <div className="flex gap-2">
                   <Button
@@ -191,18 +191,13 @@ export function TablesManagerDialog({
         <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="col-span-full space-y-2">
             <Label htmlFor="tableFloor">Floor</Label>
-            <Select value={floorId} onValueChange={(v) => v && setFloorId(v)}>
-              <SelectTrigger id="tableFloor" className="h-10 w-full text-base">
-                <SelectValue>{(value: string) => floorName(value) || "Select a floor"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {floors.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect id="tableFloor" className="h-10" value={floorId} onChange={(e) => setFloorId(e.target.value)}>
+              {floors.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
           <div className="space-y-2">
             <Label htmlFor="tableNumber">Number</Label>
