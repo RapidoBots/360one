@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PageTransition } from "@/components/shell/page-transition";
 import { TopLoader } from "@/components/shell/top-loader";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -33,7 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Suspense fallback={null}><TopLoader /></Suspense>
-        <PageTransition>{children}</PageTransition>
+        {children}
         <Toaster />
       </body>
     </html>
