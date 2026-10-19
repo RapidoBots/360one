@@ -19,7 +19,7 @@ import {
   type ReservationInput,
 } from "./actions";
 import { recommendTable } from "@/lib/table-allocation";
-import { toLocalDateInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
+import { toLocalDateInput, toLocalTimeInput, zonedDateTimeToUtc } from "@/lib/reservation-dates";
 import { STATUS_COLORS, STATUS_LABELS } from "./reservation-badge";
 import type { ReservationStatus } from "@/generated/prisma/client";
 import type { ReservationListItem } from "./day-view";
@@ -42,12 +42,6 @@ const DURATION_OPTIONS = [30, 45, 60, 75, 90, 105, 120, 150, 180, 240];
 const STATUS_OPTIONS: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 const FIELD_GRID = "grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5";
 
-function toDateInput(d: Date, timeZone: string) {
-  return toLocalDateInput(d, timeZone);
-}
-function toTimeInput(d: Date) {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
 function formatEndTime(time: string, durationMinutes: number): string {
   const [h, m] = time.split(":").map(Number);
   if (h === undefined || m === undefined) return "";
@@ -121,8 +115,8 @@ export function ReservationModal({
       setGuestEmail(reservation.customer.email ?? "");
       setGuestPhone(reservation.customer.phone ?? "");
       setPartySize(reservation.partySize);
-      setDate(toDateInput(reservation.startsAt, timeZone));
-      setTime(toTimeInput(reservation.startsAt));
+      setDate(toLocalDateInput(reservation.startsAt, timeZone));
+      setTime(toLocalTimeInput(reservation.startsAt, timeZone));
       setDurationMinutes(reservation.durationMinutes);
       setSpecialRequests(reservation.specialRequests ?? "");
       setInternalNote(reservation.internalNote ?? "");
@@ -136,7 +130,7 @@ export function ReservationModal({
       setGuestEmail("");
       setGuestPhone("");
       setPartySize(2);
-      setDate(prefill?.date ?? toDateInput(new Date(), timeZone));
+      setDate(prefill?.date ?? toLocalDateInput(new Date(), timeZone));
       setTime(prefill?.time ?? "19:00");
       setDurationMinutes(defaultDurationMinutes);
       setSpecialRequests("");
