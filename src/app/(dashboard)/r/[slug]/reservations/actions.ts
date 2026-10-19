@@ -178,6 +178,38 @@ export async function deleteReservationAction(
   return { ok: true };
 }
 
+// Used by the Reservations details panel's table reassignment -- a
+// lighter-weight path than updateReservationAction, which also requires
+// the full guest/date/time form state the panel doesn't have.
+export async function setReservationTableAction(
+  slug: string,
+  reservationId: string,
+  tableId: string | null
+): Promise<ReservationActionResult> {
+  const { restaurant } = await assertFeatureAccess(slug, "reservations", "EDIT");
+  const current = await prisma.reservation.findFirst({
+    where: { id: reservationId, restaurantId: restaurant.id },
+    select: { startsAt: true, durationMinutes: true },
+  });
+  if (!current) return { ok: false, error: "Reservation not found." };
+
+  if (tableId) {
+    const conflict = await hasTableConflict(
+      tableId,
+      current.startsAt,
+      current.durationMinutes,
+      restaurant.timezone,
+      reservationId
+    );
+    if (conflict) return { ok: false, error: "That table is already booked for an overlapping time." };
+  }
+
+  await prisma.reservation.update({ where: { id: reservationId }, data: { tableId } });
+  revalidatePath(`/r/${slug}/reservations`);
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
 export async function setReservationStatusAction(
   slug: string,
   reservationId: string,

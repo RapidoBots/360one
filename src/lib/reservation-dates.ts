@@ -70,3 +70,23 @@ export function zonedDateTimeToUtc(dateStr: string, timeStr: string, timeZone: s
 export function getZonedHour(date: Date, timeZone: string): number {
   return toZonedTime(date, timeZone).getHours();
 }
+
+// Formats a stored (UTC) Date as the restaurant's local wall-clock time
+// (e.g. "6:30 PM") -- same reasoning as toLocalDateInput/toLocalTimeInput,
+// for the Reservations calendar's Day/Week/Timeline views and details panel.
+export function formatZonedTime(date: Date, timeZone: string): string {
+  const zoned = toZonedTime(date, timeZone);
+  const h24 = zoned.getHours();
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(zoned.getMinutes()).padStart(2, "0")} ${period}`;
+}
+
+// Same as above, for a human-readable calendar date (e.g. "Friday, July 10").
+export function formatZonedDate(
+  date: Date,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions
+): string {
+  return toZonedTime(date, timeZone).toLocaleDateString([], options);
+}

@@ -2,22 +2,29 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { ChevronLeft, ChevronRight, Search, Table2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { DayView, type ReservationListItem } from "./day-view";
 import { WeekView } from "./week-view";
 import { TimelineView } from "./timeline-view";
 import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
+import { ReservationDetailsPanel } from "./reservation-details-panel";
 import { TablesManagerDialog, type TableRow, type FloorOption } from "./tables-manager-dialog";
-import { STATUS_LABELS, STATUS_SOLID, STATUS_STYLES } from "./reservation-badge";
-import { toLocalDateInput } from "@/lib/reservation-dates";
+import { STATUS_COLORS, STATUS_LABELS } from "./reservation-badge";
+import { toLocalDateInput, formatZonedDate } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
 export type CalendarView = "day" | "week" | "timeline";
 
 const ALL_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+
+function shiftDateStr(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export function ReservationsCalendar({
   slug,
@@ -48,8 +55,18 @@ export function ReservationsCalendar({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [tablesOpen, setTablesOpen] = useState(false);
   const [prefill, setPrefill] = useState<ReservationPrefill | undefined>(undefined);
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<Record<ReservationStatus, boolean>>({
+    PENDING: true,
+    CONFIRMED: true,
+    SEATED: true,
+    COMPLETED: true,
+    CANCELLED: true,
+    NO_SHOW: true,
+  });
 
   function updateParams(next: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -57,13 +74,27 @@ export function ReservationsCalendar({
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const selectedStatuses = (searchParams.get("status") ?? "").split(",").filter(Boolean) as ReservationStatus[];
+  const dateStr = searchParams.get("date") ?? toLocalDateInput(date, timeZone);
+  const step = view === "week" ? 7 : 1;
 
-  function toggleStatus(s: ReservationStatus) {
-    const next = selectedStatuses.includes(s)
-      ? selectedStatuses.filter((x) => x !== s)
-      : [...selectedStatuses, s];
-    updateParams({ status: next.join(",") });
+  function goTo(nextDateStr: string, nextView?: CalendarView) {
+    setEditingId(null);
+    setDetailsOpen(false);
+    updateParams(nextView ? { date: nextDateStr, view: nextView } : { date: nextDateStr });
+  }
+
+  const q = query.trim().toLowerCase();
+  const matchesQuery = (r: ReservationListItem) =>
+    !q || r.customer.name.toLowerCase().includes(q) || (r.customer.phone ?? "").toLowerCase().includes(q);
+  const visible = reservations.filter((r) => filters[r.status] && matchesQuery(r));
+  const active = reservations.filter((r) => r.status !== "CANCELLED");
+
+  let dateLabel: string;
+  if (view === "week") {
+    const weekEnd = new Date(date.getTime() + 6 * 24 * 60 * 60 * 1000);
+    dateLabel = `Week of ${formatZonedDate(date, timeZone, { month: "short", day: "numeric" })} – ${formatZonedDate(weekEnd, timeZone, { month: "short", day: "numeric" })}`;
+  } else {
+    dateLabel = formatZonedDate(date, timeZone, { weekday: "long", month: "long", day: "numeric" });
   }
 
   const editing = editingId ? reservations.find((r) => r.id === editingId) : undefined;
@@ -83,112 +114,180 @@ export function ReservationsCalendar({
 
   const tableOptions: TableOption[] = tables.map((t) => ({ id: t.id, number: t.number, capacity: t.capacity }));
 
+  function openDetails(id: string) {
+    setEditingId(id);
+    setDetailsOpen(true);
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={view} onValueChange={(v) => updateParams({ view: v })}>
-          <TabsList className="h-11">
-            <TabsTrigger value="day" className="px-4 py-2 text-base">
-              Day
-            </TabsTrigger>
-            <TabsTrigger value="week" className="px-4 py-2 text-base">
-              Week
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="px-4 py-2 text-base">
-              Timeline
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[32px] font-extrabold tracking-tight text-ink">Reservations</h1>
+          <p className="text-[15px] text-ink-muted">
+            {dateLabel} · {active.length} reservations · {active.reduce((sum, r) => sum + r.partySize, 0)} guests
+          </p>
+        </div>
+        {canEdit && (
+          <div className="flex flex-wrap gap-2.5">
+            <Button type="button" variant="outline" className="h-11 gap-2 rounded-xl px-4.5 text-sm font-semibold" onClick={() => setTablesOpen(true)}>
+              <Table2 className="size-4" strokeWidth={1.8} />
+              Manage tables
+            </Button>
+            <Button
+              type="button"
+              className="h-11 gap-2 rounded-xl px-5 text-sm font-bold shadow-[0_6px_16px_-6px_var(--primary)]"
+              onClick={() => {
+                setEditingId(null);
+                setPrefill(undefined);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="size-4" strokeWidth={2.4} />
+              New reservation
+            </Button>
+          </div>
+        )}
+      </div>
 
-        <Input
-          type="date"
-          value={searchParams.get("date") ?? toLocalDateInput(date, timeZone)}
-          onChange={(e) => updateParams({ date: e.target.value })}
-          className="h-11 w-full text-base sm:w-44"
-          aria-label="Jump to day"
-        />
-
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
-          {ALL_STATUSES.map((s) => {
-            const active = selectedStatuses.includes(s);
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggleStatus(s)}
-                className={cn(
-                  "rounded-[5px] border border-transparent px-3.5 py-2 text-sm font-medium transition-colors",
-                  active ? STATUS_SOLID[s] : cn(STATUS_STYLES[s], "hover:brightness-95")
-                )}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            );
-          })}
+      <div className="flex flex-wrap items-center gap-3 gap-y-3">
+        <div role="group" aria-label="View" className="flex gap-0.5 rounded-xl bg-[#E9ECF5] p-1">
+          {(["day", "week", "timeline"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => goTo(dateStr, v)}
+              className={cn(
+                "h-9 rounded-[9px] px-4 text-[13.5px] font-semibold capitalize transition-colors",
+                view === v ? "bg-white font-bold text-ink shadow-sm" : "text-[#475569]"
+              )}
+            >
+              {v}
+            </button>
+          ))}
         </div>
 
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={view === "week" ? "Previous week" : "Previous day"}
+            onClick={() => goTo(shiftDateStr(dateStr, -step))}
+            className="flex size-11 items-center justify-center rounded-xl border border-line-input bg-white text-ink hover:bg-[#F1F3F9]"
+          >
+            <ChevronLeft className="size-[18px]" />
+          </button>
           <Input
-            placeholder="Search guest name or phone"
-            defaultValue={searchParams.get("q") ?? ""}
-            className="h-11 w-full text-base sm:w-64"
-            onChange={(e) => updateParams({ q: e.target.value })}
+            type="date"
+            aria-label="Date"
+            value={dateStr}
+            onChange={(e) => e.target.value && goTo(e.target.value)}
+            className="h-11 w-[160px] text-sm font-semibold"
           />
-          {canEdit && (
-            <>
-              <Button variant="outline" className="h-11 flex-1 px-5 text-base sm:flex-none" onClick={() => setTablesOpen(true)}>
-                Manage tables
-              </Button>
-              <Button
-                className="h-11 flex-1 px-5 text-base sm:flex-none"
-                onClick={() => {
-                  setEditingId(null);
-                  setPrefill(undefined);
-                  setModalOpen(true);
-                }}
-              >
-                New reservation
-              </Button>
-            </>
-          )}
+          <button
+            type="button"
+            aria-label={view === "week" ? "Next week" : "Next day"}
+            onClick={() => goTo(shiftDateStr(dateStr, step))}
+            className="flex size-11 items-center justify-center rounded-xl border border-line-input bg-white text-ink hover:bg-[#F1F3F9]"
+          >
+            <ChevronRight className="size-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(toLocalDateInput(new Date(), timeZone))}
+            className="h-11 rounded-xl border border-line-input bg-white px-4 text-[13.5px] font-semibold text-ink hover:bg-[#F1F3F9]"
+          >
+            Today
+          </button>
         </div>
+
+        <label className="relative ml-auto flex min-w-[200px] max-w-[340px] flex-1 basis-[240px] items-center">
+          <Search className="pointer-events-none absolute left-3.5 size-[17px] text-ink-placeholder" />
+          <span className="sr-only">Search reservations</span>
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search guest name or phone"
+            className="h-11 w-full pl-[38px] text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+        {ALL_STATUSES.map((s) => {
+          const on = filters[s];
+          const c = STATUS_COLORS[s];
+          const count = reservations.filter((r) => r.status === s).length;
+          return (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setFilters((f) => ({ ...f, [s]: !f[s] }))}
+              className="flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: on ? c.bg : "#FFFFFF",
+                color: on ? c.text : "#64748B",
+                borderColor: on ? "transparent" : "#E1E5F0",
+              }}
+            >
+              <span className="size-2 rounded-full" style={{ backgroundColor: on ? c.bar : "#CBD5E1" }} />
+              {STATUS_LABELS[s]}
+              <span className="font-bold opacity-80">{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {view === "day" && (
-        <DayView
-          reservations={reservations}
-          onReservationClick={(id) => {
-            setEditingId(id);
-            setModalOpen(true);
-          }}
-        />
+        <DayView reservations={visible} totalCount={visible.length} dateLabel={dateLabel} timeZone={timeZone} onReservationClick={openDetails} />
       )}
       {view === "week" && (
         <WeekView
-          reservations={reservations}
+          reservations={visible}
+          allReservations={reservations}
           weekStart={date}
-          onDayClick={(d) => updateParams({ view: "day", date: toLocalDateInput(d, timeZone) })}
-          onReservationClick={(id) => {
-            setEditingId(id);
-            setModalOpen(true);
-          }}
+          selectedDate={date}
+          timeZone={timeZone}
+          onDayClick={(d) => goTo(toLocalDateInput(d, timeZone), "day")}
+          onReservationClick={openDetails}
         />
       )}
       {view === "timeline" && (
         <TimelineView
-          reservations={reservations}
+          reservations={visible}
+          allReservations={reservations}
           tables={tables}
           date={date}
           dayHours={dayHours}
-          onReservationClick={(id) => {
-            setEditingId(id);
+          timeZone={timeZone}
+          onReservationClick={openDetails}
+          onSlotClick={
+            canEdit
+              ? (tableId, time) => {
+                  setEditingId(null);
+                  setPrefill({ tableId, date: toLocalDateInput(date, timeZone), time });
+                  setModalOpen(true);
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {detailsOpen && editing && (
+        <ReservationDetailsPanel
+          slug={slug}
+          reservation={editing}
+          tables={tableOptions}
+          timeZone={timeZone}
+          canEdit={canEdit}
+          onClose={() => setDetailsOpen(false)}
+          onSaved={() => router.refresh()}
+          onEditDetails={() => {
+            setDetailsOpen(false);
             setModalOpen(true);
           }}
-          onSlotClick={canEdit ? (tableId, time) => {
-            setEditingId(null);
-            setPrefill({ tableId, date: toLocalDateInput(date, timeZone), time });
-            setModalOpen(true);
-          } : undefined}
         />
       )}
 
