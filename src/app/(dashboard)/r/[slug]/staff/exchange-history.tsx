@@ -189,15 +189,21 @@ export function ExchangeHistory({
     router.refresh();
   }
 
-  async function handleReview(exchangeId: string, approve: boolean) {
-    setReviewingId(exchangeId);
-    const result = await reviewShiftExchangeAction(slug, exchangeId, approve);
+  async function handleReview(exchange: ExchangeData, approve: boolean) {
+    setReviewingId(exchange.id);
+    const result = await reviewShiftExchangeAction(slug, exchange.id, approve);
     setReviewingId(null);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success(approve ? "Exchange approved — shifts swapped" : "Exchange rejected");
+    const fromName = exchange.requesterUserName ?? exchange.requesterShift.user.name;
+    const toName = exchange.targetUserName ?? exchange.targetShift.user.name;
+    toast.success(
+      approve
+        ? `Swapped: ${fromName} ⇄ ${toName} now have each other's shift`
+        : `Rejected the exchange between ${fromName} and ${toName}`
+    );
     router.refresh();
   }
 
@@ -285,16 +291,18 @@ export function ExchangeHistory({
               const canReview = isStaffView
                 ? currentUserId === ex.targetShift.user.id
                 : true;
+              const fromName = ex.requesterUserName ?? ex.requesterShift.user.name;
+              const toName = ex.targetUserName ?? ex.targetShift.user.name;
               return (
               <TableRow key={ex.id}>
                 <TableCell>
-                  <div className="text-sm font-medium">{ex.requesterShift.user.name}</div>
+                  <div className="text-sm font-medium">{fromName}</div>
                   <div className="text-xs text-muted-foreground">
                     {formatDate(ex.requesterShift.date)} {formatTime(ex.requesterShift.startTime)}–{formatTime(ex.requesterShift.endTime)}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm font-medium">{ex.targetShift.user.name}</div>
+                  <div className="text-sm font-medium">{toName}</div>
                   <div className="text-xs text-muted-foreground">
                     {formatDate(ex.targetShift.date)} {formatTime(ex.targetShift.startTime)}–{formatTime(ex.targetShift.endTime)}
                   </div>
@@ -303,6 +311,11 @@ export function ExchangeHistory({
                   <Badge variant={STATUS_VARIANT[ex.status] ?? "outline"}>
                     {ex.status.charAt(0) + ex.status.slice(1).toLowerCase()}
                   </Badge>
+                  {ex.status === "APPROVED" && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {fromName} ⇄ {toName} swapped shifts
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(ex.createdAt).toLocaleDateString()}
@@ -314,7 +327,7 @@ export function ExchangeHistory({
                         variant="outline"
                         size="icon-sm"
                         aria-label="Approve"
-                        onClick={() => handleReview(ex.id, true)}
+                        onClick={() => handleReview(ex, true)}
                         disabled={reviewingId === ex.id}
                       >
                         <Check className="size-3.5 text-green-600" />
@@ -323,7 +336,7 @@ export function ExchangeHistory({
                         variant="outline"
                         size="icon-sm"
                         aria-label="Reject"
-                        onClick={() => handleReview(ex.id, false)}
+                        onClick={() => handleReview(ex, false)}
                         disabled={reviewingId === ex.id}
                       >
                         <X className="size-3.5 text-destructive" />

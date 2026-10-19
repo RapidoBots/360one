@@ -42,6 +42,10 @@ export type ExchangeData = {
   note: string | null;
   createdAt: Date;
   reviewedAt: Date | null;
+  requesterUserId: string | null;
+  requesterUserName: string | null;
+  targetUserId: string | null;
+  targetUserName: string | null;
   requesterShift: {
     id: string;
     date: string;

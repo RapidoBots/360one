@@ -263,8 +263,14 @@ export async function requestShiftExchangeAction(
 ): Promise<ActionResult> {
   const { user, restaurant } = await assertRestaurantMember(slug);
   const [requester, target] = await Promise.all([
-    prisma.shift.findFirst({ where: { id: input.requesterShiftId, restaurantId: restaurant.id } }),
-    prisma.shift.findFirst({ where: { id: input.targetShiftId, restaurantId: restaurant.id } }),
+    prisma.shift.findFirst({
+      where: { id: input.requesterShiftId, restaurantId: restaurant.id },
+      include: { user: { select: { id: true, name: true } } },
+    }),
+    prisma.shift.findFirst({
+      where: { id: input.targetShiftId, restaurantId: restaurant.id },
+      include: { user: { select: { id: true, name: true } } },
+    }),
   ]);
   if (!requester || !target) return { ok: false, error: "One or both shifts not found." };
   if (requester.userId === target.userId) return { ok: false, error: "Can't exchange a shift with yourself." };
@@ -278,6 +284,10 @@ export async function requestShiftExchangeAction(
       requesterShiftId: input.requesterShiftId,
       targetShiftId: input.targetShiftId,
       note: input.note || null,
+      requesterUserId: requester.user.id,
+      requesterUserName: requester.user.name,
+      targetUserId: target.user.id,
+      targetUserName: target.user.name,
     },
   });
   revalidatePath(`/r/${slug}/staff`);

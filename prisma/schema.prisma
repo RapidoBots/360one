@@ -368,6 +368,13 @@ model ShiftExchange {
   requesterShift   Shift          @relation("RequesterShift", fields: [requesterShiftId], references: [id], onDelete: Cascade)
   targetShiftId    String
   targetShift      Shift          @relation("TargetShift", fields: [targetShiftId], references: [id], onDelete: Cascade)
+  // Snapshot of who owned each shift when the request was made -- the shifts'
+  // own userId fields flip on approval, so this is the only record of who
+  // actually swapped with whom.
+  requesterUserId   String?
+  requesterUserName String?
+  targetUserId      String?
+  targetUserName    String?
   status           ExchangeStatus @default(PENDING)
   note             String?
   reviewedAt       DateTime?
