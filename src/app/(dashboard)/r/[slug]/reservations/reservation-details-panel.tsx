@@ -75,13 +75,13 @@ export function ReservationDetailsPanel({
         type="button"
         aria-label="Close reservation details"
         onClick={onClose}
-        className="fixed inset-x-0 bottom-0 top-16 z-[54] border-0 bg-[#0F172A]/35 p-0"
+        className="fixed inset-x-0 bottom-0 top-16 z-50 border-0 bg-[#0F172A]/35 p-0"
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="rsvTitle"
-        className="fixed right-0 top-16 bottom-0 z-[55] flex w-[420px] max-w-[100vw] flex-col border-l border-line-card bg-white shadow-[-24px_0_60px_-20px_rgba(15,23,42,0.25)]"
+        className="fixed right-0 top-16 bottom-0 z-50 flex w-[420px] max-w-[100vw] flex-col border-l border-line-card bg-white shadow-[-24px_0_60px_-20px_rgba(15,23,42,0.25)]"
       >
         <div className="flex items-start justify-between gap-3 border-b border-line-divider px-6 py-5.5">
           <div className="flex min-w-0 flex-col gap-2.5">

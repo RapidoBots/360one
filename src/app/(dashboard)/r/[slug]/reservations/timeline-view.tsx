@@ -189,7 +189,10 @@ export function TimelineView({
   const { startHour, endHour } = dayHours;
   const rangeStartMin = startHour * 60;
   const rangeEndMin = endHour * 60;
-  const hourMarks = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
+  // One label per hour-wide grid box (e.g. 11 AM...9 PM for an 11-22 window,
+  // the last box being 9-10 PM) -- not a boundary-inclusive count, which
+  // would add a trailing label with no grid box under it.
+  const hourMarks = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
 
   const now = new Date();
   const isToday = toZonedTime(date, timeZone).toDateString() === toZonedTime(now, timeZone).toDateString();
