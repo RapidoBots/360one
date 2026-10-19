@@ -232,7 +232,7 @@ export function ReservationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[20px] p-0"
+        className="flex max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-[600px] sm:max-w-[600px] flex-col gap-0 overflow-hidden rounded-[20px] p-0"
       >
         <div className="flex items-start justify-between gap-3 border-b border-line-divider px-7 py-6">
           <div className="min-w-0">

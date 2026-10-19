@@ -72,7 +72,7 @@ export function EditTeamMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="max-w-[480px] gap-0 rounded-[20px] p-0">
+      <DialogContent showCloseButton={false} className="max-w-[480px] sm:max-w-[480px] gap-0 rounded-[20px] p-0">
         <div className="flex items-center justify-between gap-3 border-b border-line-divider px-6 py-5.5">
           <DialogTitle className="text-lg font-bold tracking-tight text-ink">Edit team member</DialogTitle>
           <button
