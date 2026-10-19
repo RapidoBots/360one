@@ -14,13 +14,15 @@ export default async function HomePage() {
   };
 
   let restaurantSlug: string | null = null;
+  let schedulingEnabled = false;
   if (restaurantId) {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
-      select: { slug: true },
+      select: { slug: true, schedulingEnabled: true },
     });
     restaurantSlug = restaurant?.slug ?? null;
+    schedulingEnabled = restaurant?.schedulingEnabled ?? false;
   }
 
-  redirect(resolveHomeRoute({ role, restaurantSlug }));
+  redirect(resolveHomeRoute({ role, restaurantSlug }, { schedulingEnabled }));
 }

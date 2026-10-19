@@ -85,7 +85,7 @@ const OWNER_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
 ];
 
 const STAFF_NAV: { key: SubPage; label: string; icon: typeof LayoutGrid }[] = [
-  { key: "my", label: "My Schedule", icon: CalendarDays },
+  { key: "my", label: "My Shifts", icon: CalendarDays },
   { key: "myexchanges", label: "Exchanges", icon: ArrowRightLeft },
   { key: "myrequests", label: "My Requests", icon: ClipboardList },
 ];

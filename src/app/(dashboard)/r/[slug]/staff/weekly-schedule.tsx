@@ -277,36 +277,35 @@ export function WeeklySchedule({
                         } ${di < 6 ? "border-r" : ""}`}
                         style={{ height: 80 }}
                       >
-                        {cellShifts.length > 0 ? (
-                          cellShifts.map((shift) => {
-                            const style = SHIFT_STYLES[shift.position];
-                            return (
-                              <button
-                                key={shift.id}
-                                onClick={() => setDialogState({ mode: "edit", shift })}
-                                className="relative mb-1 block w-full rounded-[5px] border-l-[3px] px-2 py-2.5 text-left transition-shadow hover:shadow-md"
-                                style={{
-                                  borderColor: style.border,
-                                  backgroundColor: style.bg,
-                                  color: style.text,
-                                }}
-                              >
-                                <span className="block text-xs font-semibold">
-                                  {shift.startTime}–{shift.endTime}
-                                </span>
-                                <span className="mt-1 block text-[11px] opacity-80">
-                                  {positionLabel(shift.position, shift.customPosition)}
-                                </span>
-                                {shift.draft && (
-                                  <span
-                                    className="absolute right-1.5 top-1.5 size-[6px] rounded-full border border-current"
-                                    title="Draft — not yet published"
-                                  />
-                                )}
-                              </button>
-                            );
-                          })
-                        ) : dayOff ? (
+                        {cellShifts.map((shift) => {
+                          const style = SHIFT_STYLES[shift.position];
+                          return (
+                            <button
+                              key={shift.id}
+                              onClick={() => setDialogState({ mode: "edit", shift })}
+                              className="relative mb-1 block w-full rounded-[5px] border-l-[3px] px-2 py-2.5 text-left transition-shadow hover:shadow-md"
+                              style={{
+                                borderColor: style.border,
+                                backgroundColor: style.bg,
+                                color: style.text,
+                              }}
+                            >
+                              <span className="block text-xs font-semibold">
+                                {shift.startTime}–{shift.endTime}
+                              </span>
+                              <span className="mt-1 block text-[11px] opacity-80">
+                                {positionLabel(shift.position, shift.customPosition)}
+                              </span>
+                              {shift.draft && (
+                                <span
+                                  className="absolute right-1.5 top-1.5 size-[6px] rounded-full border border-current"
+                                  title="Draft — not yet published"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                        {cellShifts.length === 0 && dayOff ? (
                           <div className="text-center text-[11px] text-muted-foreground/60">
                             Unavailable
                           </div>
@@ -315,9 +314,18 @@ export function WeeklySchedule({
                             onClick={() =>
                               setDialogState({ mode: "create", userId: member.id, date, weekDates })
                             }
-                            className="flex h-[60px] w-full items-center justify-center rounded-[5px] border border-dashed border-transparent text-lg text-muted-foreground/30 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary"
+                            aria-label={
+                              cellShifts.length > 0
+                                ? `Add another shift for ${member.name} on ${date}`
+                                : `Add a shift for ${member.name} on ${date}`
+                            }
+                            className={
+                              cellShifts.length > 0
+                                ? "flex h-6 w-full items-center justify-center gap-1 rounded-[5px] border border-dashed border-muted-foreground/20 text-[11px] text-muted-foreground/50 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary"
+                                : "flex h-[60px] w-full items-center justify-center rounded-[5px] border border-dashed border-transparent text-lg text-muted-foreground/30 transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary"
+                            }
                           >
-                            +
+                            {cellShifts.length > 0 ? "+ Add shift" : "+"}
                           </button>
                         ) : null}
                       </td>

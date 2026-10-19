@@ -22,6 +22,7 @@ export default async function RestaurantLayout({
       navItems={restaurantNavItems(slug, {
         schedulingEnabled: restaurant.schedulingEnabled,
         canAccessSettings,
+        isStaff: user.role === "STAFF",
         featureAccess,
       })}
     >

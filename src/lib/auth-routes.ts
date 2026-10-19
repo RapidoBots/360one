@@ -5,9 +5,15 @@ export type SessionUser = {
   restaurantSlug: string | null;
 };
 
-export function resolveHomeRoute(user: Pick<SessionUser, "role" | "restaurantSlug">): string {
+export function resolveHomeRoute(
+  user: Pick<SessionUser, "role" | "restaurantSlug">,
+  opts?: { schedulingEnabled?: boolean }
+): string {
   if (user.role === "SUPER_ADMIN") return "/admin";
   if (!user.restaurantSlug) return "/sign-in";
+  // Staff land on their own shifts rather than the owner-oriented dashboard --
+  // but only if scheduling is actually on, since the Staff page 404s otherwise.
+  if (user.role === "STAFF" && opts?.schedulingEnabled) return `/r/${user.restaurantSlug}/staff`;
   return `/r/${user.restaurantSlug}/dashboard`;
 }
 

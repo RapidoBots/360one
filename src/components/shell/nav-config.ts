@@ -17,6 +17,7 @@ export function restaurantNavItems(
   opts?: {
     schedulingEnabled?: boolean;
     canAccessSettings?: boolean;
+    isStaff?: boolean;
     featureAccess?: { reservations: string; waitlist: string; floorManager: string; customers: string; reports: string };
   }
 ): NavItem[] {
@@ -38,7 +39,7 @@ export function restaurantNavItems(
     items.push({ label: "Customers", href: `${base}/customers`, icon: "Users" });
   }
   if (opts?.schedulingEnabled) {
-    items.push({ label: "Staff", href: `${base}/staff`, icon: "CalendarDays" });
+    items.push({ label: opts.isStaff ? "My Shifts" : "Staff", href: `${base}/staff`, icon: "CalendarDays" });
   }
   if (!access || access.reports !== "NONE") {
     items.push({ label: "Reports", href: `${base}/reports`, icon: "BarChart3" });
