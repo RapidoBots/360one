@@ -273,8 +273,13 @@ export function ReservationModal({
           </form>
         ) : (
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-            <fieldset disabled={!canEdit} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 overflow-y-auto p-7">
+            {/* display:contents -- a flex/grid <fieldset> has a long-standing
+                browser quirk where it ignores min-height/min-width overrides
+                (its intrinsic size always wins), breaking the scrollable-body
+                layout below. contents drops it from the box tree entirely
+                while keeping `disabled` cascading to its descendants. */}
+            <fieldset disabled={!canEdit} className="contents">
+              <div className="min-h-0 flex-1 overflow-y-auto p-7">
                 {!canEdit && (
                   <p className="mb-5 rounded-xl border border-line-card bg-surface-footer px-3.5 py-2.5 text-sm text-ink-muted">
                     You have view-only access to reservations.
