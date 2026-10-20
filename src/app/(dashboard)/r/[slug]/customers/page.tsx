@@ -19,7 +19,7 @@ export default async function CustomersPage({ params }: { params: Promise<{ slug
 
   return (
     <div className="-m-4 min-h-[calc(100vh-4rem)] bg-surface-page p-5 [@media(min-width:375px)]:p-[clamp(20px,3vw,40px)] md:-m-8">
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-[32px] font-extrabold tracking-tight text-ink">Customers</h1>
           <p className="text-[15px] text-ink-muted">Everyone who has booked a table with you.</p>
