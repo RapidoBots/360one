@@ -310,6 +310,7 @@ export function StaffPageClient({
           shifts={visibleShifts}
           currentUserId={currentUserId}
           members={activeMembers}
+          swapTagByShiftId={swapTagByShiftId}
         />
       )}
       {page === "myrequests" && (
@@ -569,11 +570,12 @@ function TeamCards({
 }
 
 function MySchedule({
-  shifts, currentUserId, members,
+  shifts, currentUserId, members, swapTagByShiftId,
 }: {
   shifts: ShiftData[];
   currentUserId: string;
   members: StaffMember[];
+  swapTagByShiftId: Record<string, string>;
 }) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const myShifts = shifts
@@ -607,6 +609,12 @@ function MySchedule({
                   {positionLabel(s.position, s.customPosition)}
                   {s.notes && ` · ${s.notes}`}
                 </p>
+                {swapTagByShiftId[s.id] && (
+                  <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary">
+                    <ArrowRightLeft className="size-3 shrink-0" />
+                    Swapped w/ {swapTagByShiftId[s.id]}
+                  </p>
+                )}
               </div>
             </div>
           );
