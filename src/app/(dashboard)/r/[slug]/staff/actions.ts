@@ -310,20 +310,24 @@ export async function reviewShiftExchangeAction(
     return { ok: false, error: "You can only review exchanges for your own shifts." };
 
   if (approve) {
-    await prisma.$transaction([
-      prisma.shift.update({
-        where: { id: exchange.requesterShiftId },
-        data: { userId: exchange.targetShift.userId },
-      }),
-      prisma.shift.update({
-        where: { id: exchange.targetShiftId },
-        data: { userId: exchange.requesterShift.userId },
-      }),
-      prisma.shiftExchange.update({
-        where: { id: exchangeId },
-        data: { status: "APPROVED", reviewedAt: new Date() },
-      }),
-    ]);
+    try {
+      await prisma.$transaction([
+        prisma.shift.update({
+          where: { id: exchange.requesterShiftId },
+          data: { userId: exchange.targetShift.userId },
+        }),
+        prisma.shift.update({
+          where: { id: exchange.targetShiftId },
+          data: { userId: exchange.requesterShift.userId },
+        }),
+        prisma.shiftExchange.update({
+          where: { id: exchangeId },
+          data: { status: "APPROVED", reviewedAt: new Date() },
+        }),
+      ]);
+    } catch {
+      return { ok: false, error: "Couldn't swap — one of them already has a shift at that date and time." };
+    }
   } else {
     await prisma.shiftExchange.update({
       where: { id: exchangeId },

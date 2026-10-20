@@ -201,20 +201,25 @@ export function ExchangeHistory({
 
   async function handleReview(exchange: ExchangeData, approve: boolean) {
     setReviewingId(exchange.id);
-    const result = await reviewShiftExchangeAction(slug, exchange.id, approve);
-    setReviewingId(null);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
+    try {
+      const result = await reviewShiftExchangeAction(slug, exchange.id, approve);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      const fromName = exchange.requesterUserName ?? exchange.requesterShift.user.name;
+      const toName = exchange.targetUserName ?? exchange.targetShift.user.name;
+      toast.success(
+        approve
+          ? `Swapped: ${fromName} ⇄ ${toName} now have each other's shift`
+          : `Rejected the exchange between ${fromName} and ${toName}`
+      );
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong — please try again.");
+    } finally {
+      setReviewingId(null);
     }
-    const fromName = exchange.requesterUserName ?? exchange.requesterShift.user.name;
-    const toName = exchange.targetUserName ?? exchange.targetShift.user.name;
-    toast.success(
-      approve
-        ? `Swapped: ${fromName} ⇄ ${toName} now have each other's shift`
-        : `Rejected the exchange between ${fromName} and ${toName}`
-    );
-    router.refresh();
   }
 
   // Staff sees only their own exchanges; owners see all

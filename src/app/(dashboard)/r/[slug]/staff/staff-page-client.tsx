@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   LayoutGrid, CalendarDays, Users, ClipboardList, ArrowRightLeft,
   Calendar, Clock, AlertTriangle, Plus,
@@ -522,7 +523,9 @@ function TeamCards({
               >
                 {initials}
               </span>
-              <h3 className="mt-4 text-lg font-bold tracking-tight text-ink">{m.name}</h3>
+              <Link href={`/r/${slug}/staff/${m.id}`} className="mt-4 block text-lg font-bold tracking-tight text-ink hover:text-primary hover:underline">
+                {m.name}
+              </Link>
               <p className="mt-1 text-sm text-ink-muted">
                 {m.position ? positionLabel(m.position, m.customPosition) : "Unassigned"}
                 {" · "}
@@ -530,9 +533,9 @@ function TeamCards({
               </p>
               <div className="mt-5 flex items-center justify-between border-t border-line-divider pt-5 text-sm text-ink">
                 <span>{hrs} hrs scheduled</span>
-                <span className="text-xs font-semibold text-primary">
-                  Availability &rarr;
-                </span>
+                <Link href={`/r/${slug}/staff/${m.id}`} className="text-xs font-semibold text-primary hover:underline">
+                  Profile &rarr;
+                </Link>
               </div>
             </div>
           );
