@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Power, Trash2, Users, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,9 @@ export function TeamMembers({
                       >
                         {initialsOf(m.name)}
                       </span>
-                      <span className="font-semibold text-ink">{m.name}</span>
+                      <Link href={`/r/${slug}/staff/${m.id}`} className="font-semibold text-ink hover:text-primary hover:underline">
+                        {m.name}
+                      </Link>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-4 text-[#475569]">{m.email}</TableCell>
