@@ -229,6 +229,7 @@ export async function setReservationStatusAction(
   revalidatePath(`/r/${slug}/reservations`);
   revalidatePath(`/r/${slug}/customers`);
   revalidatePath(`/r/${slug}/floor-manager`);
+  revalidatePath(`/r/${slug}/dashboard`);
   return { ok: true };
 }
 
