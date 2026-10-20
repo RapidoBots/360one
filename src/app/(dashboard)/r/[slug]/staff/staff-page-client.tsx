@@ -142,6 +142,20 @@ export function StaffPageClient({
   const totalHours = visibleShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
   const draftCount = shifts.filter((s) => s.draft).length;
 
+  // Shifts that changed hands via an approved exchange: map each shift to the
+  // name of the person it was swapped with (its own pre-swap owner --
+  // `exchanges` is newest-first, so the first match per shift wins).
+  const swapTagByShiftId: Record<string, string> = {};
+  for (const ex of exchanges) {
+    if (ex.status !== "APPROVED") continue;
+    if (ex.requesterUserName && !(ex.requesterShift.id in swapTagByShiftId)) {
+      swapTagByShiftId[ex.requesterShift.id] = ex.requesterUserName;
+    }
+    if (ex.targetUserName && !(ex.targetShift.id in swapTagByShiftId)) {
+      swapTagByShiftId[ex.targetShift.id] = ex.targetUserName;
+    }
+  }
+
   const pageTitle: Record<SubPage, string> = {
     overview: "Ready for today.",
     schedule: "A clearer week.",
@@ -254,6 +268,7 @@ export function StaffPageClient({
           weekStart={weekStart}
           timezone={timezone}
           isOwner={isOwner}
+          swapTagByShiftId={swapTagByShiftId}
         />
       )}
       {page === "team" && (

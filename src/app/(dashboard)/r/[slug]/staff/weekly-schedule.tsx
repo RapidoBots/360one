@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Copy, Plus, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Plus, Check, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ export function WeeklySchedule({
   weekStart,
   timezone: _tz,
   isOwner,
+  swapTagByShiftId = {},
 }: {
   slug: string;
   members: StaffMember[];
@@ -39,6 +40,7 @@ export function WeeklySchedule({
   weekStart: string;
   timezone: string;
   isOwner: boolean;
+  swapTagByShiftId?: Record<string, string>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -282,6 +284,7 @@ export function WeeklySchedule({
                       >
                         {cellShifts.map((shift) => {
                           const style = SHIFT_STYLES[shift.position];
+                          const swappedWith = swapTagByShiftId[shift.id];
                           return (
                             <button
                               key={shift.id}
@@ -299,6 +302,15 @@ export function WeeklySchedule({
                               <span className="mt-1 block text-[11px] opacity-80">
                                 {positionLabel(shift.position, shift.customPosition)}
                               </span>
+                              {swappedWith && (
+                                <span
+                                  className="mt-1 flex items-center gap-1 text-[10px] font-semibold opacity-90"
+                                  title={`This shift was swapped with ${swappedWith}`}
+                                >
+                                  <ArrowRightLeft className="size-2.5 shrink-0" />
+                                  <span className="truncate">Swapped w/ {swappedWith}</span>
+                                </span>
+                              )}
                               {shift.draft && (
                                 <span
                                   className="absolute right-1.5 top-1.5 size-[6px] rounded-full border border-current"
