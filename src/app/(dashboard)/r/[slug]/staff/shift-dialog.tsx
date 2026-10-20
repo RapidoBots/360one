@@ -2,20 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FieldLabel } from "@/components/ui/section-card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { createShiftAction, createBulkShiftsAction, updateShiftAction, deleteShiftAction } from "./actions";
 import { POSITION_LABELS } from "./constants";
 import type { StaffMember, ShiftData } from "./staff-page-client";
@@ -23,6 +16,9 @@ import type { StaffPosition } from "@/generated/prisma/client";
 
 const POSITIONS: StaffPosition[] = ["SERVER", "HOST", "CHEF", "BARTENDER", "MANAGER", "OTHER"];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 type DialogState =
   | { mode: "closed" }
@@ -168,20 +164,32 @@ export function ShiftDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{state.mode === "edit" ? "Edit Shift" : "Add Shift"}</DialogTitle>
-          <DialogDescription>
-            {memberName()} — {state.mode === "edit" ? dateLabel() : "Select days below"}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent showCloseButton={false} className="max-w-[480px] sm:max-w-[480px] gap-0 rounded-[20px] p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line-divider px-6 py-5.5">
+          <div>
+            <DialogTitle className="text-lg font-bold tracking-tight text-ink">
+              {state.mode === "edit" ? "Edit shift" : "Add shift"}
+            </DialogTitle>
+            <p className="mt-0.5 text-[13px] text-ink-muted">
+              {memberName()} — {state.mode === "edit" ? dateLabel() : "Select days below"}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={onClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
 
-        <div className="grid gap-4 py-2">
+        <div className="flex flex-col gap-5 p-6">
           {state.mode === "create" && (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <Label>Days</Label>
-                <button type="button" onClick={selectAllDays} className="text-xs text-primary hover:underline">
+                <FieldLabel>Days</FieldLabel>
+                <button type="button" onClick={selectAllDays} className="text-xs font-semibold text-primary hover:underline">
                   {selectedDays.every(Boolean) ? "Deselect all" : "Select all"}
                 </button>
               </div>
@@ -191,10 +199,10 @@ export function ShiftDialog({
                     key={name}
                     type="button"
                     onClick={() => toggleDay(i)}
-                    className={`flex-1 rounded-lg border py-2 text-center text-xs font-medium transition-colors ${
+                    className={`flex-1 rounded-xl border py-2 text-center text-xs font-semibold transition-colors ${
                       selectedDays[i]
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                        : "border-line-input bg-white text-ink-muted hover:border-primary/50"
                     }`}
                   >
                     {name}
@@ -205,33 +213,30 @@ export function ShiftDialog({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="shiftStart">Start time</Label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Start time</FieldLabel>
               <Input
-                id="shiftStart"
                 type="time"
-                className="h-10 text-sm"
+                className={fieldClass}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="shiftEnd">End time</Label>
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>End time</FieldLabel>
               <Input
-                id="shiftEnd"
                 type="time"
-                className="h-10 text-sm"
+                className={fieldClass}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
-            </div>
+            </label>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="shiftPosition">Position</Label>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Position</FieldLabel>
             <NativeSelect
-              id="shiftPosition"
-              className="h-10 text-sm"
+              className={`${fieldClass} pl-3.5 pr-9`}
               value={position}
               onChange={(e) => setPosition(e.target.value as StaffPosition)}
             >
@@ -241,49 +246,52 @@ export function ShiftDialog({
                 </option>
               ))}
             </NativeSelect>
-          </div>
+          </label>
 
           {position === "OTHER" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="customPos">Custom role name</Label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Custom role name</FieldLabel>
               <Input
-                id="customPos"
-                className="h-10 text-sm"
+                className={fieldClass}
                 placeholder="e.g. Sommelier, Pastry Chef..."
                 value={customPosition}
                 onChange={(e) => setCustomPosition(e.target.value)}
               />
-            </div>
+            </label>
           )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="shiftNotes">Notes (optional)</Label>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Notes (optional)</FieldLabel>
             <Input
-              id="shiftNotes"
-              className="h-10 text-sm"
+              className={fieldClass}
               placeholder="e.g. Training, cover for Alice..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
-          </div>
+          </label>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          {state.mode === "edit" && (
+        <div className="flex items-center justify-between gap-2.5 rounded-b-[20px] border-t border-line-divider bg-surface-footer px-6 py-4">
+          {state.mode === "edit" ? (
             <Button
+              type="button"
               variant="outline"
-              className="mr-auto gap-2 text-destructive"
+              className="gap-2 rounded-xl border-[#D5DAEA] text-sm font-semibold text-destructive"
               onClick={handleDelete}
               disabled={deleting || saving}
             >
               <Trash2 className="size-3.5" />
               {deleting ? "Deleting..." : "Delete"}
             </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving || deleting} className="h-10 px-5">
+          ) : <span />}
+          <Button
+            onClick={handleSave}
+            disabled={saving || deleting}
+            className="h-11 rounded-xl px-5.5 text-sm font-bold shadow-[0_6px_16px_-6px_var(--primary)]"
+          >
             {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Saving...</> : state.mode === "edit" ? "Save changes" : `Add shift${selectedDays.filter(Boolean).length > 1 ? "s" : ""}`}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

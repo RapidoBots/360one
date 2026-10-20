@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
+import { ClipboardList, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { SectionCard, FieldLabel } from "@/components/ui/section-card";
 import { createTimeOffRequestAction, reviewTimeOffRequestAction } from "./actions";
 import type { TimeOffRequestData } from "./staff-page-client";
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 export function TimeOffRequests({
   slug,
@@ -39,24 +40,26 @@ export function TimeOffRequests({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
-        <h3 className="text-sm font-semibold">All requests</h3>
-        <Button size="sm" className="gap-1.5 text-xs" onClick={() => setShowAdd(true)}>
+    <SectionCard
+      icon={ClipboardList}
+      title="All requests"
+      description="Time off submitted by your team."
+      headerRight={
+        <Button className="h-10 gap-1.5 rounded-xl text-xs font-semibold" onClick={() => setShowAdd(true)}>
           <Plus className="size-3.5" />
           Request time off
         </Button>
-      </div>
-
-      <div className="divide-y divide-border">
+      }
+    >
+      <div className="divide-y divide-line-divider border-t border-line-divider">
         {requests.map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+          <div key={r.id} className="flex flex-wrap items-center gap-3 px-7 py-3.5">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               {r.user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{r.user.name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-semibold text-ink">{r.user.name}</p>
+              <p className="text-xs text-ink-muted">
                 {formatDate(r.fromDate)}
                 {r.toDate !== r.fromDate && ` – ${formatDate(r.toDate)}`}
                 {r.reason && ` · ${r.reason}`}
@@ -66,14 +69,14 @@ export function TimeOffRequests({
             {isOwner && r.status === "PENDING" && (
               <div className="flex gap-1.5">
                 <Button
-                  variant="outline" size="sm" className="text-xs"
+                  variant="outline" size="sm" className="rounded-lg text-xs"
                   disabled={acting === r.id}
                   onClick={() => handleReview(r.id, false)}
                 >
                   Decline
                 </Button>
                 <Button
-                  size="sm" className="text-xs"
+                  size="sm" className="rounded-lg text-xs"
                   disabled={acting === r.id}
                   onClick={() => handleReview(r.id, true)}
                 >
@@ -84,12 +87,12 @@ export function TimeOffRequests({
           </div>
         ))}
         {requests.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">No requests yet.</p>
+          <p className="py-12 text-center text-sm text-ink-muted">No requests yet.</p>
         )}
       </div>
 
       <AddTimeOffDialog slug={slug} open={showAdd} onOpenChange={setShowAdd} />
-    </div>
+    </SectionCard>
   );
 }
 
@@ -130,30 +133,44 @@ function AddTimeOffDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Request time off</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="toFrom">From</Label>
-              <Input id="toFrom" type="date" value={from} onChange={(e) => setFrom(e.target.value)} required />
+      <DialogContent showCloseButton={false} className="max-w-[480px] sm:max-w-[480px] gap-0 rounded-[20px] p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line-divider px-6 py-5.5">
+          <DialogTitle className="text-lg font-bold tracking-tight text-ink">Request time off</DialogTitle>
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={() => onOpenChange(false)}
+            className="flex size-9 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-5 p-6">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-2">
+                <FieldLabel>From</FieldLabel>
+                <Input type="date" className={fieldClass} value={from} onChange={(e) => setFrom(e.target.value)} required />
+              </label>
+              <label className="flex flex-col gap-2">
+                <FieldLabel>Through</FieldLabel>
+                <Input type="date" className={fieldClass} value={to} onChange={(e) => setTo(e.target.value)} required />
+              </label>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="toTo">Through</Label>
-              <Input id="toTo" type="date" value={to} onChange={(e) => setTo(e.target.value)} required />
-            </div>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Reason (optional)</FieldLabel>
+              <Input className={fieldClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional note" maxLength={100} />
+            </label>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="toReason">Reason (optional)</Label>
-            <Input id="toReason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional note" maxLength={100} />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={saving} className="h-10 px-5">
+          <div className="flex justify-end gap-2.5 rounded-b-[20px] border-t border-line-divider bg-surface-footer px-6 py-4">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="h-11 rounded-xl px-5.5 text-sm font-bold shadow-[0_6px_16px_-6px_var(--primary)]"
+            >
               {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit request"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -162,9 +179,9 @@ function AddTimeOffDialog({
 
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    PENDING: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-    APPROVED: "bg-primary/10 text-primary",
-    DECLINED: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400",
+    PENDING: "bg-warning-soft text-warning",
+    APPROVED: "bg-success-soft text-success",
+    DECLINED: "bg-danger-soft text-danger",
   };
   const labels: Record<string, string> = {
     PENDING: "Pending",

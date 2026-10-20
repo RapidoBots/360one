@@ -3,8 +3,10 @@
 import { useState } from "react";
 import {
   LayoutGrid, CalendarDays, Users, ClipboardList, ArrowRightLeft,
-  Calendar, Clock, AlertTriangle,
+  Calendar, Clock, AlertTriangle, Plus,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SectionCard, SectionCardBody } from "@/components/ui/section-card";
 import { WeeklySchedule } from "./weekly-schedule";
 import { TimeOffRequests } from "./time-off-requests";
 import { ExchangeHistory } from "./exchange-history";
@@ -165,24 +167,24 @@ export function StaffPageClient({
       {/* Page header */}
       <div>
         <p className="text-xs font-bold tracking-[0.1em] text-primary">STAFF SCHEDULING</p>
-        <h1 className="mt-1 text-[28px] font-extrabold leading-tight tracking-tight">
+        <h1 className="mt-1 text-[28px] font-extrabold leading-tight tracking-tight text-ink">
           {pageTitle[page]}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-ink-muted">
           {pageDesc[page]}
         </p>
       </div>
 
       {/* Sub-page navigation */}
-      <nav className="flex gap-1 rounded-lg bg-muted/50 p-1">
+      <nav className="flex gap-1 rounded-xl bg-neutral-soft p-1">
         {navItems.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setPage(key)}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               page === key
-                ? "bg-background text-primary shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-white text-primary shadow-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             <Icon className="size-4" />
@@ -315,16 +317,16 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+    <div className="rounded-[20px] border border-line-card bg-white p-5 shadow-card">
+      <div className="flex items-center justify-between text-xs font-semibold text-ink-muted">
         {label}
-        <span className="text-muted-foreground/60">{icon}</span>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">{icon}</span>
       </div>
-      <div className="mt-2 text-2xl font-extrabold tracking-tight">
+      <div className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
         {value}
-        {suffix && <span className="ml-1 text-xs font-medium tracking-normal text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="ml-1 text-xs font-medium tracking-normal text-ink-muted">{suffix}</span>}
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+      <p className="mt-1 text-xs text-ink-muted">{note}</p>
     </div>
   );
 }
@@ -348,102 +350,106 @@ function OverviewPage({
   return (
     <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
       {/* Time-off requests summary */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">
-            Time-off requests{" "}
+      <SectionCard
+        icon={ClipboardList}
+        title="Time-off requests"
+        description="Recent requests waiting on your review."
+        headerRight={
+          <div className="flex items-center gap-2.5">
             {pending.length > 0 && (
-              <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                 {pending.length}
               </span>
             )}
-          </h3>
-          <button onClick={onGoToRequests} className="text-xs font-medium text-primary hover:underline">
-            View requests &rarr;
-          </button>
-        </div>
-        <div className="mt-4 space-y-0 divide-y divide-border">
-          {pending.slice(0, 3).map((r) => (
-            <div key={r.id} className="flex items-center gap-3 py-3">
-              <Avatar name={r.user.name} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{r.user.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDate(r.fromDate)}
-                  {r.toDate !== r.fromDate && ` – ${formatDate(r.toDate)}`}
-                  {r.reason && ` · ${r.reason}`}
-                </p>
+            <button onClick={onGoToRequests} className="text-xs font-semibold text-primary hover:underline">
+              View requests &rarr;
+            </button>
+          </div>
+        }
+      >
+        <SectionCardBody>
+          <div className="divide-y divide-line-divider">
+            {pending.slice(0, 3).map((r) => (
+              <div key={r.id} className="flex items-center gap-3 py-3">
+                <Avatar name={r.user.name} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{r.user.name}</p>
+                  <p className="text-xs text-ink-muted">
+                    {formatDate(r.fromDate)}
+                    {r.toDate !== r.fromDate && ` – ${formatDate(r.toDate)}`}
+                    {r.reason && ` · ${r.reason}`}
+                  </p>
+                </div>
+                <span className="rounded-md bg-warning-soft px-2 py-1 text-xs font-medium text-warning">
+                  Pending
+                </span>
               </div>
-              <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                Pending
-              </span>
-            </div>
-          ))}
-          {pending.length === 0 && (
-            <p className="py-4 text-sm text-muted-foreground">You&apos;re all caught up.</p>
-          )}
-        </div>
-      </div>
+            ))}
+            {pending.length === 0 && (
+              <p className="py-4 text-sm text-ink-muted">You&apos;re all caught up.</p>
+            )}
+          </div>
+        </SectionCardBody>
+      </SectionCard>
 
       {/* Publish status */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Before you publish</h3>
-          <Calendar className="size-4 text-muted-foreground" />
-        </div>
-        <div className="mt-4 flex gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            {draftCount > 0 ? <AlertTriangle className="size-4" /> : <CalendarDays className="size-4" />}
-          </div>
-          <div>
-            <p className="text-sm font-semibold">
-              {draftCount > 0 ? "Draft shifts need publishing." : "Your week is looking good."}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {draftCount > 0
-                ? "Review your draft shifts, then publish to make the latest schedule visible to your team."
-                : "Your team can see the published shifts. Any new edits will stay in draft until you publish again."}
-            </p>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="mt-4">
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: total ? `${(publishedCount / total) * 100}%` : "0%" }}
-            />
-          </div>
-          <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-            <span>{publishedCount} published</span>
-            <span>{draftCount} draft</span>
-          </div>
-        </div>
-
-        {todayShifts.length > 0 && (
-          <div className="mt-5 border-t border-border pt-4">
-            <h4 className="text-xs font-semibold text-muted-foreground">TODAY&apos;S TEAM</h4>
-            <div className="mt-2 space-y-2">
-              {todayShifts.slice(0, 4).map((s) => (
-                <div key={s.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Avatar name={s.user.name} size="sm" />
-                    <span className="font-medium">{s.user.name}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{s.startTime}–{s.endTime}</span>
-                </div>
-              ))}
+      <SectionCard
+        icon={Calendar}
+        title="Before you publish"
+        description="Keep drafts moving to a published schedule."
+      >
+        <SectionCardBody>
+          <div className="flex gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              {draftCount > 0 ? <AlertTriangle className="size-4" /> : <CalendarDays className="size-4" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-ink">
+                {draftCount > 0 ? "Draft shifts need publishing." : "Your week is looking good."}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                {draftCount > 0
+                  ? "Review your draft shifts, then publish to make the latest schedule visible to your team."
+                  : "Your team can see the published shifts. Any new edits will stay in draft until you publish again."}
+              </p>
             </div>
           </div>
-        )}
+          {/* Progress bar */}
+          <div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-neutral-soft">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: total ? `${(publishedCount / total) * 100}%` : "0%" }}
+              />
+            </div>
+            <div className="mt-2 flex justify-between text-xs text-ink-muted">
+              <span>{publishedCount} published</span>
+              <span>{draftCount} draft</span>
+            </div>
+          </div>
 
-        <button
-          onClick={onGoToSchedule}
-          className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Open schedule &rarr;
-        </button>
-      </div>
+          {todayShifts.length > 0 && (
+            <div className="border-t border-line-divider pt-4">
+              <h4 className="text-xs font-bold tracking-wider text-ink-muted uppercase">Today&apos;s team</h4>
+              <div className="mt-2 space-y-2">
+                {todayShifts.slice(0, 4).map((s) => (
+                  <div key={s.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Avatar name={s.user.name} size="sm" />
+                      <span className="font-medium text-ink">{s.user.name}</span>
+                    </div>
+                    <span className="text-xs text-ink-muted">{s.startTime}–{s.endTime}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button onClick={onGoToSchedule} className="h-11 w-full rounded-xl text-sm font-semibold">
+            Open schedule &rarr;
+          </Button>
+        </SectionCardBody>
+      </SectionCard>
     </div>
   );
 }
@@ -485,13 +491,10 @@ function TeamCards({
     <>
       {isOwner && (
         <div className="mb-5 flex justify-end">
-          <button
-            onClick={() => setAddOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Users className="size-4" />
+          <Button onClick={() => setAddOpen(true)} className="h-11 gap-2 rounded-xl px-5 text-sm font-semibold">
+            <Plus className="size-4" />
             Add employee
-          </button>
+          </Button>
         </div>
       )}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -508,7 +511,7 @@ function TeamCards({
           return (
             <div
               key={m.id}
-              className="rounded-xl border border-border bg-card p-5"
+              className="rounded-[20px] border border-line-card bg-white p-5 shadow-card"
             >
               <span
                 className={`inline-flex size-11 items-center justify-center rounded-full text-xs font-bold ${
@@ -519,15 +522,15 @@ function TeamCards({
               >
                 {initials}
               </span>
-              <h3 className="mt-4 text-lg font-bold tracking-tight">{m.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h3 className="mt-4 text-lg font-bold tracking-tight text-ink">{m.name}</h3>
+              <p className="mt-1 text-sm text-ink-muted">
                 {m.position ? positionLabel(m.position, m.customPosition) : "Unassigned"}
                 {" · "}
                 {m.active ? "Active" : "Inactive"}
               </p>
-              <div className="mt-5 flex items-center justify-between border-t border-border pt-5 text-sm">
+              <div className="mt-5 flex items-center justify-between border-t border-line-divider pt-5 text-sm text-ink">
                 <span>{hrs} hrs scheduled</span>
-                <span className="text-xs font-medium text-primary">
+                <span className="text-xs font-semibold text-primary">
                   Availability &rarr;
                 </span>
               </div>
@@ -536,7 +539,7 @@ function TeamCards({
         })}
       </div>
       {members.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">
+        <p className="py-12 text-center text-sm text-ink-muted">
           No team members yet. Click &quot;Add employee&quot; to get started.
         </p>
       )}
@@ -561,25 +564,28 @@ function MySchedule({
   const me = members.find((m) => m.id === currentUserId);
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
-        <h3 className="text-sm font-semibold">Published shifts</h3>
-        <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+    <SectionCard
+      icon={CalendarDays}
+      title="Published shifts"
+      description="Your upcoming shifts, soonest first."
+      headerRight={
+        <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
           {myShifts.length} upcoming
         </span>
-      </div>
-      <div className="divide-y divide-border">
+      }
+    >
+      <div className="divide-y divide-line-divider border-t border-line-divider">
         {myShifts.map((s) => {
           const d = new Date(s.date + "T12:00:00Z");
           return (
-            <div key={s.id} className="flex items-center gap-5 px-5 py-4">
-              <div className="flex flex-col items-center rounded-lg bg-primary/10 px-4 py-3 text-primary">
+            <div key={s.id} className="flex items-center gap-5 px-7 py-4">
+              <div className="flex flex-col items-center rounded-[14px] bg-primary/10 px-4 py-3 text-primary">
                 <span className="text-xs">{d.toLocaleDateString("en-CA", { weekday: "short", timeZone: "UTC" })}</span>
                 <span className="text-xl font-bold">{d.getUTCDate()}</span>
               </div>
               <div>
-                <p className="text-base font-bold">{s.startTime} – {s.endTime}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="text-base font-bold text-ink">{s.startTime} – {s.endTime}</p>
+                <p className="mt-1 text-sm text-ink-muted">
                   {positionLabel(s.position, s.customPosition)}
                   {s.notes && ` · ${s.notes}`}
                 </p>
@@ -588,12 +594,12 @@ function MySchedule({
           );
         })}
         {myShifts.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">
+          <p className="py-12 text-center text-sm text-ink-muted">
             No upcoming published shifts. Your manager will publish the next schedule here.
           </p>
         )}
       </div>
-    </div>
+    </SectionCard>
   );
 }
 

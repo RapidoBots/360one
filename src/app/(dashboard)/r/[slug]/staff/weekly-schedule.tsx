@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Copy, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { SHIFT_STYLES } from "./constants";
 import { positionLabel } from "./position-utils";
 import { copyWeekScheduleAction, publishWeekAction } from "./actions";
@@ -140,11 +142,11 @@ export function WeeklySchedule({
   return (
     <div className="space-y-4">
       {/* Panel */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-divider px-5 py-4">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold">{weekLabel()}</h3>
+            <h3 className="text-sm font-semibold text-ink">{weekLabel()}</h3>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
                 <ChevronLeft className="size-4" />
@@ -180,19 +182,20 @@ export function WeeklySchedule({
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-divider px-5 py-3">
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               placeholder="Search team members..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 rounded-md border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="h-9 w-[200px] rounded-lg border-line-input bg-white px-3 text-xs font-medium text-ink placeholder:text-ink-placeholder focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16"
             />
-            <select
+            <NativeSelect
+              compact
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-8 rounded-md border border-border bg-background px-2 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-[140px] text-xs"
             >
               <option value="all">All roles</option>
               <option value="SERVER">Server</option>
@@ -201,9 +204,9 @@ export function WeeklySchedule({
               <option value="BARTENDER">Bartender</option>
               <option value="MANAGER">Manager</option>
               <option value="OTHER">Other</option>
-            </select>
+            </NativeSelect>
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-2 rounded-sm" style={{ background: "#2855ee" }} />
               Service
@@ -224,15 +227,15 @@ export function WeeklySchedule({
           <table className="w-full min-w-[900px] border-collapse">
             <thead>
               <tr>
-                <th className="w-[180px] border-b border-r border-border bg-muted/30 px-5 py-3 text-left text-[11px] font-medium tracking-wide text-muted-foreground">
-                  TEAM MEMBER <span className="ml-1 text-muted-foreground/60">{filteredMembers.length} people</span>
+                <th className="w-[180px] border-b border-r border-line-divider bg-surface-footer px-5 py-3 text-left text-[11px] font-bold tracking-wider text-ink-muted uppercase">
+                  Team member <span className="ml-1 normal-case text-ink-muted/70">{filteredMembers.length} people</span>
                 </th>
                 {weekDates.map((date, i) => (
                   <th
                     key={date}
-                    className={`border-b border-border px-2 py-3 text-center text-[11px] font-medium tracking-wide text-muted-foreground ${
+                    className={`border-b border-line-divider px-2 py-3 text-center text-[11px] font-bold tracking-wider text-ink-muted uppercase ${
                       i < 6 ? "border-r" : ""
-                    } ${isToday(date) ? "bg-primary/5" : "bg-muted/30"}`}
+                    } ${isToday(date) ? "bg-primary/5" : "bg-surface-footer"}`}
                   >
                     {DAY_NAMES[i]?.toUpperCase()}
                     <br />
@@ -250,17 +253,17 @@ export function WeeklySchedule({
             <tbody>
               {filteredMembers.map((member) => (
                 <tr key={member.id}>
-                  <td className="border-b border-r border-border px-4 py-3">
+                  <td className="border-b border-r border-line-divider px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                         {member.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold">{member.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="truncate text-xs font-semibold text-ink">{member.name}</p>
+                        <p className="text-[11px] text-ink-muted">
                           {member.position ? positionLabel(member.position, member.customPosition) : "Unassigned"}
                         </p>
-                        <p className="text-[11px] text-muted-foreground/70">
+                        <p className="text-[11px] text-ink-muted/70">
                           {Math.round(memberHours(member.id) * 10) / 10} hrs this week
                         </p>
                       </div>
@@ -272,7 +275,7 @@ export function WeeklySchedule({
                     return (
                       <td
                         key={date}
-                        className={`group border-b border-border px-1.5 py-1.5 align-middle ${
+                        className={`group border-b border-line-divider px-1.5 py-1.5 align-middle ${
                           isToday(date) ? "bg-primary/[0.03]" : ""
                         } ${di < 6 ? "border-r" : ""}`}
                         style={{ height: 80 }}
@@ -335,7 +338,7 @@ export function WeeklySchedule({
               ))}
               {filteredMembers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-sm text-ink-muted">
                     No team members match these filters.
                   </td>
                 </tr>
@@ -345,10 +348,10 @@ export function WeeklySchedule({
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-line-divider bg-surface-footer px-5 py-3 text-xs text-ink-muted">
           <span>
             <span
-              className={`mr-1.5 inline-block size-1.5 rounded-full ${hasDrafts ? "bg-amber-500" : "bg-emerald-500"}`}
+              className={`mr-1.5 inline-block size-1.5 rounded-full ${hasDrafts ? "bg-warning" : "bg-success"}`}
             />
             {hasDrafts ? "Unpublished changes" : "Published schedule"} &middot; {shifts.length} shifts
           </span>

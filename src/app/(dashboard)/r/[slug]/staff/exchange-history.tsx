@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft, Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Input } from "@/components/ui/input";
+import { SectionCard, FieldLabel } from "@/components/ui/section-card";
 import {
   Table,
   TableBody,
@@ -19,6 +18,9 @@ import {
 } from "@/components/ui/table";
 import { requestShiftExchangeAction, reviewShiftExchangeAction } from "./actions";
 import type { StaffMember, ShiftData, ExchangeData } from "./staff-page-client";
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00Z");
@@ -34,11 +36,19 @@ function formatTime(t: string): string {
   return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
 }
 
-const STATUS_VARIANT: Record<string, "default" | "outline" | "destructive"> = {
-  PENDING: "outline",
-  APPROVED: "default",
-  REJECTED: "destructive",
+const STATUS_STYLES: Record<string, string> = {
+  PENDING: "bg-warning-soft text-warning",
+  APPROVED: "bg-success-soft text-success",
+  REJECTED: "bg-danger-soft text-danger",
 };
+
+function ExchangeStatusPill({ status }: { status: string }) {
+  return (
+    <span className={`rounded-md px-2 py-1 text-[11px] font-medium ${STATUS_STYLES[status] ?? ""}`}>
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
+  );
+}
 
 // One side of the exchange: pick a team member, then pick one of their
 // shifts. Staff requesting their own side skip straight to the shift list
@@ -69,11 +79,11 @@ function PersonShiftPicker({
   const fixedMember = fixedPersonId ? members.find((m) => m.id === fixedPersonId) : undefined;
 
   return (
-    <div className="min-w-0 flex-1 space-y-2.5 rounded-lg border border-border p-3.5">
-      <Label className="text-xs font-semibold text-muted-foreground uppercase">{label}</Label>
+    <div className="min-w-0 flex-1 space-y-2.5 rounded-xl border border-line-card bg-white p-3.5">
+      <FieldLabel>{label}</FieldLabel>
 
       {fixedPersonId ? (
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="flex items-center gap-2 text-sm font-medium text-ink">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
             {(fixedMember?.name ?? "You").slice(0, 2).toUpperCase()}
           </span>
@@ -81,7 +91,7 @@ function PersonShiftPicker({
         </div>
       ) : (
         <NativeSelect
-          className="h-10 text-sm"
+          className={`${fieldClass} h-10`}
           value={personId ?? ""}
           onChange={(e) => {
             onPersonChange(e.target.value || null);
@@ -104,7 +114,7 @@ function PersonShiftPicker({
       {effectivePersonId && (
         <div className="max-h-56 space-y-1.5 overflow-y-auto">
           {personShifts.length === 0 ? (
-            <p className="py-3 text-center text-xs text-muted-foreground">
+            <p className="py-3 text-center text-xs text-ink-muted">
               {fixedPersonId ? "You have no shifts to offer." : "This person has no shifts."}
             </p>
           ) : (
@@ -115,14 +125,14 @@ function PersonShiftPicker({
                   key={s.id}
                   type="button"
                   onClick={() => onShiftChange(s.id)}
-                  className={`block w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                  className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                     selected
                       ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "border-border hover:bg-muted/50"
+                      : "border-line-divider hover:bg-surface-footer"
                   }`}
                 >
-                  <span className="block font-medium">{formatDate(s.date)}</span>
-                  <span className="block text-xs text-muted-foreground">
+                  <span className="block font-medium text-ink">{formatDate(s.date)}</span>
+                  <span className="block text-xs text-ink-muted">
                     {formatTime(s.startTime)}–{formatTime(s.endTime)}
                     {s.draft && " · Draft"}
                   </span>
@@ -217,17 +227,16 @@ export function ExchangeHistory({
   return (
     <div className="space-y-6">
       {/* New exchange request */}
-      <div className="rounded-xl border border-border bg-card p-5 ring-1 ring-foreground/5">
-        <h3 className="flex items-center gap-2 text-base font-semibold">
-          <ArrowRightLeft className="size-4" />
-          Request Shift Exchange
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isStaffView
+      <SectionCard
+        icon={ArrowRightLeft}
+        title="Request shift exchange"
+        description={
+          isStaffView
             ? "Pick one of your shifts, then a colleague and one of their shifts to swap with."
-            : "Pick a team member and shift on each side to swap. The owner reviews and approves."}
-        </p>
-        <form onSubmit={handleRequest} className="mt-4 space-y-4">
+            : "Pick a team member and shift on each side to swap. The owner reviews and approves."
+        }
+      >
+        <form onSubmit={handleRequest} className="flex flex-col gap-4 border-t border-line-divider p-7">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <PersonShiftPicker
               label={isStaffView ? "Giving up" : "From"}
@@ -240,7 +249,7 @@ export function ExchangeHistory({
               shiftId={fromShiftId}
               onShiftChange={setFromShiftId}
             />
-            <div className="hidden items-center justify-center pt-8 text-muted-foreground sm:flex">
+            <div className="hidden items-center justify-center pt-8 text-ink-muted sm:flex">
               <ArrowRightLeft className="size-4" />
             </div>
             <PersonShiftPicker
@@ -255,33 +264,35 @@ export function ExchangeHistory({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Note (optional)</Label>
-            <Input className="h-10 text-sm" placeholder="Reason for the swap..." value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
+          <label className="flex flex-col gap-2">
+            <FieldLabel>Note (optional)</FieldLabel>
+            <Input className={fieldClass} placeholder="Reason for the swap..." value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
 
-          <Button type="submit" disabled={submitting || !fromShiftId || !toShiftId} className="h-10 gap-2 px-5">
+          <Button
+            type="submit"
+            disabled={submitting || !fromShiftId || !toShiftId}
+            className="h-11 w-fit gap-2 rounded-xl px-5 text-sm font-semibold shadow-[0_6px_16px_-6px_var(--primary)]"
+          >
             <ArrowRightLeft className="size-3.5" />
             {submitting ? <><Loader2 className="mr-2 size-4 animate-spin" />Submitting...</> : "Submit exchange request"}
           </Button>
         </form>
-      </div>
+      </SectionCard>
 
       {/* Exchange history */}
-      <div className="rounded-xl border border-border bg-card ring-1 ring-foreground/5">
-        <div className="border-b border-border px-5 py-4">
-          <h3 className="text-base font-semibold">Exchange History</h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Track all shift swap requests and their outcomes.
-          </p>
-        </div>
+      <SectionCard
+        icon={ArrowRightLeft}
+        title="Exchange history"
+        description="Track all shift swap requests and their outcomes."
+      >
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>From</TableHead>
-              <TableHead>To</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
+            <TableRow className="border-line-divider bg-surface-footer hover:bg-surface-footer">
+              <TableHead className="text-[12px] font-bold tracking-wider text-ink-muted uppercase">From</TableHead>
+              <TableHead className="text-[12px] font-bold tracking-wider text-ink-muted uppercase">To</TableHead>
+              <TableHead className="text-[12px] font-bold tracking-wider text-ink-muted uppercase">Status</TableHead>
+              <TableHead className="text-[12px] font-bold tracking-wider text-ink-muted uppercase">Date</TableHead>
               <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
@@ -294,30 +305,28 @@ export function ExchangeHistory({
               const fromName = ex.requesterUserName ?? ex.requesterShift.user.name;
               const toName = ex.targetUserName ?? ex.targetShift.user.name;
               return (
-              <TableRow key={ex.id}>
+              <TableRow key={ex.id} className="border-line-divider">
                 <TableCell>
-                  <div className="text-sm font-medium">{fromName}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm font-semibold text-ink">{fromName}</div>
+                  <div className="text-xs text-ink-muted">
                     {formatDate(ex.requesterShift.date)} {formatTime(ex.requesterShift.startTime)}–{formatTime(ex.requesterShift.endTime)}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm font-medium">{toName}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm font-semibold text-ink">{toName}</div>
+                  <div className="text-xs text-ink-muted">
                     {formatDate(ex.targetShift.date)} {formatTime(ex.targetShift.startTime)}–{formatTime(ex.targetShift.endTime)}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[ex.status] ?? "outline"}>
-                    {ex.status.charAt(0) + ex.status.slice(1).toLowerCase()}
-                  </Badge>
+                  <ExchangeStatusPill status={ex.status} />
                   {ex.status === "APPROVED" && (
-                    <div className="mt-1 text-[11px] text-muted-foreground">
+                    <div className="mt-1 text-[11px] text-ink-muted">
                       {fromName} ⇄ {toName} swapped shifts
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
+                <TableCell className="text-xs text-ink-muted">
                   {new Date(ex.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
@@ -330,7 +339,7 @@ export function ExchangeHistory({
                         onClick={() => handleReview(ex, true)}
                         disabled={reviewingId === ex.id}
                       >
-                        <Check className="size-3.5 text-green-600" />
+                        <Check className="size-3.5 text-success" />
                       </Button>
                       <Button
                         variant="outline"
@@ -344,7 +353,7 @@ export function ExchangeHistory({
                     </div>
                   )}
                   {ex.status === "PENDING" && !canReview && isStaffView && (
-                    <span className="text-xs text-muted-foreground">Awaiting response</span>
+                    <span className="text-xs text-ink-muted">Awaiting response</span>
                   )}
                 </TableCell>
               </TableRow>
@@ -352,14 +361,14 @@ export function ExchangeHistory({
             })}
             {visibleExchanges.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-12 text-center text-ink-muted">
                   No exchange requests yet.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
     </div>
   );
 }

@@ -2,20 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FieldLabel, FieldHint } from "@/components/ui/section-card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { addEmployeeAction } from "./actions";
+
+const fieldClass =
+  "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 export function AddEmployeeDialog({
   slug,
@@ -30,12 +26,14 @@ export function AddEmployeeDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function reset() {
     setName("");
     setEmail("");
     setPassword("");
+    setShowPw(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,29 +57,63 @@ export function AddEmployeeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Employee</DialogTitle>
-          <DialogDescription>Create a new staff account for this restaurant.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="empName">Full name</Label>
-            <Input id="empName" className="h-10" value={name} onChange={(e) => setName(e.target.value)} required />
+      <DialogContent showCloseButton={false} className="max-w-[480px] sm:max-w-[480px] gap-0 rounded-[20px] p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line-divider px-6 py-5.5">
+          <div>
+            <DialogTitle className="text-lg font-bold tracking-tight text-ink">Add employee</DialogTitle>
+            <p className="mt-0.5 text-[13px] text-ink-muted">Create a new staff account for this restaurant.</p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="empEmail">Email</Label>
-            <Input id="empEmail" type="email" className="h-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={() => onOpenChange(false)}
+            className="flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-5 p-6">
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Full name</FieldLabel>
+              <Input className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} required />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Email</FieldLabel>
+              <Input type="email" className={fieldClass} value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Password</FieldLabel>
+              <div className="relative flex items-center">
+                <Input
+                  type={showPw ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className={`${fieldClass} pr-11`}
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-1.5 flex size-9 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]"
+                >
+                  {showPw ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                </button>
+              </div>
+              <FieldHint>Staff use this to sign in.</FieldHint>
+            </label>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="empPassword">Password</Label>
-            <Input id="empPassword" type="password" className="h-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={saving} className="h-10 px-5">
+          <div className="flex justify-end gap-2.5 rounded-b-[20px] border-t border-line-divider bg-surface-footer px-6 py-4">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="h-11 rounded-xl px-5.5 text-sm font-bold shadow-[0_6px_16px_-6px_var(--primary)]"
+            >
               {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Adding...</> : "Add employee"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
