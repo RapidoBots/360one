@@ -20,6 +20,14 @@ export const STATUS_COLORS: Record<ReservationStatus, { bg: string; text: string
   NO_SHOW: { bg: "#FFEDD5", text: "#C2410C", bar: "#F97316" },
 };
 
+// URL token Reservations' status filter reads (see RESERVATIONS-HANDOFF.md's
+// "URL filters") -- shared so any page linking into a filtered Reservations
+// view (Dashboard, Reports) can't drift out of sync with what it expects.
+export const STATUS_URL_TOKEN: Record<ReservationStatus, string> = {
+  PENDING: "pending", CONFIRMED: "confirmed", SEATED: "seated",
+  COMPLETED: "completed", CANCELLED: "cancelled", NO_SHOW: "noshow",
+};
+
 export function ReservationBadge({ status }: { status: ReservationStatus }) {
   const c = STATUS_COLORS[status];
   return (

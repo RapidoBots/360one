@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportReservationsCsvAction } from "./actions";
 
@@ -35,11 +35,17 @@ export function ExportCsvButton({ slug, start, end }: { slug: string; start: str
   }
 
   return (
-    <div className="space-y-2">
-      <Button variant="outline" className="h-11 px-5 text-base" onClick={handleExport} disabled={exporting}>
-        {exporting ? <><Loader2 className="mr-2 size-4 animate-spin" />Exporting...</> : "Export CSV"}
+    <div className="flex flex-col items-end gap-2">
+      <Button
+        variant="outline"
+        className="h-11 gap-2 rounded-xl border-[#D5DAEA] px-4.5 text-sm font-semibold text-ink"
+        onClick={handleExport}
+        disabled={exporting}
+      >
+        {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" strokeWidth={1.8} />}
+        {exporting ? "Exporting..." : "Export CSV"}
       </Button>
-      {error && <p className="text-base text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

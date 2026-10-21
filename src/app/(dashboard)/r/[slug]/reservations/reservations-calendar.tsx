@@ -12,7 +12,7 @@ import { TimelineView } from "./timeline-view";
 import { ReservationModal, type ReservationForEdit, type ReservationPrefill, type TableOption } from "./reservation-modal";
 import { ReservationDetailsPanel } from "./reservation-details-panel";
 import { TablesManagerDialog, type TableRow, type FloorOption } from "./tables-manager-dialog";
-import { STATUS_COLORS, STATUS_LABELS } from "./reservation-badge";
+import { STATUS_COLORS, STATUS_LABELS, STATUS_URL_TOKEN } from "./reservation-badge";
 import { toLocalDateInput, formatZonedDate } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
@@ -24,10 +24,6 @@ const ALL_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "CO
 // URL token <-> enum, per RESERVATIONS-HANDOFF.md's "URL filters" section.
 // "unconfirmed" is read as an alias for PENDING but never written back --
 // "pending" is the canonical token.
-const STATUS_TOKEN: Record<ReservationStatus, string> = {
-  PENDING: "pending", CONFIRMED: "confirmed", SEATED: "seated",
-  COMPLETED: "completed", CANCELLED: "cancelled", NO_SHOW: "noshow",
-};
 const TOKEN_STATUS: Record<string, ReservationStatus> = {
   pending: "PENDING", unconfirmed: "PENDING", confirmed: "CONFIRMED", seated: "SEATED",
   completed: "COMPLETED", cancelled: "CANCELLED", noshow: "NO_SHOW",
@@ -45,7 +41,7 @@ function parseStatusParam(raw: string | null): Record<ReservationStatus, boolean
 function statusParamValue(filters: Record<ReservationStatus, boolean>): string | null {
   const on = ALL_STATUSES.filter((s) => filters[s]);
   if (on.length === ALL_STATUSES.length || on.length === 0) return null; // default: everything on
-  return on.map((s) => STATUS_TOKEN[s]).join(",");
+  return on.map((s) => STATUS_URL_TOKEN[s]).join(",");
 }
 
 function parseTableParam(raw: string | null): TableFilter {
