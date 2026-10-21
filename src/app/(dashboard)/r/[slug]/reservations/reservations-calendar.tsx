@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, Search, Table2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,40 @@ import { toLocalDateInput, formatZonedDate } from "@/lib/reservation-dates";
 import type { ReservationStatus } from "@/generated/prisma/client";
 
 export type CalendarView = "day" | "week" | "timeline";
+type TableFilter = "any" | "assigned" | "none";
 
 const ALL_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+
+// URL token <-> enum, per RESERVATIONS-HANDOFF.md's "URL filters" section.
+// "unconfirmed" is read as an alias for PENDING but never written back --
+// "pending" is the canonical token.
+const STATUS_TOKEN: Record<ReservationStatus, string> = {
+  PENDING: "pending", CONFIRMED: "confirmed", SEATED: "seated",
+  COMPLETED: "completed", CANCELLED: "cancelled", NO_SHOW: "noshow",
+};
+const TOKEN_STATUS: Record<string, ReservationStatus> = {
+  pending: "PENDING", unconfirmed: "PENDING", confirmed: "CONFIRMED", seated: "SEATED",
+  completed: "COMPLETED", cancelled: "CANCELLED", noshow: "NO_SHOW",
+};
+
+function parseStatusParam(raw: string | null): Record<ReservationStatus, boolean> {
+  const all = { PENDING: true, CONFIRMED: true, SEATED: true, COMPLETED: true, CANCELLED: true, NO_SHOW: true };
+  if (!raw) return all;
+  const on = new Set(raw.split(",").map((t) => TOKEN_STATUS[t.trim().toLowerCase()]).filter(Boolean));
+  if (on.size === 0) return all;
+  return { PENDING: on.has("PENDING"), CONFIRMED: on.has("CONFIRMED"), SEATED: on.has("SEATED"),
+    COMPLETED: on.has("COMPLETED"), CANCELLED: on.has("CANCELLED"), NO_SHOW: on.has("NO_SHOW") };
+}
+
+function statusParamValue(filters: Record<ReservationStatus, boolean>): string | null {
+  const on = ALL_STATUSES.filter((s) => filters[s]);
+  if (on.length === ALL_STATUSES.length || on.length === 0) return null; // default: everything on
+  return on.map((s) => STATUS_TOKEN[s]).join(",");
+}
+
+function parseTableParam(raw: string | null): TableFilter {
+  return raw === "assigned" || raw === "none" ? raw : "any";
+}
 
 function shiftDateStr(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -59,19 +91,41 @@ export function ReservationsCalendar({
   const [tablesOpen, setTablesOpen] = useState(false);
   const [prefill, setPrefill] = useState<ReservationPrefill | undefined>(undefined);
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<Record<ReservationStatus, boolean>>({
-    PENDING: true,
-    CONFIRMED: true,
-    SEATED: true,
-    COMPLETED: true,
-    CANCELLED: true,
-    NO_SHOW: true,
-  });
+  const [filters, setFilters] = useState<Record<ReservationStatus, boolean>>(() =>
+    parseStatusParam(searchParams.get("status"))
+  );
+  const [tableFilter, setTableFilter] = useState<TableFilter>(() => parseTableParam(searchParams.get("table")));
 
-  function updateParams(next: Record<string, string>) {
+  // Re-derive from the URL on every navigation (e.g. a Dashboard tile linking
+  // in with its own status/table filter) -- a plain useState initializer only
+  // runs once and would miss a filtered deep link landing on an already-
+  // mounted page.
+  useEffect(() => {
+    setFilters(parseStatusParam(searchParams.get("status")));
+    setTableFilter(parseTableParam(searchParams.get("table")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("status"), searchParams.get("table")]);
+
+  // Replace (not push) -- clicking through filters/dates shouldn't pile up
+  // history entries, per RESERVATIONS-HANDOFF.md.
+  function updateParams(next: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
-    for (const [key, value] of Object.entries(next)) params.set(key, value);
-    router.push(`${pathname}?${params.toString()}`);
+    for (const [key, value] of Object.entries(next)) {
+      if (value === null) params.delete(key);
+      else params.set(key, value);
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }
+
+  function toggleStatus(s: ReservationStatus) {
+    const next = { ...filters, [s]: !filters[s] };
+    setFilters(next);
+    updateParams({ status: statusParamValue(next) });
+  }
+
+  function pickTableFilter(next: TableFilter) {
+    setTableFilter(next);
+    updateParams({ table: next === "any" ? null : next });
   }
 
   const dateStr = searchParams.get("date") ?? toLocalDateInput(date, timeZone);
@@ -86,8 +140,12 @@ export function ReservationsCalendar({
   const q = query.trim().toLowerCase();
   const matchesQuery = (r: ReservationListItem) =>
     !q || r.customer.name.toLowerCase().includes(q) || (r.customer.phone ?? "").toLowerCase().includes(q);
-  const visible = reservations.filter((r) => filters[r.status] && matchesQuery(r));
+  const matchesTable = (r: ReservationListItem) =>
+    tableFilter === "any" || (tableFilter === "assigned" ? r.tableId !== null : r.tableId === null);
+  const visible = reservations.filter((r) => filters[r.status] && matchesQuery(r) && matchesTable(r));
   const active = reservations.filter((r) => r.status !== "CANCELLED");
+  const assignedCount = reservations.filter((r) => r.tableId !== null).length;
+  const unassignedCount = reservations.filter((r) => r.tableId === null).length;
 
   let dateLabel: string;
   if (view === "week") {
@@ -224,7 +282,7 @@ export function ReservationsCalendar({
               key={s}
               type="button"
               aria-pressed={on}
-              onClick={() => setFilters((f) => ({ ...f, [s]: !f[s] }))}
+              onClick={() => toggleStatus(s)}
               className="flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold"
               style={{
                 backgroundColor: on ? c.bg : "#FFFFFF",
@@ -234,6 +292,36 @@ export function ReservationsCalendar({
             >
               <span className="size-2 rounded-full" style={{ backgroundColor: on ? c.bar : "#CBD5E1" }} />
               {STATUS_LABELS[s]}
+              <span className="font-bold opacity-80">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold tracking-wider text-ink-muted uppercase">Table</span>
+        {(
+          [
+            ["any", "Any table", reservations.length],
+            ["assigned", "Table assigned", assignedCount],
+            ["none", "No table", unassignedCount],
+          ] as const
+        ).map(([value, label, count]) => {
+          const on = tableFilter === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => pickTableFilter(value)}
+              className="flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold"
+              style={{
+                backgroundColor: on ? "color-mix(in srgb, var(--primary) 10%, white)" : "#FFFFFF",
+                color: on ? "var(--primary)" : "#64748B",
+                borderColor: on ? "transparent" : "#E1E5F0",
+              }}
+            >
+              {label}
               <span className="font-bold opacity-80">{count}</span>
             </button>
           );

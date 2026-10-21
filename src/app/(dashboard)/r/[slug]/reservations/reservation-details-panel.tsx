@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -38,6 +38,42 @@ export function ReservationDetailsPanel({
 }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+
+  // Hand-rolled dialog (not the base-ui Dialog primitive, so it needs its
+  // own focus trap): focus the panel on open, Escape closes it, Tab cycles
+  // within it, and focus returns to whatever opened it on close.
+  useEffect(() => {
+    const trigger = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      trigger?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const c = STATUS_COLORS[reservation.status];
   const endsAt = new Date(reservation.startsAt.getTime() + reservation.durationMinutes * 60000);
@@ -78,10 +114,12 @@ export function ReservationDetailsPanel({
         className="fixed inset-x-0 bottom-0 top-16 z-50 border-0 bg-[#0F172A]/35 p-0"
       />
       <aside
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="rsvTitle"
-        className="fixed right-0 top-16 bottom-0 z-50 flex w-[420px] max-w-[100vw] flex-col border-l border-line-card bg-white shadow-[-24px_0_60px_-20px_rgba(15,23,42,0.25)]"
+        className="fixed right-0 top-16 bottom-0 z-50 flex w-[420px] max-w-[100vw] flex-col border-l border-line-card bg-white shadow-[-24px_0_60px_-20px_rgba(15,23,42,0.25)] outline-none"
       >
         <div className="flex items-start justify-between gap-3 border-b border-line-divider px-6 py-5.5">
           <div className="flex min-w-0 flex-col gap-2.5">
