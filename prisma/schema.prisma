@@ -86,6 +86,9 @@ model Floor {
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   name         String
   order        Int        @default(0)
+  // Room footprint in metres, for the 3D floor plan.
+  width        Float      @default(20)
+  depth        Float      @default(14)
   tables       Table[]
   createdAt    DateTime   @default(now())
 
@@ -241,6 +244,10 @@ model Table {
   chairsRight  Int?
   chairsBottom Int?
   chairsLeft   Int?
+  // Null means "use the default wood finish" -- same null-means-default
+  // convention as width/height/chairs above.
+  color        String?
+  finish       String?
   reservations Reservation[]
   createdAt    DateTime      @default(now())
 

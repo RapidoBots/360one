@@ -117,14 +117,17 @@ export function FloorSwitcher({
           ) : (
             <div
               key={floor.id}
-              className="flex items-center gap-0.5 overflow-hidden rounded-[5px] border border-border"
+              className={cn(
+                "flex items-center gap-0.5 overflow-hidden rounded-xl border bg-white",
+                floor.id === currentFloorId ? "border-primary/30 bg-primary/5" : "border-line-card"
+              )}
             >
               <button
                 type="button"
                 onClick={() => switchFloor(floor.id)}
                 className={cn(
-                  "px-3.5 py-2 text-sm font-medium transition-colors",
-                  floor.id === currentFloorId ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted"
+                  "px-3.5 py-2 text-sm font-semibold transition-colors",
+                  floor.id === currentFloorId ? "text-primary" : "text-ink-muted hover:text-ink"
                 )}
               >
                 {floor.name}

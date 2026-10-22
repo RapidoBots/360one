@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { TableBox, type TableSettings } from "./table-box";
+import { FloorViewport } from "./floor-viewport";
 import { QuickSeatDialog } from "./quick-seat-dialog";
 import { SeatedInfoDialog } from "./seated-info-dialog";
-import { updateTableLayoutAction } from "./actions";
 import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
+import { getEffectiveSize } from "@/lib/table-layout";
+import { STATUS_COLOR, type SceneTable } from "./scene-engine";
 import type { TableShape } from "@/generated/prisma/client";
 
 export type FloorTable = {
@@ -21,45 +21,37 @@ export type FloorTable = {
   rotation: number;
   width: number | null;
   height: number | null;
-  chairsTop: number | null;
-  chairsRight: number | null;
-  chairsBottom: number | null;
-  chairsLeft: number | null;
+  color: string | null;
+  finish: string | null;
 };
 
-const CANVAS_WIDTH = 1600;
-const CANVAS_HEIGHT = 700;
-const TABLE_BOX_SIZE = 96; // matches table-layout.ts's largest capacity-based default size
-const DEFAULT_DROP_POSITION = { x: 20, y: 20 };
-const ZOOM_MIN = 0.4;
-const ZOOM_MAX = 1.5;
-const ZOOM_STEP = 0.2;
-const SNAP_GRID_SIZE = 10;
+// The existing 2D canvas was 1600x700px -- reused here just as the basis for
+// converting each table's existing posX/posY into the 3D room's metres, so
+// today's layout carries over without re-placing every table. Phase 2's real
+// 3D editing will persist metre coordinates directly and retire this.
+const LEGACY_CANVAS_W = 1600;
+const LEGACY_CANVAS_H = 700;
+const PX_PER_METRE = 80;
 
-const STATUS_LEGEND: { label: string; dot: string }[] = [
-  { label: "Available", dot: "bg-emerald-500" },
-  { label: "Reserved soon", dot: "bg-amber-400" },
-  { label: "Seated", dot: "bg-red-500" },
-];
-
-function tableSettings(t: FloorTable): TableSettings {
-  return {
-    shape: t.shape,
-    rotation: t.rotation,
-    width: t.width,
-    height: t.height,
-    chairsTop: t.chairsTop,
-    chairsRight: t.chairsRight,
-    chairsBottom: t.chairsBottom,
-    chairsLeft: t.chairsLeft,
-  };
+const STATUS_MAP = { AVAILABLE: "available", RESERVED_SOON: "soon", SEATED: "seated" } as const;
+const FINISHES = new Set(["wood", "matte", "satin", "gloss", "metal"]);
+function asFinish(f: string | null): SceneTable["finish"] {
+  return f && FINISHES.has(f) ? (f as SceneTable["finish"]) : "wood";
 }
+
+const LEGEND: { label: string; status: SceneTable["status"] }[] = [
+  { label: "Available", status: "available" },
+  { label: "Reserved soon", status: "soon" },
+  { label: "Seated", status: "seated" },
+];
 
 export function FloorPlan({
   slug,
   tables,
   floors,
   currentFloorId,
+  floorWidth,
+  floorDepth,
   reservations,
   timeZone,
   canEdit = true,
@@ -68,26 +60,14 @@ export function FloorPlan({
   tables: FloorTable[];
   floors: FloorOption[];
   currentFloorId: string;
+  floorWidth: number;
+  floorDepth: number;
   reservations: TableStatusReservation[];
   timeZone: string;
   canEdit?: boolean;
 }) {
   const router = useRouter();
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{ tableId: string; offsetX: number; offsetY: number } | null>(null);
-
-  const [editMode, setEditMode] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [snapToGrid, setSnapToGrid] = useState(true);
   const [now, setNow] = useState(() => new Date());
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(() =>
-    Object.fromEntries(
-      tables.filter((t) => t.posX != null && t.posY != null).map((t) => [t.id, { x: t.posX!, y: t.posY! }])
-    )
-  );
-  const [settings, setSettings] = useState<Record<string, TableSettings>>(() =>
-    Object.fromEntries(tables.map((t) => [t.id, tableSettings(t)]))
-  );
   const [quickSeat, setQuickSeat] = useState<{ id: string; number: string } | null>(null);
   const [seatedInfo, setSeatedInfo] = useState<{ number: string; reservation: TableStatusReservation } | null>(null);
 
@@ -96,211 +76,78 @@ export function FloorPlan({
     return () => clearInterval(interval);
   }, []);
 
-  const placed = tables.filter((t) => positions[t.id]);
-  const unplaced = tables.filter((t) => !positions[t.id]);
+  const placed = useMemo(() => tables.filter((t) => t.posX != null && t.posY != null), [tables]);
+  const unplaced = useMemo(() => tables.filter((t) => t.posX == null || t.posY == null), [tables]);
 
-  function snap(value: number) {
-    return snapToGrid ? Math.round(value / SNAP_GRID_SIZE) * SNAP_GRID_SIZE : value;
-  }
+  const byId = useMemo(() => new Map(tables.map((t) => [t.id, t])), [tables]);
 
-  function handlePointerDown(tableId: string, e: React.PointerEvent<HTMLDivElement>) {
-    if (!editMode || !canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const pos = positions[tableId] ?? DEFAULT_DROP_POSITION;
-    dragState.current = {
-      tableId,
-      offsetX: (e.clientX - canvasRect.left) / zoom - pos.x,
-      offsetY: (e.clientY - canvasRect.top) / zoom - pos.y,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
+  const sceneTables: SceneTable[] = useMemo(
+    () =>
+      placed.map((t) => {
+        const { status } = getTableStatus(t.id, reservations, now);
+        const dayCount = reservations.filter((r) => r.tableId === t.id).length;
+        const size = getEffectiveSize(t.capacity, t.width, t.height);
+        return {
+          id: t.id,
+          name: `Table ${t.number}`,
+          x: (t.posX! / LEGACY_CANVAS_W) * floorWidth - floorWidth / 2,
+          z: (t.posY! / LEGACY_CANVAS_H) * floorDepth - floorDepth / 2,
+          rotation: t.rotation,
+          round: t.shape === "ROUND",
+          width: size.width / PX_PER_METRE,
+          depth: size.height / PX_PER_METRE,
+          color: t.color ?? "#C99A62",
+          finish: asFinish(t.finish),
+          seats: t.capacity,
+          status: STATUS_MAP[status],
+          reservationCount: dayCount,
+        };
+      }),
+    [placed, reservations, now, floorWidth, floorDepth]
+  );
 
-  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    const drag = dragState.current;
-    if (!drag || !canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = snap(
-      Math.max(0, Math.min(CANVAS_WIDTH - TABLE_BOX_SIZE, (e.clientX - canvasRect.left) / zoom - drag.offsetX))
-    );
-    const y = snap(
-      Math.max(0, Math.min(CANVAS_HEIGHT - TABLE_BOX_SIZE, (e.clientY - canvasRect.top) / zoom - drag.offsetY))
-    );
-    setPositions((prev) => ({ ...prev, [drag.tableId]: { x, y } }));
-  }
-
-  async function handlePointerUp() {
-    const drag = dragState.current;
-    dragState.current = null;
-    if (!drag) return;
-    const pos = positions[drag.tableId];
-    const config = settings[drag.tableId];
-    if (!pos || !config) return;
-    await updateTableLayoutAction(slug, drag.tableId, { posX: pos.x, posY: pos.y, ...config });
-    router.refresh();
-  }
-
-  async function handlePlaceFromTray(tableId: string) {
-    setPositions((prev) => ({ ...prev, [tableId]: DEFAULT_DROP_POSITION }));
-    const config = settings[tableId];
-    if (!config) return;
-    await updateTableLayoutAction(slug, tableId, {
-      posX: DEFAULT_DROP_POSITION.x,
-      posY: DEFAULT_DROP_POSITION.y,
-      ...config,
-    });
-    router.refresh();
-  }
-
-  async function handleSettingsChange(tableId: string, next: TableSettings) {
-    setSettings((prev) => ({ ...prev, [tableId]: next }));
-    const pos = positions[tableId];
-    if (!pos) return;
-    await updateTableLayoutAction(slug, tableId, { posX: pos.x, posY: pos.y, ...next });
-    router.refresh();
+  function handleTableClick(id: string) {
+    const t = byId.get(id);
+    if (!t) return;
+    const { status, reservation } = getTableStatus(id, reservations, now);
+    if (status === "AVAILABLE" && canEdit) setQuickSeat({ id: t.id, number: t.number });
+    if (status === "SEATED" && reservation) setSeatedInfo({ number: t.number, reservation });
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Floor Manager</h1>
+        <div>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-ink">Floor Manager</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">{floorWidth} × {floorDepth} m room</p>
+        </div>
         <FloorSwitcher slug={slug} floors={floors} currentFloorId={currentFloorId} canEdit={canEdit} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            {STATUS_LEGEND.map((s) => (
-              <span key={s.label} className="flex items-center gap-1.5">
-                <span className={`size-2.5 rounded-full ${s.dot}`} />
-                {s.label}
-              </span>
-            ))}
-          </div>
-          {editMode && (
-            <Button
-              type="button"
-              variant={snapToGrid ? "default" : "outline"}
-              className="h-9 px-3 text-sm"
-              onClick={() => setSnapToGrid((v) => !v)}
-            >
-              Snap to grid
-            </Button>
-          )}
-          <div className="flex items-center gap-1 rounded-[5px] border border-border">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-r-none"
-              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 10) / 10))}
-              disabled={zoom <= ZOOM_MIN}
-              aria-label="Zoom out"
-            >
-              −
-            </Button>
-            <span className="w-11 text-center text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-l-none"
-              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 10) / 10))}
-              disabled={zoom >= ZOOM_MAX}
-              aria-label="Zoom in"
-            >
-              +
-            </Button>
-          </div>
-          {canEdit && (
-            <Button
-              variant={editMode ? "default" : "outline"}
-              className="h-11 px-5 text-base"
-              onClick={() => setEditMode((v) => !v)}
-            >
-              {editMode ? "Done" : "Edit Layout"}
-            </Button>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink-muted">
+        {LEGEND.map((l) => (
+          <span key={l.status} className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full" style={{ backgroundColor: STATUS_COLOR[l.status] }} />
+            {l.label}
+          </span>
+        ))}
       </div>
 
-      {canEdit && unplaced.length > 0 && !editMode && (
-        <div className="flex items-center justify-between rounded-[5px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-base">
-          <span>{unplaced.length} table{unplaced.length === 1 ? "" : "s"} aren&apos;t on the floor plan yet.</span>
-          <Button variant="outline" className="h-9" onClick={() => setEditMode(true)}>
-            Arrange them
-          </Button>
-        </div>
-      )}
-
-      <div
-        ref={canvasRef}
-        className="relative h-[60vh] max-h-[700px] overflow-auto rounded-[5px] border border-border bg-muted/20 sm:h-[700px]"
-        style={{ width: "100%", maxWidth: CANVAS_WIDTH }}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        {/* Sized to the zoomed pixel dimensions so scroll bounds shrink/grow
-            with the zoom level; the inner div stays at the true canvas size
-            and is visually scaled, so child posX/posY stay in one coordinate
-            space regardless of zoom. */}
-        <div style={{ width: CANVAS_WIDTH * zoom, height: CANVAS_HEIGHT * zoom }}>
-          <div
-            className="relative"
-            style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom})`, transformOrigin: "0 0" }}
-          >
-            {placed.map((table) => {
-              const pos = positions[table.id]!;
-              const config = settings[table.id]!;
-              const { status, reservation } = getTableStatus(table.id, reservations, now);
-              const dayReservations = reservations
-                .filter((r) => r.tableId === table.id)
-                .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-              return (
-                <TableBox
-                  key={table.id}
-                  number={table.number}
-                  capacity={table.capacity}
-                  shape={config.shape}
-                  rotation={config.rotation}
-                  width={config.width}
-                  height={config.height}
-                  chairsTop={config.chairsTop}
-                  chairsRight={config.chairsRight}
-                  chairsBottom={config.chairsBottom}
-                  chairsLeft={config.chairsLeft}
-                  posX={pos.x}
-                  posY={pos.y}
-                  status={status}
-                  reservation={reservation}
-                  dayReservations={dayReservations}
-                  editMode={editMode}
-                  onPointerDownDrag={(e) => handlePointerDown(table.id, e)}
-                  onSettingsChange={(next) => handleSettingsChange(table.id, next)}
-                  onClick={() => {
-                    if (status === "AVAILABLE" && canEdit) setQuickSeat({ id: table.id, number: table.number });
-                    if (status === "SEATED" && reservation) setSeatedInfo({ number: table.number, reservation });
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex min-h-[560px] flex-1">
+        <FloorViewport floorWidth={floorWidth} floorDepth={floorDepth} tables={sceneTables} onTableClick={handleTableClick} />
       </div>
 
-      {editMode && unplaced.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-base font-semibold">Unplaced tables</h2>
-          <p className="text-sm text-muted-foreground">
-            Click a table to drop it onto the canvas, then drag it into place.
+      {unplaced.length > 0 && (
+        <div className="rounded-[20px] border border-line-card bg-white p-5 shadow-card">
+          <h2 className="text-sm font-bold text-ink">Unplaced tables</h2>
+          <p className="mt-0.5 text-[13px] text-ink-muted">
+            These tables aren&apos;t on the floor plan yet. Placing them is coming in the next update.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {unplaced.map((table) => (
-              <button
-                key={table.id}
-                type="button"
-                className="rounded-[5px] border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
-                onClick={() => handlePlaceFromTray(table.id)}
-              >
+              <span key={table.id} className="rounded-full bg-neutral-soft px-3 py-1.5 text-[13px] font-semibold text-[#334155]">
                 Table {table.number} ({table.capacity} seats)
-              </button>
+              </span>
             ))}
           </div>
         </div>

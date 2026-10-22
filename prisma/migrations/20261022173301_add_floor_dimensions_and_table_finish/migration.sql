@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "floor" ADD COLUMN     "depth" DOUBLE PRECISION NOT NULL DEFAULT 14,
+ADD COLUMN     "width" DOUBLE PRECISION NOT NULL DEFAULT 20;
+
+-- AlterTable
+ALTER TABLE "table" ADD COLUMN     "color" TEXT,
+ADD COLUMN     "finish" TEXT;

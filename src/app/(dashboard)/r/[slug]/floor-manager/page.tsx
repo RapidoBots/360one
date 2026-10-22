@@ -63,6 +63,8 @@ export default async function FloorManagerPage({
       tables={tables}
       floors={floors}
       currentFloorId={currentFloor.id}
+      floorWidth={currentFloor.width}
+      floorDepth={currentFloor.depth}
       reservations={floorReservations}
       timeZone={restaurant.timezone}
       canEdit={access === "EDIT"}
