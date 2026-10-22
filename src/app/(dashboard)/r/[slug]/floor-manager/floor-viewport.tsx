@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createFloorScene, type SceneTable, type SceneView, type SceneLight } from "./scene-engine";
+import { createFloorScene, type SceneTable, type SceneFurnitureItem, type SceneView, type SceneLight } from "./scene-engine";
 
 export function FloorViewport({
   floorWidth,
   floorDepth,
   tables,
+  items,
   editMode,
-  onTableSelect,
-  onTableMove,
+  onSelect,
+  onMove,
 }: {
   floorWidth: number;
   floorDepth: number;
   tables: SceneTable[];
+  items: SceneFurnitureItem[];
   editMode: boolean;
-  onTableSelect: (id: string | null) => void;
-  onTableMove: (id: string, x: number, z: number) => void;
+  onSelect: (id: string | null, kind: "table" | "item" | null) => void;
+  onMove: (id: string, kind: "table" | "item", x: number, z: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,12 +46,16 @@ export function FloorViewport({
   }, [tables]);
 
   useEffect(() => {
-    engineRef.current?.onPick(onTableSelect);
-  }, [onTableSelect]);
+    engineRef.current?.setFurniture(items);
+  }, [items]);
 
   useEffect(() => {
-    engineRef.current?.onMove(onTableMove);
-  }, [onTableMove]);
+    engineRef.current?.onPick((pick) => onSelect(pick?.id ?? null, pick?.kind ?? null));
+  }, [onSelect]);
+
+  useEffect(() => {
+    engineRef.current?.onMove(onMove);
+  }, [onMove]);
 
   useEffect(() => {
     engineRef.current?.setEditable(editMode);

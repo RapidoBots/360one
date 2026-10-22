@@ -100,6 +100,50 @@ export async function updateTableLayoutAction(
   return { ok: true };
 }
 
+export type FloorItemInput = {
+  floorId: string;
+  type: string;
+  name: string;
+  x: number;
+  z: number;
+  rotation: number;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+  finish: string;
+};
+
+export async function createFloorItemAction(slug: string, input: FloorItemInput): Promise<FloorActionResult> {
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
+  await prisma.floorItem.create({ data: { ...input, restaurantId: restaurant.id } });
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
+export async function updateFloorItemAction(
+  slug: string,
+  itemId: string,
+  input: Partial<Omit<FloorItemInput, "floorId">> & { locked?: boolean }
+): Promise<FloorActionResult> {
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
+  const { count } = await prisma.floorItem.updateMany({
+    where: { id: itemId, restaurantId: restaurant.id },
+    data: input,
+  });
+  if (count === 0) return { ok: false, error: "Item not found." };
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
+export async function deleteFloorItemAction(slug: string, itemId: string): Promise<FloorActionResult> {
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
+  const { count } = await prisma.floorItem.deleteMany({ where: { id: itemId, restaurantId: restaurant.id } });
+  if (count === 0) return { ok: false, error: "Item not found." };
+  revalidatePath(`/r/${slug}/floor-manager`);
+  return { ok: true };
+}
+
 export async function quickSeatWalkInAction(
   slug: string,
   tableId: string,

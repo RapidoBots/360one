@@ -6,13 +6,16 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloorViewport } from "./floor-viewport";
 import { TableInspector } from "./table-inspector";
+import { FloorItemInspector } from "./floor-item-inspector";
+import { FurnitureLibrary } from "./furniture-library";
 import { QuickSeatDialog } from "./quick-seat-dialog";
 import { SeatedInfoDialog } from "./seated-info-dialog";
 import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
 import { getEffectiveSize } from "@/lib/table-layout";
-import { updateTableLayoutAction } from "./actions";
-import { STATUS_COLOR, type SceneTable } from "./scene-engine";
+import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction } from "./actions";
+import { FURNITURE_BY_ID, type FurnitureCatalogItem } from "./furniture-catalog";
+import { STATUS_COLOR, type SceneTable, type SceneFurnitureItem } from "./scene-engine";
 import type { TableShape } from "@/generated/prisma/client";
 
 export type FloorTable = {
@@ -33,6 +36,21 @@ export type FloorTable = {
   finish: string | null;
 };
 
+export type PlacedFloorItem = {
+  id: string;
+  type: string;
+  name: string;
+  x: number;
+  z: number;
+  rotation: number;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+  finish: string;
+  locked: boolean;
+};
+
 const STATUS_MAP = { AVAILABLE: "available", RESERVED_SOON: "soon", SEATED: "seated" } as const;
 const FINISHES = new Set(["wood", "matte", "satin", "gloss", "metal"]);
 function asFinish(f: string | null): SceneTable["finish"] {
@@ -48,6 +66,7 @@ const LEGEND: { label: string; status: SceneTable["status"] }[] = [
 export function FloorPlan({
   slug,
   tables,
+  items,
   floors,
   currentFloorId,
   floorWidth,
@@ -58,6 +77,7 @@ export function FloorPlan({
 }: {
   slug: string;
   tables: FloorTable[];
+  items: PlacedFloorItem[];
   floors: FloorOption[];
   currentFloorId: string;
   floorWidth: number;
@@ -70,6 +90,7 @@ export function FloorPlan({
   const [now, setNow] = useState(() => new Date());
   const [editMode, setEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"table" | "item" | null>(null);
   const [quickSeat, setQuickSeat] = useState<{ id: string; number: string } | null>(null);
   const [seatedInfo, setSeatedInfo] = useState<{ number: string; reservation: TableStatusReservation } | null>(null);
 
@@ -81,6 +102,7 @@ export function FloorPlan({
   const placed = useMemo(() => tables.filter((t) => t.posX != null && t.posY != null), [tables]);
   const unplaced = useMemo(() => tables.filter((t) => t.posX == null || t.posY == null), [tables]);
   const byId = useMemo(() => new Map(tables.map((t) => [t.id, t])), [tables]);
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
   const sceneTables: SceneTable[] = useMemo(
     () =>
@@ -108,12 +130,32 @@ export function FloorPlan({
   );
   const sceneById = useMemo(() => new Map(sceneTables.map((t) => [t.id, t])), [sceneTables]);
 
-  function handleTableSelect(id: string | null) {
+  const sceneItems: SceneFurnitureItem[] = useMemo(
+    () =>
+      items.map((it) => ({
+        id: it.id,
+        kind: FURNITURE_BY_ID.get(it.type)?.kind ?? it.type,
+        name: it.name,
+        x: it.x,
+        z: it.z,
+        rotation: it.rotation,
+        width: it.width,
+        depth: it.depth,
+        height: it.height,
+        color: it.color,
+        finish: asFinish(it.finish),
+        locked: it.locked,
+      })),
+    [items]
+  );
+
+  function handleSelect(id: string | null, kind: "table" | "item" | null) {
     if (editMode) {
       setSelectedId(id);
+      setSelectedKind(kind);
       return;
     }
-    if (!id) return;
+    if (!id || kind !== "table") return;
     const t = byId.get(id);
     if (!t) return;
     const { status, reservation } = getTableStatus(id, reservations, now);
@@ -121,23 +163,27 @@ export function FloorPlan({
     if (status === "SEATED" && reservation) setSeatedInfo({ number: t.number, reservation });
   }
 
-  async function handleTableMove(id: string, x: number, z: number) {
-    const t = byId.get(id);
-    if (!t) return;
-    await updateTableLayoutAction(slug, id, {
-      posX: x,
-      posY: z,
-      shape: t.shape,
-      rotation: t.rotation,
-      width: t.width,
-      height: t.height,
-      chairsTop: t.chairsTop,
-      chairsRight: t.chairsRight,
-      chairsBottom: t.chairsBottom,
-      chairsLeft: t.chairsLeft,
-      color: t.color,
-      finish: t.finish,
-    });
+  async function handleMove(id: string, kind: "table" | "item", x: number, z: number) {
+    if (kind === "table") {
+      const t = byId.get(id);
+      if (!t) return;
+      await updateTableLayoutAction(slug, id, {
+        posX: x,
+        posY: z,
+        shape: t.shape,
+        rotation: t.rotation,
+        width: t.width,
+        height: t.height,
+        chairsTop: t.chairsTop,
+        chairsRight: t.chairsRight,
+        chairsBottom: t.chairsBottom,
+        chairsLeft: t.chairsLeft,
+        color: t.color,
+        finish: t.finish,
+      });
+    } else {
+      await updateFloorItemAction(slug, id, { x, z });
+    }
     router.refresh();
   }
 
@@ -161,11 +207,35 @@ export function FloorPlan({
       finish: table.finish,
     });
     setSelectedId(table.id);
+    setSelectedKind("table");
     router.refresh();
   }
 
-  const selectedTable = selectedId ? byId.get(selectedId) : null;
-  const selectedScene = selectedId ? sceneById.get(selectedId) : null;
+  async function handlePlaceFurniture(catalog: FurnitureCatalogItem) {
+    const result = await createFloorItemAction(slug, {
+      floorId: currentFloorId,
+      type: catalog.id,
+      name: catalog.name,
+      x: 0,
+      z: 0,
+      rotation: 0,
+      width: catalog.width,
+      depth: catalog.depth,
+      height: catalog.height,
+      color: catalog.color,
+      finish: "wood",
+    });
+    if (result.ok) router.refresh();
+  }
+
+  const selectedTable = selectedKind === "table" && selectedId ? byId.get(selectedId) : null;
+  const selectedScene = selectedKind === "table" && selectedId ? sceneById.get(selectedId) : null;
+  const selectedItem = selectedKind === "item" && selectedId ? itemById.get(selectedId) : null;
+
+  function closeInspector() {
+    setSelectedId(null);
+    setSelectedKind(null);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -183,7 +253,7 @@ export function FloorPlan({
               className="h-10 gap-2 rounded-xl text-sm font-semibold"
               onClick={() => {
                 setEditMode((v) => !v);
-                setSelectedId(null);
+                closeInspector();
               }}
             >
               <Pencil className="size-3.5" />
@@ -207,9 +277,10 @@ export function FloorPlan({
           floorWidth={floorWidth}
           floorDepth={floorDepth}
           tables={sceneTables}
+          items={sceneItems}
           editMode={editMode}
-          onTableSelect={handleTableSelect}
-          onTableMove={handleTableMove}
+          onSelect={handleSelect}
+          onMove={handleMove}
         />
         {editMode && selectedTable && selectedScene && (
           <TableInspector
@@ -217,9 +288,19 @@ export function FloorPlan({
             table={selectedTable}
             status={selectedScene.status}
             onSaved={() => router.refresh()}
-            onClose={() => setSelectedId(null)}
+            onClose={closeInspector}
           />
         )}
+        {editMode && selectedItem && (
+          <FloorItemInspector
+            slug={slug}
+            item={selectedItem}
+            onSaved={() => router.refresh()}
+            onDeleted={() => { closeInspector(); router.refresh(); }}
+            onClose={closeInspector}
+          />
+        )}
+        {editMode && !selectedTable && !selectedItem && <FurnitureLibrary onPlace={handlePlaceFurniture} />}
       </div>
 
       {unplaced.length > 0 && (

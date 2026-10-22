@@ -17,9 +17,10 @@ export default async function FloorManagerPage({
   const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { slug } });
   const { start, end } = getDayRange(new Date(), restaurant.timezone);
 
-  const [rawTables, floors, reservations] = await Promise.all([
+  const [rawTables, floors, rawItems, reservations] = await Promise.all([
     prisma.table.findMany({ where: { restaurantId: restaurant.id } }),
     prisma.floor.findMany({ where: { restaurantId: restaurant.id }, orderBy: { order: "asc" } }),
+    prisma.floorItem.findMany({ where: { restaurantId: restaurant.id } }),
     prisma.reservation.findMany({
       where: {
         restaurantId: restaurant.id,
@@ -41,6 +42,7 @@ export default async function FloorManagerPage({
   }
 
   const tables = sortTablesByNumber(rawTables.filter((t) => t.floorId === currentFloor.id));
+  const items = rawItems.filter((i) => i.floorId === currentFloor.id);
 
   // Not floor-filtered: getTableStatus scopes per-table internally (it
   // filters by tableId), so reservations for tables on other floors are
@@ -61,6 +63,7 @@ export default async function FloorManagerPage({
       key={currentFloor.id}
       slug={slug}
       tables={tables}
+      items={items}
       floors={floors}
       currentFloorId={currentFloor.id}
       floorWidth={currentFloor.width}

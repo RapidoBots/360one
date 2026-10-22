@@ -87,6 +87,36 @@ function darker(hex: string, f: number): string {
   return `#${c.getHexString()}`;
 }
 
+export type SceneFurnitureItem = {
+  id: string;
+  kind: string; // furniture-catalog builder key
+  name: string;
+  x: number;
+  z: number;
+  rotation: number;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+  finish: SceneTable["finish"];
+  locked: boolean;
+};
+
+function stool(color: string, g: THREE.Object3D, x: number, z: number, h: number) {
+  const c = new THREE.Group();
+  const m = mat(color, 0.6, 0);
+  const d = mat("#B8BCC4", 0.25, 0.9);
+  cyl(0.19, 0.19, 0.06, m, 0, h, 0, c, 24);
+  cyl(0.025, 0.025, h - 0.04, d, 0, h / 2, 0, c, 10);
+  cyl(0.17, 0.17, 0.02, d, 0, 0.01, 0, c, 24);
+  const r = new THREE.Mesh(G("tor", () => new THREE.TorusGeometry(0.15, 0.012, 6, 24)), d);
+  r.rotation.x = Math.PI / 2;
+  r.position.y = h * 0.38;
+  c.add(r);
+  c.position.set(x, 0, z);
+  g.add(c);
+}
+
 function chair(color: string, g: THREE.Object3D, x: number, z: number, rot: number) {
   const c = new THREE.Group();
   const m = mat(color, 0.7, 0);
@@ -188,6 +218,215 @@ function buildTableTop(t: SceneTable, g: THREE.Object3D) {
   }
   buildSeats(t, g);
 }
+
+// ---------- furniture catalog builders (ported from the mockup's `B` map) ----------
+// Where the mockup hardcoded a material's roughness/metalness, this keeps
+// that (it's load-bearing for e.g. a chrome rail vs a fabric cushion on the
+// same piece) -- except each item's *primary* material now reads from its
+// own `finish`, so the Finish selector in the inspector actually does
+// something for furniture too, not just table tops.
+function primaryMat(item: SceneFurnitureItem) {
+  const f = FINISH[item.finish];
+  return mat(item.color, f.roughness, f.metalness);
+}
+
+const glowMat = new THREE.MeshStandardMaterial({ color: "#FFF3D6", emissive: "#FFB454", emissiveIntensity: 0.15, roughness: 0.4 });
+
+const FURNITURE_BUILDERS: Record<string, (o: SceneFurnitureItem, g: THREE.Object3D) => void> = {
+  "table-bar"(o, g) {
+    const tm = primaryMat(o), leg = mat("#B8BCC4", 0.25, 0.9);
+    const top = cyl(0.5, 0.5, 0.045, tm, 0, o.height - 0.022, 0, g);
+    top.scale.set(o.width, 1, o.depth);
+    cyl(0.035, 0.035, o.height - 0.05, leg, 0, (o.height - 0.05) / 2, 0, g, 16);
+    const base = cyl(0.5, 0.5, 0.03, leg, 0, 0.015, 0, g);
+    base.scale.set(o.width * 0.5, 1, o.depth * 0.5);
+    for (let i = 0; i < 2; i++) {
+      const a = (i * 2 * Math.PI) / 2;
+      stool("#1F2937", g, Math.sin(a) * (o.width / 2 + 0.3), Math.cos(a) * (o.depth / 2 + 0.3), 0.75);
+    }
+  },
+  counter(o, g) {
+    const tm = primaryMat(o), body = mat(darker(o.color, 0.55), 0.8, 0), rail = mat("#B8BCC4", 0.25, 0.9);
+    box(o.width, o.height - 0.06, o.depth - 0.12, body, 0, (o.height - 0.06) / 2, -0.02, g);
+    box(o.width + 0.06, 0.06, o.depth + 0.1, tm, 0, o.height - 0.03, 0.02, g);
+    const r = cyl(0.02, 0.02, o.width - 0.1, rail, 0, 0.18, o.depth / 2 + 0.02, g, 10);
+    r.rotation.z = Math.PI / 2;
+    const n = Math.max(1, Math.round((5 * o.width) / 3.2));
+    for (let j = 0; j < n; j++) stool("#1F2937", g, -o.width / 2 + (j + 0.5) * (o.width / n), o.depth / 2 + 0.38, 0.75);
+  },
+  backbar(o, g) {
+    const m = primaryMat(o);
+    const cols = ["#7DB6A0", "#8B5E3C", "#B91C1C", "#E9E1D3", "#1F2937"];
+    box(o.width, o.height, 0.06, m, 0, o.height / 2, -o.depth / 2 + 0.03, g);
+    box(0.05, o.height, o.depth, m, -o.width / 2 + 0.025, o.height / 2, 0, g);
+    box(0.05, o.height, o.depth, m, o.width / 2 - 0.025, o.height / 2, 0, g);
+    for (let s = 0; s < 4; s++) {
+      const y = 0.45 + s * 0.45;
+      box(o.width - 0.1, 0.04, o.depth, m, 0, y, 0, g);
+      for (let k = 0; k < Math.floor(o.width / 0.2); k++) {
+        const b = cyl(0.032, 0.032, 0.26, mat(cols[(k + s) % 5]!, 0.2, 0.1), -o.width / 2 + 0.15 + k * 0.2, y + 0.15, 0, g, 10);
+        b.scale.y = 0.85 + ((k * 7 + s * 3) % 5) * 0.08;
+      }
+    }
+    box(o.width, 0.8, o.depth, m, 0, 0.4, 0, g);
+  },
+  chair(o, g) {
+    chair(o.color, g, 0, 0, 0);
+  },
+  stool(o, g) {
+    stool(o.color, g, 0, 0, o.height);
+  },
+  armchair(o, g) {
+    const m = primaryMat(o), f = mat("#2B2B2B", 0.4, 0.6);
+    box(o.width, 0.3, o.depth, m, 0, 0.3, 0, g);
+    box(o.width, 0.45, 0.18, m, 0, 0.62, -o.depth / 2 + 0.09, g);
+    box(0.16, 0.3, o.depth, m, -o.width / 2 + 0.08, 0.5, 0, g);
+    box(0.16, 0.3, o.depth, m, o.width / 2 - 0.08, 0.5, 0, g);
+    box(o.width - 0.3, 0.12, o.depth - 0.25, mat(darker(o.color, 1.12), 0.95, 0), 0, 0.5, 0.05, g);
+    ([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).forEach(([sx, sz]) =>
+      cyl(0.03, 0.02, 0.15, f, sx * (o.width / 2 - 0.1), 0.075, sz * (o.depth / 2 - 0.1), g, 8)
+    );
+  },
+  sofa(o, g) {
+    const m = primaryMat(o), c = mat(darker(o.color, 1.15), 0.95, 0), f = mat("#2B2B2B", 0.4, 0.6);
+    const n = Math.max(2, Math.round(o.width / 0.7));
+    box(o.width, 0.3, o.depth, m, 0, 0.28, 0, g);
+    box(o.width, 0.5, 0.2, m, 0, 0.65, -o.depth / 2 + 0.1, g);
+    box(0.2, 0.35, o.depth, m, -o.width / 2 + 0.1, 0.5, 0, g);
+    box(0.2, 0.35, o.depth, m, o.width / 2 - 0.1, 0.5, 0, g);
+    const cw = (o.width - 0.4) / n;
+    for (let i = 0; i < n; i++) {
+      box(cw - 0.03, 0.14, o.depth - 0.28, c, -o.width / 2 + 0.2 + cw * (i + 0.5), 0.5, 0.08, g);
+      const back = box(cw - 0.06, 0.34, 0.12, c, -o.width / 2 + 0.2 + cw * (i + 0.5), 0.72, -o.depth / 2 + 0.3, g);
+      back.rotation.x = -0.12;
+    }
+    ([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).forEach(([sx, sz]) =>
+      cyl(0.03, 0.02, 0.13, f, sx * (o.width / 2 - 0.1), 0.065, sz * (o.depth / 2 - 0.1), g, 8)
+    );
+  },
+  booth(o, g) {
+    const m = primaryMat(o), c = mat(darker(o.color, 1.12), 0.6, 0.05), b = mat("#2B2B2B", 0.6, 0);
+    box(o.width, 0.12, o.depth, b, 0, 0.06, 0, g);
+    box(o.width, 0.28, o.depth - 0.04, m, 0, 0.26, 0, g);
+    box(o.width - 0.1, 0.1, o.depth - 0.18, c, 0, 0.45, 0.06, g);
+    box(o.width, o.height - 0.4, 0.14, m, 0, 0.4 + (o.height - 0.4) / 2, -o.depth / 2 + 0.07, g);
+    const slats = Math.round(o.width / 0.45);
+    for (let i = 1; i < slats; i++) {
+      box(0.012, o.height - 0.55, 0.02, b, -o.width / 2 + i * (o.width / slats), 0.55 + (o.height - 0.55) / 2, -o.depth / 2 + 0.15, g);
+    }
+  },
+  corner(o, g) {
+    const m = primaryMat(o), c = mat(darker(o.color, 1.12), 0.6, 0.05), t = 0.62;
+    box(o.width, 0.3, t, m, 0, 0.27, -o.depth / 2 + t / 2, g);
+    box(o.width - 0.08, 0.1, t - 0.12, c, 0, 0.47, -o.depth / 2 + t / 2, g);
+    box(t, 0.3, o.depth - t, m, -o.width / 2 + t / 2, 0.27, t / 2, g);
+    box(t - 0.08, 0.1, o.depth - t - 0.12, c, -o.width / 2 + t / 2, 0.47, t / 2, g);
+    box(o.width, o.height - 0.4, 0.14, m, 0, 0.4 + (o.height - 0.4) / 2, -o.depth / 2 + 0.07, g);
+    box(0.14, o.height - 0.4, o.depth, m, -o.width / 2 + 0.07, 0.4 + (o.height - 0.4) / 2, 0, g);
+  },
+  bench(o, g) {
+    const m = primaryMat(o), f = mat("#2B2B2B", 0.4, 0.6);
+    box(o.width, 0.06, o.depth, m, 0, o.height - 0.03, 0, g);
+    [-1, 1].forEach((s) => box(0.05, o.height - 0.06, o.depth - 0.05, f, s * (o.width / 2 - 0.1), (o.height - 0.06) / 2, 0, g));
+  },
+  wall(o, g) {
+    const m = primaryMat(o);
+    box(o.width, o.height, o.depth, m, 0, o.height / 2, 0, g);
+    box(o.width + 0.002, 0.1, o.depth + 0.02, mat(darker(o.color, 0.88), 0.8, 0), 0, 0.05, 0, g);
+  },
+  glass(o, g) {
+    const gl = mat("#BFD8E6", 0.05, 0.1);
+    const f = mat(o.color, 0.4, 0.6);
+    const p = new THREE.Mesh(G(`glp${o.width},${o.height - 0.1},${o.depth}`, () => new THREE.BoxGeometry(o.width, o.height - 0.1, o.depth)), gl);
+    p.position.y = 0.1 + (o.height - 0.1) / 2;
+    p.renderOrder = 2;
+    g.add(p);
+    box(o.width + 0.04, 0.05, 0.1, f, 0, 0.025, 0, g);
+    box(o.width + 0.04, 0.04, 0.06, f, 0, o.height - 0.02, 0, g);
+  },
+  slat(o, g) {
+    const m = primaryMat(o);
+    const dm = mat(darker(o.color, 0.7), 0.7, 0);
+    const n = Math.max(3, Math.round(o.width / 0.1));
+    box(o.width, 0.08, 0.14, dm, 0, 0.04, 0, g);
+    box(o.width, 0.05, 0.14, dm, 0, o.height - 0.03, 0, g);
+    for (let i = 0; i < n; i++) box(0.05, o.height - 0.1, 0.09, m, -o.width / 2 + 0.04 + i * ((o.width - 0.08) / (n - 1)), o.height / 2, 0, g);
+  },
+  door(o, g) {
+    const fm = mat(darker(o.color, 0.7), 0.5, 0.1), lm = primaryMat(o), gl = mat("#BFD8E6", 0.05, 0.1);
+    const n = o.width > 1.4 ? 2 : 1, lw = (o.width - 0.1) / n;
+    box(0.06, o.height, o.depth + 0.04, fm, -o.width / 2 + 0.03, o.height / 2, 0, g);
+    box(0.06, o.height, o.depth + 0.04, fm, o.width / 2 - 0.03, o.height / 2, 0, g);
+    box(o.width, 0.06, o.depth + 0.04, fm, 0, o.height - 0.03, 0, g);
+    for (let i = 0; i < n; i++) {
+      const x = -o.width / 2 + 0.05 + lw * (i + 0.5);
+      box(lw - 0.02, o.height - 0.08, 0.045, lm, x, (o.height - 0.08) / 2, 0, g);
+      const gp = new THREE.Mesh(G(`dglp${lw}${o.height}`, () => new THREE.BoxGeometry(lw - 0.2, o.height * 0.55, 0.02)), gl);
+      gp.position.set(x, o.height * 0.58, 0);
+      g.add(gp);
+      box(0.05, 0.04, 0.12, mat("#B8BCC4", 0.2, 0.9), x + (i ? -1 : 1) * (lw / 2 - 0.1), 1.0, 0.05, g);
+    }
+  },
+  window(o, g) {
+    const m = primaryMat(o), fm = mat("#2B2B2B", 0.4, 0.6), gl = mat("#BFD8E6", 0.05, 0.1);
+    box(o.width, 0.9, o.depth, m, 0, 0.45, 0, g);
+    box(o.width, o.height - 2.2, o.depth, m, 0, 2.2 + (o.height - 2.2) / 2, 0, g);
+    box(o.width, 0.05, o.depth + 0.04, fm, 0, 0.92, 0, g);
+    box(o.width, 0.05, o.depth + 0.04, fm, 0, 2.18, 0, g);
+    box(0.05, 1.3, o.depth + 0.04, fm, -o.width / 2 + 0.025, 1.55, 0, g);
+    box(0.05, 1.3, o.depth + 0.04, fm, o.width / 2 - 0.025, 1.55, 0, g);
+    box(0.04, 1.3, o.depth + 0.02, fm, 0, 1.55, 0, g);
+    const p = new THREE.Mesh(G(`wg${o.width}`, () => new THREE.BoxGeometry(o.width - 0.1, 1.26, 0.02)), gl);
+    p.position.y = 1.55;
+    g.add(p);
+  },
+  column(o, g) {
+    const m = primaryMat(o);
+    box(o.width + 0.1, 0.12, o.depth + 0.1, m, 0, 0.06, 0, g);
+    box(o.width, o.height - 0.24, o.depth, m, 0, o.height / 2, 0, g);
+    box(o.width + 0.1, 0.12, o.depth + 0.1, m, 0, o.height - 0.06, 0, g);
+  },
+  plant(o, g) {
+    const pot = mat("#7A5C45", 0.8, 0);
+    const lf = ["#4D8B4F", "#3E7A45", "#5FA05A"];
+    const p = cyl(0.26, 0.2, 0.38, pot, 0, 0.19, 0, g, 20);
+    p.scale.set(o.width / 0.6, 1, o.depth / 0.6);
+    cyl(0.2, 0.2, 0.02, mat("#3B2A1F", 1, 0), 0, 0.37, 0, g, 20).scale.set(o.width / 0.6, 1, o.depth / 0.6);
+    const k = o.height / 1.3;
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2.4, r = 0.1 + (i % 3) * 0.08;
+      sph(0.2 + (i % 3) * 0.05, mat(lf[i % 3]!, 0.9, 0), Math.sin(a) * r * (o.width / 0.6), (0.55 + i * 0.095) * k, Math.cos(a) * r * (o.depth / 0.6), g, 1, 1.1, 1);
+    }
+  },
+  host(o, g) {
+    const m = primaryMat(o), t = mat("#1F2937", 0.5, 0.2);
+    box(o.width, o.height - 0.1, o.depth, m, 0, (o.height - 0.1) / 2, 0, g);
+    const s = box(o.width + 0.06, 0.05, o.depth + 0.06, t, 0, o.height - 0.075, 0.02, g);
+    s.rotation.x = 0.14;
+    box(o.width - 0.1, 0.04, 0.04, mat("#E9C46A", 0.3, 0.8), 0, 0.5, o.depth / 2 + 0.002, g);
+  },
+  rug(o, g) {
+    const m = primaryMat(o);
+    const s = box(o.width, 0.02, o.depth, m, 0, 0.01, 0, g);
+    s.castShadow = false;
+    const b = box(o.width - 0.3, 0.022, o.depth - 0.3, mat(darker(o.color, 0.8), 1, 0), 0, 0.011, 0, g);
+    b.castShadow = false;
+    const c = box(o.width - 0.6, 0.024, o.depth - 0.6, mat(darker(o.color, 1.15), 1, 0), 0, 0.012, 0, g);
+    c.castShadow = false;
+  },
+  pendant(o, g) {
+    const m = primaryMat(o);
+    cyl(0.006, 0.006, 1.2, mat("#222", 0.5, 0.5), 0, o.height + 0.5, 0, g, 6).castShadow = false;
+    const s = new THREE.Mesh(G("dome", () => new THREE.SphereGeometry(0.25, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)), m);
+    s.scale.set(o.width / 0.5, 1, o.depth / 0.5);
+    s.position.y = o.height - 0.1;
+    s.castShadow = true;
+    g.add(s);
+    const b = new THREE.Mesh(G("bulb", () => new THREE.SphereGeometry(0.09, 16, 12)), glowMat);
+    b.position.y = o.height - 0.12;
+    g.add(b);
+  },
+};
 
 function labelTexture(t: SceneTable): THREE.CanvasTexture {
   const c = document.createElement("canvas");
@@ -298,6 +537,9 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   const objGroups = new Map<string, THREE.Group>();
   const hits: THREE.Mesh[] = [];
   const tableById = new Map<string, SceneTable>();
+  const itemById = new Map<string, SceneFurnitureItem>();
+  const tableIds = new Set<string>();
+  const itemIds = new Set<string>();
   let floorW = 20, floorD = 14;
   let light: SceneLight = "day";
   let editable = false;
@@ -378,8 +620,11 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     dirty();
   }
 
-  function clearWorld() {
-    objGroups.forEach((g) => {
+  function clearByKind(kind: "table" | "item") {
+    const ids = kind === "table" ? tableIds : itemIds;
+    ids.forEach((id) => {
+      const g = objGroups.get(id);
+      if (!g) return;
       world.remove(g);
       g.traverse((m) => {
         const mm = m as THREE.Sprite;
@@ -388,9 +633,12 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
           mm.material.dispose();
         }
       });
+      objGroups.delete(id);
     });
-    objGroups.clear();
-    hits.length = 0;
+    for (let i = hits.length - 1; i >= 0; i--) {
+      if (hits[i]!.userData.kind === kind) hits.splice(i, 1);
+    }
+    ids.clear();
   }
 
   function buildTable(t: SceneTable) {
@@ -407,8 +655,10 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     const hit = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hd), new THREE.MeshBasicMaterial({ visible: false }));
     hit.position.set(0, hh / 2, 0);
     hit.userData.id = t.id;
+    hit.userData.kind = "table";
     g.add(hit);
     hits.push(hit);
+    tableIds.add(t.id);
 
     const disc = new THREE.Mesh(
       G("disc", () => new THREE.CircleGeometry(0.5, 48)),
@@ -432,6 +682,30 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     dirty();
   }
 
+  function buildFurnitureItem(item: SceneFurnitureItem) {
+    const old = objGroups.get(item.id);
+    if (old) {
+      world.remove(old);
+    }
+    const g = new THREE.Group();
+    FURNITURE_BUILDERS[item.kind]?.(item, g);
+
+    const hw = item.width + 0.3, hd = item.depth + 0.3, hh = Math.max(item.height, 0.3);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hd), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.position.set(0, hh / 2, 0);
+    hit.userData.id = item.id;
+    hit.userData.kind = "item";
+    g.add(hit);
+    hits.push(hit);
+    itemIds.add(item.id);
+
+    g.position.set(item.x, 0, item.z);
+    g.rotation.y = -item.rotation * DEG;
+    world.add(g);
+    objGroups.set(item.id, g);
+    dirty();
+  }
+
   function setFloor(w: number, d: number) {
     floorW = w;
     floorD = d;
@@ -439,11 +713,21 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   }
 
   function setTables(tables: SceneTable[]) {
-    clearWorld();
+    clearByKind("table");
     tableById.clear();
     tables.forEach((t) => {
       tableById.set(t.id, t);
       buildTable(t);
+    });
+    updateSelection();
+  }
+
+  function setFurniture(items: SceneFurnitureItem[]) {
+    clearByKind("item");
+    itemById.clear();
+    items.forEach((it) => {
+      itemById.set(it.id, it);
+      buildFurnitureItem(it);
     });
     updateSelection();
   }
@@ -463,21 +747,24 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
       });
     }
     const t = selectedId ? tableById.get(selectedId) : null;
-    if (!t) {
+    const it = !t && selectedId ? itemById.get(selectedId) : null;
+    const sel = t ?? it;
+    if (!sel) {
       dirty();
       return;
     }
+    const h = t ? 0.78 : it!.height;
     const ac = new THREE.Color("#2B50E8");
     const lineMat = new THREE.LineBasicMaterial({ color: ac, depthTest: false, transparent: true });
     const holder = new THREE.Group();
-    holder.position.set(t.x, 0, t.z);
-    holder.rotation.y = -t.rotation * DEG;
-    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(t.width, 0.78, t.depth)), lineMat);
-    box.position.y = 0.39;
+    holder.position.set(sel.x, 0, sel.z);
+    holder.rotation.y = -sel.rotation * DEG;
+    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(sel.width, h, sel.depth)), lineMat);
+    box.position.y = h / 2;
     box.renderOrder = 30;
     holder.add(box);
     const fp = new THREE.Mesh(
-      new THREE.PlaneGeometry(t.width, t.depth),
+      new THREE.PlaneGeometry(sel.width, sel.depth),
       new THREE.MeshBasicMaterial({ color: ac, transparent: true, opacity: 0.14, depthWrite: false })
     );
     fp.rotation.x = -Math.PI / 2;
@@ -545,10 +832,13 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     V.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(V, camera);
   }
-  function pickId(clientX: number, clientY: number): string | null {
+  type Pick = { id: string; kind: "table" | "item" };
+  function pickId(clientX: number, clientY: number): Pick | null {
     ndc(clientX, clientY);
     const h = ray.intersectObjects(hits, false);
-    return h.length ? (h[0]!.object.userData.id as string) : null;
+    if (!h.length) return null;
+    const o = h[0]!.object;
+    return { id: o.userData.id as string, kind: o.userData.kind as "table" | "item" };
   }
   function groundPoint(clientX: number, clientY: number): THREE.Vector3 | null {
     ndc(clientX, clientY);
@@ -556,12 +846,12 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     return ray.ray.intersectPlane(groundPlane, p) ? p : null;
   }
 
-  let onPickCb: ((id: string | null) => void) | null = null;
-  function onPick(cb: (id: string | null) => void) {
+  let onPickCb: ((pick: Pick | null) => void) | null = null;
+  function onPick(cb: (pick: Pick | null) => void) {
     onPickCb = cb;
   }
-  let onMoveCb: ((id: string, x: number, z: number) => void) | null = null;
-  function onMove(cb: (id: string, x: number, z: number) => void) {
+  let onMoveCb: ((id: string, kind: "table" | "item", x: number, z: number) => void) | null = null;
+  function onMove(cb: (id: string, kind: "table" | "item", x: number, z: number) => void) {
     onMoveCb = cb;
   }
 
@@ -575,20 +865,36 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   const ptr = new Map<number, { x: number; y: number }>();
   let drag:
     | { mode: "orbit" | "pan"; sx: number; sy: number; lx: number; ly: number; moved: boolean }
-    | { mode: "obj"; id: string; offX: number; offZ: number; sx: number; sy: number; moved: boolean }
+    | { mode: "obj"; id: string; kind: "table" | "item"; offX: number; offZ: number; sx: number; sy: number; moved: boolean }
     | null = null;
+
+  function entryFor(pick: Pick): SceneTable | SceneFurnitureItem | undefined {
+    return pick.kind === "table" ? tableById.get(pick.id) : itemById.get(pick.id);
+  }
 
   function onPointerDown(e: PointerEvent) {
     canvas.setPointerCapture(e.pointerId);
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptr.size > 1) return;
     if (editable && e.button === 0 && !e.shiftKey) {
-      const id = pickId(e.clientX, e.clientY);
-      if (id) {
-        const t = tableById.get(id)!;
-        const gp = groundPoint(e.clientX, e.clientY);
-        drag = { mode: "obj", id, offX: gp ? t.x - gp.x : 0, offZ: gp ? t.z - gp.z : 0, sx: e.clientX, sy: e.clientY, moved: false };
-        return;
+      const hit = pickId(e.clientX, e.clientY);
+      if (hit) {
+        const entry = entryFor(hit);
+        const locked = hit.kind === "item" && (entry as SceneFurnitureItem).locked;
+        if (entry && !locked) {
+          const gp = groundPoint(e.clientX, e.clientY);
+          drag = {
+            mode: "obj",
+            id: hit.id,
+            kind: hit.kind,
+            offX: gp ? entry.x - gp.x : 0,
+            offZ: gp ? entry.z - gp.z : 0,
+            sx: e.clientX,
+            sy: e.clientY,
+            moved: false,
+          };
+          return;
+        }
       }
     }
     const mode = e.button === 2 || (e.shiftKey && e.button === 0) ? "pan" : "orbit";
@@ -607,11 +913,11 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
       if (!gp) return;
       const [x, z] = clampToRoom(snap(gp.x + drag.offX), snap(gp.z + drag.offZ));
       const g = objGroups.get(drag.id);
-      const t = tableById.get(drag.id);
-      if (g && t) {
+      const entry = entryFor(drag);
+      if (g && entry) {
         g.position.set(x, 0, z);
-        t.x = x;
-        t.z = z;
+        entry.x = x;
+        entry.z = z;
         if (selectedId === drag.id) updateSelection();
         dirty();
       }
@@ -637,15 +943,15 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     ptr.delete(e.pointerId);
     if (drag && ptr.size === 0) {
       if (drag.mode === "obj") {
-        const t = tableById.get(drag.id);
-        if (t) {
+        const entry = entryFor(drag);
+        if (entry) {
           select(drag.id);
-          onPickCb?.(drag.id);
-          if (drag.moved) onMoveCb?.(drag.id, t.x, t.z);
+          onPickCb?.({ id: drag.id, kind: drag.kind });
+          if (drag.moved) onMoveCb?.(drag.id, drag.kind, entry.x, entry.z);
         }
       } else if (!drag.moved) {
-        const id = pickId(e.clientX, e.clientY);
-        onPickCb?.(id);
+        const hit = pickId(e.clientX, e.clientY);
+        onPickCb?.(hit);
       }
       drag = null;
     }
@@ -708,13 +1014,14 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     canvas.removeEventListener("pointercancel", onPointerUp);
     canvas.removeEventListener("wheel", onWheel);
     canvas.removeEventListener("contextmenu", onContextMenu);
-    clearWorld();
+    clearByKind("table");
+    clearByKind("item");
     select(null);
     renderer.dispose();
   }
 
   return {
-    setFloor, setTables, onPick, onMove, select, setEditable,
+    setFloor, setTables, setFurniture, onPick, onMove, select, setEditable,
     frame, zoom, zoomPct, setLight, resize, destroy,
   };
 }
