@@ -33,6 +33,9 @@ export function FloorItemInspector({
   onDeleted: () => void;
   onClose: () => void;
 }) {
+  const [name, setName] = useState(item.name);
+  const [x, setX] = useState(item.x);
+  const [z, setZ] = useState(item.z);
   const [rotation, setRotation] = useState(item.rotation);
   const [width, setWidth] = useState(item.width);
   const [depth, setDepth] = useState(item.depth);
@@ -46,6 +49,9 @@ export function FloorItemInspector({
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    setName(item.name);
+    setX(item.x);
+    setZ(item.z);
     setRotation(item.rotation);
     setWidth(item.width);
     setDepth(item.depth);
@@ -64,7 +70,7 @@ export function FloorItemInspector({
   async function handleSave() {
     setSaving(true);
     setError(null);
-    const result = await updateFloorItemAction(slug, item.id, { rotation, width, depth, height, color, finish, locked });
+    const result = await updateFloorItemAction(slug, item.id, { name, x, z, rotation, width, depth, height, color, finish, locked });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
@@ -97,12 +103,26 @@ export function FloorItemInspector({
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-4 border-b border-line-divider pb-4">
           <label className="flex flex-col gap-2">
-            <FieldLabel>Rotation (°)</FieldLabel>
-            <input
-              type="number" step={15} className={fieldClass} value={rotation}
-              onChange={(e) => { setRotation(((Number(e.target.value) % 360) + 360) % 360); markDirty(); }}
-            />
+            <FieldLabel>Name</FieldLabel>
+            <input type="text" className={fieldClass} value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} />
           </label>
+          <div className="grid grid-cols-3 gap-2.5">
+            <label className="flex flex-col gap-2">
+              <FieldLabel>X (m)</FieldLabel>
+              <input type="number" step={0.1} className={fieldClass} value={x} onChange={(e) => { setX(Number(e.target.value)); markDirty(); }} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Z (m)</FieldLabel>
+              <input type="number" step={0.1} className={fieldClass} value={z} onChange={(e) => { setZ(Number(e.target.value)); markDirty(); }} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Angle (°)</FieldLabel>
+              <input
+                type="number" step={15} className={fieldClass} value={rotation}
+                onChange={(e) => { setRotation(((Number(e.target.value) % 360) + 360) % 360); markDirty(); }}
+              />
+            </label>
+          </div>
           <div className="grid grid-cols-3 gap-2.5">
             <label className="flex flex-col gap-2">
               <FieldLabel>Width (m)</FieldLabel>

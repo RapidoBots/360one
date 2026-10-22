@@ -1,7 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createFloorScene, type SceneTable, type SceneFurnitureItem, type SceneView, type SceneLight } from "./scene-engine";
+import { Move, RotateCw, Maximize2 } from "lucide-react";
+import { createFloorScene, type SceneTable, type SceneFurnitureItem, type SceneView, type SceneLight, type SceneTool } from "./scene-engine";
+
+const TOOLS: { tool: SceneTool; key: string; label: string; icon: typeof Move }[] = [
+  { tool: "move", key: "G", label: "Move", icon: Move },
+  { tool: "rotate", key: "R", label: "Rotate", icon: RotateCw },
+  { tool: "scale", key: "S", label: "Scale", icon: Maximize2 },
+];
+
+function isTypingTarget(el: EventTarget | null): boolean {
+  const t = el as HTMLElement | null;
+  if (!t) return false;
+  return t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable;
+}
 
 export function FloorViewport({
   floorWidth,
@@ -9,16 +22,22 @@ export function FloorViewport({
   tables,
   items,
   editMode,
+  selectedId,
   onSelect,
   onMove,
+  onRotate,
+  onResize,
 }: {
   floorWidth: number;
   floorDepth: number;
   tables: SceneTable[];
   items: SceneFurnitureItem[];
   editMode: boolean;
+  selectedId: string | null;
   onSelect: (id: string | null, kind: "table" | "item" | null) => void;
   onMove: (id: string, kind: "table" | "item", x: number, z: number) => void;
+  onRotate: (id: string, kind: "table" | "item", rotation: number) => void;
+  onResize: (id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,6 +45,7 @@ export function FloorViewport({
   const [view, setView] = useState<SceneView>("3d");
   const [light, setLight] = useState<SceneLight>("day");
   const [zoomPct, setZoomPct] = useState(100);
+  const [tool, setTool] = useState<SceneTool>("move");
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -58,8 +78,38 @@ export function FloorViewport({
   }, [onMove]);
 
   useEffect(() => {
+    engineRef.current?.onRotate(onRotate);
+  }, [onRotate]);
+
+  useEffect(() => {
+    engineRef.current?.onResize(onResize);
+  }, [onResize]);
+
+  useEffect(() => {
     engineRef.current?.setEditable(editMode);
+    if (!editMode) setTool("move");
   }, [editMode]);
+
+  useEffect(() => {
+    engineRef.current?.select(selectedId);
+  }, [selectedId]);
+
+  useEffect(() => {
+    engineRef.current?.setToolMode(tool);
+  }, [tool]);
+
+  useEffect(() => {
+    if (!editMode) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "g" || e.key === "G") setTool("move");
+      else if (e.key === "r" || e.key === "R") setTool("rotate");
+      else if (e.key === "s" || e.key === "S") setTool("scale");
+      else if ((e.key === "f" || e.key === "F") && selectedId) engineRef.current?.frameSelected();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editMode, selectedId]);
 
   useEffect(() => {
     engineRef.current?.setLight(light);
@@ -79,6 +129,25 @@ export function FloorViewport({
   return (
     <div ref={containerRef} className="relative min-h-[560px] flex-1 overflow-hidden rounded-[20px] border border-line-card bg-[#E9ECF4] shadow-card">
       <canvas ref={canvasRef} tabIndex={0} aria-label="3D floor plan" className="absolute inset-0 size-full touch-none outline-none" />
+
+      {editMode && (
+        <div className="absolute left-3 top-3 flex flex-col gap-1 rounded-xl border border-line-card bg-white/90 p-1 backdrop-blur-sm">
+          {TOOLS.map(({ tool: t, key, label, icon: Icon }) => (
+            <button
+              key={t}
+              type="button"
+              aria-label={`${label} tool (${key})`}
+              aria-pressed={tool === t}
+              onClick={() => setTool(t)}
+              className={`flex size-8 items-center justify-center rounded-lg ${
+                tool === t ? "bg-primary text-white" : "text-ink-muted hover:bg-surface-footer hover:text-ink"
+              }`}
+            >
+              <Icon className="size-4" />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="absolute right-3 top-3 flex flex-wrap justify-end gap-2">
         <div className="flex gap-0.5 rounded-xl border border-line-card bg-white/85 p-1 backdrop-blur-sm">
@@ -132,7 +201,7 @@ export function FloorViewport({
       <div className="absolute bottom-3 left-3 rounded-xl border border-line-card bg-white/85 px-3 py-1.5 text-xs text-ink-muted backdrop-blur-sm">
         {editMode ? (
           <>
-            <b className="text-ink">Drag</b> a table to move it · <b className="text-ink">Left-drag</b> empty space to orbit · <b className="text-ink">Shift-drag</b> to pan
+            <b className="text-ink">Drag</b> to move · <b className="text-ink">Left-drag</b> orbit · <b className="text-ink">Shift-drag</b> pan · <b className="text-ink">G R S</b> tools · <b className="text-ink">Del</b> delete
           </>
         ) : (
           <>

@@ -47,6 +47,8 @@ export function TableInspector({
   onClose: () => void;
 }) {
   const [shape, setShape] = useState<TableShape>(table.shape);
+  const [posX, setPosX] = useState(table.posX ?? 0);
+  const [posY, setPosY] = useState(table.posY ?? 0);
   const [rotation, setRotation] = useState(table.rotation);
   const [width, setWidth] = useState<number | null>(table.width);
   const [height, setHeight] = useState<number | null>(table.height);
@@ -62,6 +64,8 @@ export function TableInspector({
 
   useEffect(() => {
     setShape(table.shape);
+    setPosX(table.posX ?? 0);
+    setPosY(table.posY ?? 0);
     setRotation(table.rotation);
     setWidth(table.width);
     setHeight(table.height);
@@ -87,8 +91,8 @@ export function TableInspector({
     setSaving(true);
     setError(null);
     const input: TableLayoutInput = {
-      posX: table.posX ?? 0,
-      posY: table.posY ?? 0,
+      posX,
+      posY,
       shape,
       rotation,
       width,
@@ -135,13 +139,23 @@ export function TableInspector({
               ))}
             </NativeSelect>
           </label>
-          <label className="flex flex-col gap-2">
-            <FieldLabel>Rotation (°)</FieldLabel>
-            <input
-              type="number" step={15} className={fieldClass} value={rotation}
-              onChange={(e) => { setRotation(((Number(e.target.value) % 360) + 360) % 360); markDirty(); }}
-            />
-          </label>
+          <div className="grid grid-cols-3 gap-2.5">
+            <label className="flex flex-col gap-2">
+              <FieldLabel>X (m)</FieldLabel>
+              <input type="number" step={0.1} className={fieldClass} value={posX} onChange={(e) => { setPosX(Number(e.target.value)); markDirty(); }} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Z (m)</FieldLabel>
+              <input type="number" step={0.1} className={fieldClass} value={posY} onChange={(e) => { setPosY(Number(e.target.value)); markDirty(); }} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <FieldLabel>Angle (°)</FieldLabel>
+              <input
+                type="number" step={15} className={fieldClass} value={rotation}
+                onChange={(e) => { setRotation(((Number(e.target.value) % 360) + 360) % 360); markDirty(); }}
+              />
+            </label>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-2">
               <FieldLabel>Width (m)</FieldLabel>

@@ -506,6 +506,7 @@ type CamGoal = Partial<CamState>;
 
 export type SceneView = "3d" | "top" | "front";
 export type SceneLight = "day" | "evening";
+export type SceneTool = "move" | "rotate" | "scale";
 
 export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -544,6 +545,8 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   let light: SceneLight = "day";
   let editable = false;
   let selectedId: string | null = null;
+  let toolMode: SceneTool = "move";
+  const gizmoHits: THREE.Mesh[] = [];
   const GRID = 0.25;
   let need = true;
   let D0 = 24;
@@ -739,6 +742,17 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     return Math.round(v / GRID) * GRID;
   }
 
+  const handleMat = new THREE.MeshBasicMaterial({ color: "#2B50E8", depthTest: false });
+  const handleMatH = new THREE.MeshBasicMaterial({ color: "#F59E0B", depthTest: false });
+
+  function addScaleHandle(holder: THREE.Group, kind: "scaleW" | "scaleD" | "scaleH", x: number, y: number, z: number, m: THREE.Mesh) {
+    m.position.set(x, y, z);
+    m.renderOrder = 40;
+    m.userData.handle = kind;
+    holder.add(m);
+    gizmoHits.push(m);
+  }
+
   function updateSelection() {
     while (selectionGroup.children.length) {
       const c = selectionGroup.children.pop()!;
@@ -746,6 +760,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
         if (m instanceof THREE.Mesh || m instanceof THREE.LineSegments) m.geometry.dispose();
       });
     }
+    gizmoHits.length = 0;
     const t = selectedId ? tableById.get(selectedId) : null;
     const it = !t && selectedId ? itemById.get(selectedId) : null;
     const sel = t ?? it;
@@ -770,6 +785,28 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     fp.rotation.x = -Math.PI / 2;
     fp.position.y = 0.02;
     holder.add(fp);
+
+    if (editable && toolMode === "rotate") {
+      const ringR = Math.max(sel.width, sel.depth) / 2 + 0.35;
+      const ring = new THREE.Mesh(G(`ring${ringR}`, () => new THREE.TorusGeometry(ringR, 0.06, 10, 48)), handleMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.03;
+      ring.renderOrder = 40;
+      ring.userData.handle = "rotate";
+      holder.add(ring);
+      gizmoHits.push(ring);
+    }
+    if (editable && toolMode === "scale") {
+      const r = 0.09;
+      addScaleHandle(holder, "scaleW", sel.width / 2 + 0.15, h / 2, 0, new THREE.Mesh(G(`hb${r}`, () => new THREE.BoxGeometry(r, r, r)), handleMat.clone()));
+      addScaleHandle(holder, "scaleW", -sel.width / 2 - 0.15, h / 2, 0, new THREE.Mesh(G(`hb${r}`, () => new THREE.BoxGeometry(r, r, r)), handleMat.clone()));
+      addScaleHandle(holder, "scaleD", 0, h / 2, sel.depth / 2 + 0.15, new THREE.Mesh(G(`hb${r}`, () => new THREE.BoxGeometry(r, r, r)), handleMat.clone()));
+      addScaleHandle(holder, "scaleD", 0, h / 2, -sel.depth / 2 - 0.15, new THREE.Mesh(G(`hb${r}`, () => new THREE.BoxGeometry(r, r, r)), handleMat.clone()));
+      if (it) {
+        addScaleHandle(holder, "scaleH", 0, h + 0.2, 0, new THREE.Mesh(G("hcone", () => new THREE.ConeGeometry(0.1, 0.22, 16)), handleMatH.clone()));
+      }
+    }
+
     selectionGroup.add(holder);
     dirty();
   }
@@ -777,6 +814,20 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   function select(id: string | null) {
     selectedId = id;
     updateSelection();
+  }
+
+  function setToolMode(mode: SceneTool) {
+    toolMode = mode;
+    updateSelection();
+  }
+
+  function frameSelected() {
+    const t = selectedId ? tableById.get(selectedId) : null;
+    const it = !t && selectedId ? itemById.get(selectedId) : null;
+    const sel = t ?? it;
+    if (!sel) return;
+    const span = Math.max(sel.width, sel.depth, 1.5);
+    tweenTo({ tx: sel.x, tz: sel.z, ty: 0, dist: Math.max(7, span * 5) });
   }
 
   function setEditable(v: boolean) {
@@ -854,6 +905,28 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   function onMove(cb: (id: string, kind: "table" | "item", x: number, z: number) => void) {
     onMoveCb = cb;
   }
+  let onRotateCb: ((id: string, kind: "table" | "item", rotation: number) => void) | null = null;
+  function onRotate(cb: (id: string, kind: "table" | "item", rotation: number) => void) {
+    onRotateCb = cb;
+  }
+  let onResizeCb: ((id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) => void) | null = null;
+  function onResize(cb: (id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) => void) {
+    onResizeCb = cb;
+  }
+  function pickGizmo(clientX: number, clientY: number): THREE.Object3D | null {
+    ndc(clientX, clientY);
+    const h = ray.intersectObjects(gizmoHits, false);
+    return h.length ? h[0]!.object : null;
+  }
+  function rebuildObj(id: string, kind: "table" | "item") {
+    if (kind === "table") {
+      const t = tableById.get(id);
+      if (t) buildTable(t);
+    } else {
+      const it = itemById.get(id);
+      if (it) buildFurnitureItem(it);
+    }
+  }
 
   function panBy(dx: number, dy: number) {
     const k = (cam.dist * Math.tan((camera.fov * DEG) / 2) * 2) / container.clientHeight;
@@ -866,6 +939,22 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   let drag:
     | { mode: "orbit" | "pan"; sx: number; sy: number; lx: number; ly: number; moved: boolean }
     | { mode: "obj"; id: string; kind: "table" | "item"; offX: number; offZ: number; sx: number; sy: number; moved: boolean }
+    | {
+        mode: "gizmo";
+        handle: "rotate" | "scaleW" | "scaleD" | "scaleH";
+        id: string;
+        kind: "table" | "item";
+        cx: number;
+        cz: number;
+        yaw: number;
+        startRotation: number;
+        startAngle: number;
+        startWidth: number;
+        startDepth: number;
+        startHeight: number;
+        startClientY: number;
+        moved: boolean;
+      }
     | null = null;
 
   function entryFor(pick: Pick): SceneTable | SceneFurnitureItem | undefined {
@@ -876,6 +965,33 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     canvas.setPointerCapture(e.pointerId);
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptr.size > 1) return;
+    if (editable && e.button === 0 && !e.shiftKey && selectedId && toolMode !== "move") {
+      const gh = pickGizmo(e.clientX, e.clientY);
+      if (gh) {
+        const kind: "table" | "item" = tableById.has(selectedId) ? "table" : "item";
+        const sel = kind === "table" ? tableById.get(selectedId) : itemById.get(selectedId);
+        const gp0 = groundPoint(e.clientX, e.clientY);
+        if (sel && gp0) {
+          drag = {
+            mode: "gizmo",
+            handle: gh.userData.handle as "rotate" | "scaleW" | "scaleD" | "scaleH",
+            id: selectedId,
+            kind,
+            cx: sel.x,
+            cz: sel.z,
+            yaw: -sel.rotation * DEG,
+            startRotation: sel.rotation,
+            startAngle: Math.atan2(gp0.x - sel.x, gp0.z - sel.z),
+            startWidth: sel.width,
+            startDepth: sel.depth,
+            startHeight: kind === "item" ? (sel as SceneFurnitureItem).height : 0,
+            startClientY: e.clientY,
+            moved: false,
+          };
+          return;
+        }
+      }
+    }
     if (editable && e.button === 0 && !e.shiftKey) {
       const hit = pickId(e.clientX, e.clientY);
       if (hit) {
@@ -906,6 +1022,43 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     p.x = e.clientX;
     p.y = e.clientY;
     if (!drag) return;
+    if (drag.mode === "gizmo") {
+      drag.moved = true;
+      const entry = drag.kind === "table" ? tableById.get(drag.id) : itemById.get(drag.id);
+      const g = objGroups.get(drag.id);
+      if (!entry || !g) return;
+      if (drag.handle === "rotate") {
+        const gp = groundPoint(e.clientX, e.clientY);
+        if (!gp) return;
+        const curAngle = Math.atan2(gp.x - drag.cx, gp.z - drag.cz);
+        const deltaDeg = (curAngle - drag.startAngle) / DEG;
+        let newRot = drag.startRotation - deltaDeg;
+        newRot = (Math.round(newRot / 15) * 15) % 360;
+        if (newRot < 0) newRot += 360;
+        entry.rotation = newRot;
+        g.rotation.y = -newRot * DEG;
+      } else if (drag.handle === "scaleH" && drag.kind === "item") {
+        const it = entry as SceneFurnitureItem;
+        const dy = drag.startClientY - e.clientY;
+        it.height = Math.max(0.1, Math.min(4, drag.startHeight + dy * 0.01));
+        rebuildObj(drag.id, drag.kind);
+      } else {
+        const gp = groundPoint(e.clientX, e.clientY);
+        if (!gp) return;
+        // Project the pointer into the object's local (unrotated) frame so
+        // dragging a side handle only changes the axis it's attached to.
+        const dx = gp.x - drag.cx, dz = gp.z - drag.cz;
+        const cosY = Math.cos(-drag.yaw), sinY = Math.sin(-drag.yaw);
+        const lx = dx * cosY - dz * sinY;
+        const lz = dx * sinY + dz * cosY;
+        if (drag.handle === "scaleW") entry.width = Math.max(0.3, Math.min(6, Math.abs(lx) * 2));
+        else entry.depth = Math.max(0.3, Math.min(6, Math.abs(lz) * 2));
+        rebuildObj(drag.id, drag.kind);
+      }
+      if (selectedId === drag.id) updateSelection();
+      dirty();
+      return;
+    }
     if (drag.mode === "obj") {
       if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
       drag.moved = true;
@@ -942,7 +1095,13 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   function onPointerUp(e: PointerEvent) {
     ptr.delete(e.pointerId);
     if (drag && ptr.size === 0) {
-      if (drag.mode === "obj") {
+      if (drag.mode === "gizmo") {
+        const entry = drag.kind === "table" ? tableById.get(drag.id) : itemById.get(drag.id);
+        if (entry && drag.moved) {
+          if (drag.handle === "rotate") onRotateCb?.(drag.id, drag.kind, entry.rotation);
+          else onResizeCb?.(drag.id, drag.kind, { width: entry.width, depth: entry.depth, height: drag.kind === "item" ? (entry as SceneFurnitureItem).height : 0 });
+        }
+      } else if (drag.mode === "obj") {
         const entry = entryFor(drag);
         if (entry) {
           select(drag.id);
@@ -1021,7 +1180,8 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   }
 
   return {
-    setFloor, setTables, setFurniture, onPick, onMove, select, setEditable,
+    setFloor, setTables, setFurniture, onPick, onMove, onRotate, onResize, select, setEditable,
+    setToolMode, frameSelected,
     frame, zoom, zoomPct, setLight, resize, destroy,
   };
 }

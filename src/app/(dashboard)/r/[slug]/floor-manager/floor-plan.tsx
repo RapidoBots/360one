@@ -225,6 +225,116 @@ export function FloorPlan({
     router.refresh();
   }
 
+  async function handleRotate(id: string, kind: "table" | "item", rotation: number) {
+    if (kind === "table") {
+      const t = byId.get(id);
+      if (!t) return;
+      await updateTableLayoutAction(slug, id, { posX: t.posX ?? 0, posY: t.posY ?? 0, shape: t.shape, rotation, width: t.width, height: t.height, chairsTop: t.chairsTop, chairsRight: t.chairsRight, chairsBottom: t.chairsBottom, chairsLeft: t.chairsLeft, color: t.color, finish: t.finish });
+    } else {
+      await updateFloorItemAction(slug, id, { rotation });
+    }
+    router.refresh();
+  }
+
+  async function handleResize(id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) {
+    if (kind === "table") {
+      const t = byId.get(id);
+      if (!t) return;
+      await updateTableLayoutAction(slug, id, { posX: t.posX ?? 0, posY: t.posY ?? 0, shape: t.shape, rotation: t.rotation, width: dims.width, height: dims.depth, chairsTop: t.chairsTop, chairsRight: t.chairsRight, chairsBottom: t.chairsBottom, chairsLeft: t.chairsLeft, color: t.color, finish: t.finish });
+    } else {
+      await updateFloorItemAction(slug, id, { width: dims.width, depth: dims.depth, height: dims.height });
+    }
+    router.refresh();
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedKind !== "item" || !selectedItem) return;
+    const item = selectedItem;
+    const result = await deleteFloorItemAction(slug, item.id);
+    if (!result.ok) return;
+    handleItemDeleted(item);
+    closeInspector();
+    router.refresh();
+  }
+
+  async function handleDuplicateSelected() {
+    if (selectedKind !== "item" || !selectedItem) return;
+    const item = selectedItem;
+    const result = await createFloorItemAction(slug, {
+      floorId: currentFloorId,
+      type: item.type,
+      name: item.name,
+      x: item.x + 0.3,
+      z: item.z + 0.3,
+      rotation: item.rotation,
+      width: item.width,
+      depth: item.depth,
+      height: item.height,
+      color: item.color,
+      finish: item.finish,
+    });
+    if (!result.ok) return;
+    setSelectedId(result.id);
+    setSelectedKind("item");
+    router.refresh();
+  }
+
+  async function handleNudge(dx: number, dz: number) {
+    if (!selectedId || !selectedKind) return;
+    if (selectedKind === "table") {
+      const t = byId.get(selectedId);
+      if (!t) return;
+      await handleMove(selectedId, "table", (t.posX ?? 0) + dx, (t.posY ?? 0) + dz);
+    } else {
+      const it = itemById.get(selectedId);
+      if (!it) return;
+      await handleMove(selectedId, "item", it.x + dx, it.z + dz);
+    }
+  }
+
+  async function handleRotateStep(delta: number) {
+    if (!selectedId || !selectedKind) return;
+    if (selectedKind === "table") {
+      const t = byId.get(selectedId);
+      if (!t) return;
+      await handleRotate(selectedId, "table", ((t.rotation + delta) % 360 + 360) % 360);
+    } else {
+      const it = itemById.get(selectedId);
+      if (!it) return;
+      await handleRotate(selectedId, "item", ((it.rotation + delta) % 360 + 360) % 360);
+    }
+  }
+
+  useEffect(() => {
+    if (!editMode) return;
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        handleDuplicateSelected();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteSelected();
+      } else if (e.key === "Escape") {
+        closeInspector();
+      } else if (e.key === "[" || e.key === "]") {
+        handleRotateStep(e.key === "[" ? -15 : 15);
+      } else if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const step = (e.shiftKey ? 2 : 1) * 0.25;
+        const [dx, dz] = e.key === "ArrowUp" ? [0, -step] : e.key === "ArrowDown" ? [0, step] : e.key === "ArrowLeft" ? [-step, 0] : [step, 0];
+        handleNudge(dx, dz);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, selectedId, selectedKind]);
+
   async function handlePlaceFromTray(table: FloorTable, index: number) {
     // Spread newly-placed tables out a bit so they don't all land in one
     // stack in the middle of the room.
@@ -366,8 +476,11 @@ export function FloorPlan({
           tables={sceneTables}
           items={sceneItems}
           editMode={editMode}
+          selectedId={selectedId}
           onSelect={handleSelect}
           onMove={handleMove}
+          onRotate={handleRotate}
+          onResize={handleResize}
         />
         {editMode && selectedTable && selectedScene && (
           <TableInspector
