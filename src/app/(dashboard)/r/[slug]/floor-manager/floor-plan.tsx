@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Redo2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloorViewport } from "./floor-viewport";
 import { TableInspector } from "./table-inspector";
@@ -13,7 +13,7 @@ import { SeatedInfoDialog } from "./seated-info-dialog";
 import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
 import { getEffectiveSize } from "@/lib/table-layout";
-import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction, deleteFloorItemAction } from "./actions";
+import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction, deleteFloorItemAction, type TableLayoutInput } from "./actions";
 import { FURNITURE_BY_ID, type FurnitureCatalogItem } from "./furniture-catalog";
 import { STATUS_COLOR, type SceneTable, type SceneFurnitureItem } from "./scene-engine";
 import type { TableShape } from "@/generated/prisma/client";
@@ -50,6 +50,19 @@ export type PlacedFloorItem = {
   finish: string;
   locked: boolean;
 };
+
+// Edit sessions are staged client-side (Save layout / Discard), matching the
+// mockup's edit model -- nothing hits the server until Save, and Discard
+// just drops this snapshot.
+type Draft = { tables: FloorTable[]; items: PlacedFloorItem[] };
+
+let tempIdSeq = 0;
+function tempId(): string {
+  return `temp-${Date.now()}-${tempIdSeq++}`;
+}
+function isTempId(id: string): boolean {
+  return id.startsWith("temp-");
+}
 
 const STATUS_MAP = { AVAILABLE: "available", RESERVED_SOON: "soon", SEATED: "seated" } as const;
 const FINISHES = new Set(["wood", "matte", "satin", "gloss", "metal"]);
@@ -93,21 +106,29 @@ export function FloorPlan({
   const [selectedKind, setSelectedKind] = useState<"table" | "item" | null>(null);
   const [quickSeat, setQuickSeat] = useState<{ id: string; number: string } | null>(null);
   const [seatedInfo, setSeatedInfo] = useState<{ number: string; reservation: TableStatusReservation } | null>(null);
-  // ponytail: single-level undo only (drag-move, add, delete) -- covers the
-  // one-click accidental actions; inspector saves have their own "Saved"
-  // confirmation before committing, so they're lower-risk and left out.
-  const [lastAction, setLastAction] = useState<{ label: string; run: () => Promise<void> } | null>(null);
-  const [undoing, setUndoing] = useState(false);
+  // A single state object so every undo/redo/mutate transition is one atomic
+  // setState call -- nesting setState calls inside another updater (e.g.
+  // calling setUndoStack from within setDraft's updater) breaks under React
+  // Strict Mode's double-invocation of updaters, which silently corrupts the
+  // stacks with duplicate entries.
+  const [session, setSession] = useState<{ draft: Draft; undoStack: Draft[]; redoStack: Draft[] } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  const placed = useMemo(() => tables.filter((t) => t.posX != null && t.posY != null), [tables]);
-  const unplaced = useMemo(() => tables.filter((t) => t.posX == null || t.posY == null), [tables]);
-  const byId = useMemo(() => new Map(tables.map((t) => [t.id, t])), [tables]);
-  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  // While editing, every read goes through the draft; outside edit mode the
+  // server props are the only source of truth.
+  const activeTables = session?.draft.tables ?? tables;
+  const activeItems = session?.draft.items ?? items;
+
+  const placed = useMemo(() => activeTables.filter((t) => t.posX != null && t.posY != null), [activeTables]);
+  const unplaced = useMemo(() => activeTables.filter((t) => t.posX == null || t.posY == null), [activeTables]);
+  const byId = useMemo(() => new Map(activeTables.map((t) => [t.id, t])), [activeTables]);
+  const itemById = useMemo(() => new Map(activeItems.map((i) => [i.id, i])), [activeItems]);
+  const totalSeats = useMemo(() => activeTables.reduce((sum, t) => sum + t.capacity, 0), [activeTables]);
 
   const sceneTables: SceneTable[] = useMemo(
     () =>
@@ -137,7 +158,7 @@ export function FloorPlan({
 
   const sceneItems: SceneFurnitureItem[] = useMemo(
     () =>
-      items.map((it) => ({
+      activeItems.map((it) => ({
         id: it.id,
         kind: FURNITURE_BY_ID.get(it.type)?.kind ?? it.type,
         name: it.name,
@@ -151,7 +172,7 @@ export function FloorPlan({
         finish: asFinish(it.finish),
         locked: it.locked,
       })),
-    [items]
+    [activeItems]
   );
 
   function handleSelect(id: string | null, kind: "table" | "item" | null) {
@@ -168,141 +189,116 @@ export function FloorPlan({
     if (status === "SEATED" && reservation) setSeatedInfo({ number: t.number, reservation });
   }
 
-  async function handleMove(id: string, kind: "table" | "item", x: number, z: number) {
-    if (kind === "table") {
-      const t = byId.get(id);
-      if (!t) return;
-      const prevX = t.posX ?? 0;
-      const prevZ = t.posY ?? 0;
-      await updateTableLayoutAction(slug, id, {
-        posX: x,
-        posY: z,
-        shape: t.shape,
-        rotation: t.rotation,
-        width: t.width,
-        height: t.height,
-        chairsTop: t.chairsTop,
-        chairsRight: t.chairsRight,
-        chairsBottom: t.chairsBottom,
-        chairsLeft: t.chairsLeft,
-        color: t.color,
-        finish: t.finish,
-      });
-      setLastAction({
-        label: `Moved Table ${t.number}`,
-        run: async () => {
-          await updateTableLayoutAction(slug, id, {
-            posX: prevX,
-            posY: prevZ,
-            shape: t.shape,
-            rotation: t.rotation,
-            width: t.width,
-            height: t.height,
-            chairsTop: t.chairsTop,
-            chairsRight: t.chairsRight,
-            chairsBottom: t.chairsBottom,
-            chairsLeft: t.chairsLeft,
-            color: t.color,
-            finish: t.finish,
-          });
-          router.refresh();
-        },
-      });
-    } else {
-      const it = itemById.get(id);
-      if (!it) return;
-      const prevX = it.x;
-      const prevZ = it.z;
-      await updateFloorItemAction(slug, id, { x, z });
-      setLastAction({
-        label: `Moved ${it.name}`,
-        run: async () => {
-          await updateFloorItemAction(slug, id, { x: prevX, z: prevZ });
-          router.refresh();
-        },
-      });
-    }
-    router.refresh();
-  }
-
-  async function handleRotate(id: string, kind: "table" | "item", rotation: number) {
-    if (kind === "table") {
-      const t = byId.get(id);
-      if (!t) return;
-      await updateTableLayoutAction(slug, id, { posX: t.posX ?? 0, posY: t.posY ?? 0, shape: t.shape, rotation, width: t.width, height: t.height, chairsTop: t.chairsTop, chairsRight: t.chairsRight, chairsBottom: t.chairsBottom, chairsLeft: t.chairsLeft, color: t.color, finish: t.finish });
-    } else {
-      await updateFloorItemAction(slug, id, { rotation });
-    }
-    router.refresh();
-  }
-
-  async function handleResize(id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) {
-    if (kind === "table") {
-      const t = byId.get(id);
-      if (!t) return;
-      await updateTableLayoutAction(slug, id, { posX: t.posX ?? 0, posY: t.posY ?? 0, shape: t.shape, rotation: t.rotation, width: dims.width, height: dims.depth, chairsTop: t.chairsTop, chairsRight: t.chairsRight, chairsBottom: t.chairsBottom, chairsLeft: t.chairsLeft, color: t.color, finish: t.finish });
-    } else {
-      await updateFloorItemAction(slug, id, { width: dims.width, depth: dims.depth, height: dims.height });
-    }
-    router.refresh();
-  }
-
-  async function handleDeleteSelected() {
-    if (selectedKind !== "item" || !selectedItem) return;
-    const item = selectedItem;
-    const result = await deleteFloorItemAction(slug, item.id);
-    if (!result.ok) return;
-    handleItemDeleted(item);
-    closeInspector();
-    router.refresh();
-  }
-
-  async function handleDuplicateSelected() {
-    if (selectedKind !== "item" || !selectedItem) return;
-    const item = selectedItem;
-    const result = await createFloorItemAction(slug, {
-      floorId: currentFloorId,
-      type: item.type,
-      name: item.name,
-      x: item.x + 0.3,
-      z: item.z + 0.3,
-      rotation: item.rotation,
-      width: item.width,
-      depth: item.depth,
-      height: item.height,
-      color: item.color,
-      finish: item.finish,
+  function mutate(fn: (d: Draft) => Draft) {
+    setSession((cur) => {
+      if (!cur) return cur;
+      return { draft: fn(cur.draft), undoStack: [...cur.undoStack, cur.draft], redoStack: [] };
     });
-    if (!result.ok) return;
-    setSelectedId(result.id);
+  }
+
+  function handleMove(id: string, kind: "table" | "item", x: number, z: number) {
+    mutate((d) =>
+      kind === "table"
+        ? { ...d, tables: d.tables.map((t) => (t.id === id ? { ...t, posX: x, posY: z } : t)) }
+        : { ...d, items: d.items.map((i) => (i.id === id ? { ...i, x, z } : i)) }
+    );
+  }
+
+  function handleRotate(id: string, kind: "table" | "item", rotation: number) {
+    mutate((d) =>
+      kind === "table"
+        ? { ...d, tables: d.tables.map((t) => (t.id === id ? { ...t, rotation } : t)) }
+        : { ...d, items: d.items.map((i) => (i.id === id ? { ...i, rotation } : i)) }
+    );
+  }
+
+  function handleResize(id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) {
+    mutate((d) =>
+      kind === "table"
+        ? { ...d, tables: d.tables.map((t) => (t.id === id ? { ...t, width: dims.width, height: dims.depth } : t)) }
+        : { ...d, items: d.items.map((i) => (i.id === id ? { ...i, width: dims.width, depth: dims.depth, height: dims.height } : i)) }
+    );
+  }
+
+  function handleApplyTable(id: string, input: TableLayoutInput) {
+    mutate((d) => ({
+      ...d,
+      tables: d.tables.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              posX: input.posX,
+              posY: input.posY,
+              shape: input.shape,
+              rotation: input.rotation ?? t.rotation,
+              width: input.width ?? null,
+              height: input.height ?? null,
+              chairsTop: input.chairsTop ?? null,
+              chairsRight: input.chairsRight ?? null,
+              chairsBottom: input.chairsBottom ?? null,
+              chairsLeft: input.chairsLeft ?? null,
+              color: input.color ?? null,
+              finish: input.finish ?? null,
+            }
+          : t
+      ),
+    }));
+  }
+
+  function handleApplyItem(id: string, patch: Partial<PlacedFloorItem>) {
+    mutate((d) => ({ ...d, items: d.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) }));
+  }
+
+  function handleDeleteSelected() {
+    if (selectedKind !== "item" || !selectedId) return;
+    mutate((d) => ({ ...d, items: d.items.filter((i) => i.id !== selectedId) }));
+    closeInspector();
+  }
+
+  function handleDuplicateSelected() {
+    if (selectedKind !== "item" || !selectedId) return;
+    const item = itemById.get(selectedId);
+    if (!item) return;
+    const clone: PlacedFloorItem = { ...item, id: tempId(), x: item.x + 0.3, z: item.z + 0.3 };
+    mutate((d) => ({ ...d, items: [...d.items, clone] }));
+    setSelectedId(clone.id);
     setSelectedKind("item");
-    router.refresh();
   }
 
-  async function handleNudge(dx: number, dz: number) {
+  function handleNudge(dx: number, dz: number) {
     if (!selectedId || !selectedKind) return;
     if (selectedKind === "table") {
       const t = byId.get(selectedId);
       if (!t) return;
-      await handleMove(selectedId, "table", (t.posX ?? 0) + dx, (t.posY ?? 0) + dz);
+      handleMove(selectedId, "table", (t.posX ?? 0) + dx, (t.posY ?? 0) + dz);
     } else {
       const it = itemById.get(selectedId);
       if (!it) return;
-      await handleMove(selectedId, "item", it.x + dx, it.z + dz);
+      handleMove(selectedId, "item", it.x + dx, it.z + dz);
     }
   }
 
-  async function handleRotateStep(delta: number) {
+  function handleRotateStep(delta: number) {
     if (!selectedId || !selectedKind) return;
-    if (selectedKind === "table") {
-      const t = byId.get(selectedId);
-      if (!t) return;
-      await handleRotate(selectedId, "table", ((t.rotation + delta) % 360 + 360) % 360);
-    } else {
-      const it = itemById.get(selectedId);
-      if (!it) return;
-      await handleRotate(selectedId, "item", ((it.rotation + delta) % 360 + 360) % 360);
-    }
+    const cur = selectedKind === "table" ? byId.get(selectedId) : itemById.get(selectedId);
+    if (!cur) return;
+    handleRotate(selectedId, selectedKind, ((cur.rotation + delta) % 360 + 360) % 360);
+  }
+
+  function handleUndo() {
+    setSession((cur) => {
+      if (!cur || cur.undoStack.length === 0) return cur;
+      const prev = cur.undoStack[cur.undoStack.length - 1]!;
+      return { draft: prev, undoStack: cur.undoStack.slice(0, -1), redoStack: [...cur.redoStack, cur.draft] };
+    });
+  }
+
+  function handleRedo() {
+    setSession((cur) => {
+      if (!cur || cur.redoStack.length === 0) return cur;
+      const next = cur.redoStack[cur.redoStack.length - 1]!;
+      return { draft: next, undoStack: [...cur.undoStack, cur.draft], redoStack: cur.redoStack.slice(0, -1) };
+    });
   }
 
   useEffect(() => {
@@ -310,10 +306,17 @@ export function FloorPlan({
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === "z" && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      } else if (ctrl && e.key.toLowerCase() === "z") {
         e.preventDefault();
         handleUndo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+      } else if (ctrl && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleRedo();
+      } else if (ctrl && e.key.toLowerCase() === "d") {
         e.preventDefault();
         handleDuplicateSelected();
       } else if (e.key === "Delete" || e.key === "Backspace") {
@@ -333,35 +336,21 @@ export function FloorPlan({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editMode, selectedId, selectedKind]);
+  }, [editMode, selectedId, selectedKind, session]);
 
-  async function handlePlaceFromTray(table: FloorTable, index: number) {
+  function handlePlaceFromTray(table: FloorTable, index: number) {
     // Spread newly-placed tables out a bit so they don't all land in one
     // stack in the middle of the room.
     const x = ((index % 3) - 1) * 1.5;
     const z = Math.floor(index / 3) * 1.5;
-    await updateTableLayoutAction(slug, table.id, {
-      posX: x,
-      posY: z,
-      shape: table.shape,
-      rotation: table.rotation,
-      width: table.width,
-      height: table.height,
-      chairsTop: table.chairsTop,
-      chairsRight: table.chairsRight,
-      chairsBottom: table.chairsBottom,
-      chairsLeft: table.chairsLeft,
-      color: table.color,
-      finish: table.finish,
-    });
+    mutate((d) => ({ ...d, tables: d.tables.map((t) => (t.id === table.id ? { ...t, posX: x, posY: z } : t)) }));
     setSelectedId(table.id);
     setSelectedKind("table");
-    router.refresh();
   }
 
-  async function handlePlaceFurniture(catalog: FurnitureCatalogItem) {
-    const result = await createFloorItemAction(slug, {
-      floorId: currentFloorId,
+  function handlePlaceFurniture(catalog: FurnitureCatalogItem) {
+    const item: PlacedFloorItem = {
+      id: tempId(),
       type: catalog.id,
       name: catalog.name,
       x: 0,
@@ -372,47 +361,92 @@ export function FloorPlan({
       height: catalog.height,
       color: catalog.color,
       finish: "wood",
-    });
-    if (!result.ok) return;
-    setLastAction({
-      label: `Added ${catalog.name}`,
-      run: async () => {
-        await deleteFloorItemAction(slug, result.id);
-        router.refresh();
-      },
-    });
-    router.refresh();
+      locked: false,
+    };
+    mutate((d) => ({ ...d, items: [...d.items, item] }));
   }
 
-  function handleItemDeleted(item: PlacedFloorItem) {
-    setLastAction({
-      label: `Deleted ${item.name}`,
-      run: async () => {
-        const result = await createFloorItemAction(slug, {
+  function enterEdit() {
+    setSession({ draft: { tables, items }, undoStack: [], redoStack: [] });
+    setEditMode(true);
+  }
+
+  function handleDiscard() {
+    setSession(null);
+    setEditMode(false);
+    closeInspector();
+  }
+
+  async function handleSaveLayout() {
+    if (!session) return;
+    const draft = session.draft;
+    setSaving(true);
+    const origTablesById = new Map(tables.map((t) => [t.id, t]));
+    const origItemsById = new Map(items.map((i) => [i.id, i]));
+
+    for (const t of draft.tables) {
+      const orig = origTablesById.get(t.id);
+      if (!orig || JSON.stringify(orig) === JSON.stringify(t)) continue;
+      await updateTableLayoutAction(slug, t.id, {
+        posX: t.posX ?? 0,
+        posY: t.posY ?? 0,
+        shape: t.shape,
+        rotation: t.rotation,
+        width: t.width,
+        height: t.height,
+        chairsTop: t.chairsTop,
+        chairsRight: t.chairsRight,
+        chairsBottom: t.chairsBottom,
+        chairsLeft: t.chairsLeft,
+        color: t.color,
+        finish: t.finish,
+      });
+    }
+
+    for (const it of draft.items) {
+      if (isTempId(it.id)) {
+        await createFloorItemAction(slug, {
           floorId: currentFloorId,
-          type: item.type,
-          name: item.name,
-          x: item.x,
-          z: item.z,
-          rotation: item.rotation,
-          width: item.width,
-          depth: item.depth,
-          height: item.height,
-          color: item.color,
-          finish: item.finish,
-          locked: item.locked,
+          type: it.type,
+          name: it.name,
+          x: it.x,
+          z: it.z,
+          rotation: it.rotation,
+          width: it.width,
+          depth: it.depth,
+          height: it.height,
+          color: it.color,
+          finish: it.finish,
+          locked: it.locked,
         });
-        if (result.ok) router.refresh();
-      },
-    });
-  }
+      } else {
+        const orig = origItemsById.get(it.id);
+        if (orig && JSON.stringify(orig) === JSON.stringify(it)) continue;
+        await updateFloorItemAction(slug, it.id, {
+          name: it.name,
+          x: it.x,
+          z: it.z,
+          rotation: it.rotation,
+          width: it.width,
+          depth: it.depth,
+          height: it.height,
+          color: it.color,
+          finish: it.finish,
+          locked: it.locked,
+        });
+      }
+    }
+    for (const orig of items) {
+      if (!draft.items.some((i) => i.id === orig.id)) {
+        await deleteFloorItemAction(slug, orig.id);
+      }
+    }
 
-  async function handleUndo() {
-    if (!lastAction) return;
-    setUndoing(true);
-    await lastAction.run();
-    setUndoing(false);
-    setLastAction(null);
+    setSaving(false);
+    setSession(null);
+    setEditMode(false);
+    closeInspector();
+    router.refresh();
   }
 
   const selectedTable = selectedKind === "table" && selectedId ? byId.get(selectedId) : null;
@@ -429,36 +463,51 @@ export function FloorPlan({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[28px] font-extrabold tracking-tight text-ink">Floor Manager</h1>
-          <p className="mt-0.5 text-sm text-ink-muted">{floorWidth} × {floorDepth} m room</p>
+          <p className="mt-0.5 text-sm text-ink-muted">
+            {activeTables.length} tables · {totalSeats} seats · {floorWidth} × {floorDepth} m
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <FloorSwitcher slug={slug} floors={floors} currentFloorId={currentFloorId} canEdit={canEdit && !editMode} />
-          {canEdit && (
-            <Button
-              type="button"
-              variant={editMode ? "default" : "outline"}
-              className="h-10 gap-2 rounded-xl text-sm font-semibold"
-              onClick={() => {
-                setEditMode((v) => !v);
-                closeInspector();
-                setLastAction(null);
-              }}
-            >
-              <Pencil className="size-3.5" />
-              {editMode ? "Done" : "Edit Layout"}
-            </Button>
+          {editMode ? (
+            <>
+              <div className="flex gap-0.5 rounded-xl border border-line-card bg-white p-1">
+                <button
+                  type="button"
+                  aria-label="Undo"
+                  onClick={handleUndo}
+                  disabled={(session?.undoStack.length ?? 0) === 0}
+                  className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-footer hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <Undo2 className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Redo"
+                  onClick={handleRedo}
+                  disabled={(session?.redoStack.length ?? 0) === 0}
+                  className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-footer hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <Redo2 className="size-4" />
+                </button>
+              </div>
+              <Button type="button" variant="outline" className="h-10 rounded-xl text-sm font-semibold" onClick={handleDiscard}>
+                Discard
+              </Button>
+              <Button type="button" className="h-10 rounded-xl text-sm font-bold" onClick={handleSaveLayout} disabled={saving}>
+                {saving ? "Saving..." : "Save layout"}
+              </Button>
+            </>
+          ) : (
+            canEdit && (
+              <Button type="button" variant="outline" className="h-10 gap-2 rounded-xl text-sm font-semibold" onClick={enterEdit}>
+                <Pencil className="size-3.5" />
+                Edit Layout
+              </Button>
+            )
           )}
         </div>
       </div>
-
-      {editMode && lastAction && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-line-card bg-white px-4 py-2.5 text-[13px] shadow-card">
-          <span className="font-medium text-ink">{lastAction.label}</span>
-          <button type="button" onClick={handleUndo} disabled={undoing} className="font-bold text-primary hover:underline disabled:opacity-50">
-            {undoing ? "Undoing..." : "Undo"}
-          </button>
-        </div>
-      )}
 
       <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink-muted">
         {LEGEND.map((l) => (
@@ -484,19 +533,17 @@ export function FloorPlan({
         />
         {editMode && selectedTable && selectedScene && (
           <TableInspector
-            slug={slug}
             table={selectedTable}
             status={selectedScene.status}
-            onSaved={() => router.refresh()}
+            onApply={(input) => handleApplyTable(selectedTable.id, input)}
             onClose={closeInspector}
           />
         )}
         {editMode && selectedItem && (
           <FloorItemInspector
-            slug={slug}
             item={selectedItem}
-            onSaved={() => router.refresh()}
-            onDeleted={() => { handleItemDeleted(selectedItem); closeInspector(); router.refresh(); }}
+            onApply={(patch) => handleApplyItem(selectedItem.id, patch)}
+            onDelete={handleDeleteSelected}
             onClose={closeInspector}
           />
         )}

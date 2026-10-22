@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { FieldLabel } from "@/components/ui/section-card";
 import { getEffectiveSize, getChairCounts } from "@/lib/table-layout";
-import { updateTableLayoutAction, type TableLayoutInput } from "./actions";
+import type { TableLayoutInput } from "./actions";
 import { STATUS_COLOR, type SceneTableStatus } from "./scene-engine";
 import type { FloorTable } from "./floor-plan";
 import type { TableShape } from "@/generated/prisma/client";
@@ -34,16 +34,14 @@ function num(input: HTMLInputElement | null): number {
 }
 
 export function TableInspector({
-  slug,
   table,
   status,
-  onSaved,
+  onApply,
   onClose,
 }: {
-  slug: string;
   table: FloorTable;
   status: SceneTableStatus;
-  onSaved: () => void;
+  onApply: (input: TableLayoutInput) => void;
   onClose: () => void;
 }) {
   const [shape, setShape] = useState<TableShape>(table.shape);
@@ -58,8 +56,6 @@ export function TableInspector({
   const [chairsRight, setChairsRight] = useState<number | null>(table.chairsRight ?? null);
   const [chairsBottom, setChairsBottom] = useState<number | null>(table.chairsBottom ?? null);
   const [chairsLeft, setChairsLeft] = useState<number | null>(table.chairsLeft ?? null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -75,7 +71,6 @@ export function TableInspector({
     setChairsRight(table.chairsRight ?? null);
     setChairsBottom(table.chairsBottom ?? null);
     setChairsLeft(table.chairsLeft ?? null);
-    setError(null);
     setSaved(false);
   }, [table]);
 
@@ -87,9 +82,7 @@ export function TableInspector({
     setSaved(false);
   }
 
-  async function handleSave() {
-    setSaving(true);
-    setError(null);
+  function handleSave() {
     const input: TableLayoutInput = {
       posX,
       posY,
@@ -104,14 +97,8 @@ export function TableInspector({
       color,
       finish,
     };
-    const result = await updateTableLayoutAction(slug, table.id, input);
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+    onApply(input);
     setSaved(true);
-    onSaved();
   }
 
   return (
@@ -230,13 +217,12 @@ export function TableInspector({
           </div>
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
       <div className="flex items-center gap-2.5 border-t border-line-divider bg-surface-footer px-4 py-3.5">
-        {saved && <span className="mr-auto text-[13px] font-semibold text-success">Saved</span>}
-        <Button onClick={handleSave} disabled={saving} className="h-10 w-full rounded-xl text-sm font-bold">
-          {saving ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}
+        {saved && <span className="mr-auto text-[13px] font-semibold text-success">Updated</span>}
+        <Button onClick={handleSave} className="h-10 w-full rounded-xl text-sm font-bold">
+          Apply changes
         </Button>
       </div>
     </aside>

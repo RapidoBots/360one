@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Lock, Trash2, Unlock, X } from "lucide-react";
+import { Lock, Trash2, Unlock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { FieldLabel } from "@/components/ui/section-card";
-import { deleteFloorItemAction, updateFloorItemAction } from "./actions";
 import type { PlacedFloorItem } from "./floor-plan";
 
 const FINISH_OPTIONS: { value: string; label: string }[] = [
@@ -21,16 +20,14 @@ const fieldClass =
   "h-11 w-full rounded-xl border-line-input bg-white px-3.5 text-sm font-medium text-ink focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/16";
 
 export function FloorItemInspector({
-  slug,
   item,
-  onSaved,
-  onDeleted,
+  onApply,
+  onDelete,
   onClose,
 }: {
-  slug: string;
   item: PlacedFloorItem;
-  onSaved: () => void;
-  onDeleted: () => void;
+  onApply: (patch: Partial<PlacedFloorItem>) => void;
+  onDelete: () => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(item.name);
@@ -43,9 +40,6 @@ export function FloorItemInspector({
   const [color, setColor] = useState(item.color);
   const [finish, setFinish] = useState(item.finish);
   const [locked, setLocked] = useState(item.locked);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -59,7 +53,6 @@ export function FloorItemInspector({
     setColor(item.color);
     setFinish(item.finish);
     setLocked(item.locked);
-    setError(null);
     setSaved(false);
   }, [item]);
 
@@ -67,28 +60,9 @@ export function FloorItemInspector({
     setSaved(false);
   }
 
-  async function handleSave() {
-    setSaving(true);
-    setError(null);
-    const result = await updateFloorItemAction(slug, item.id, { name, x, z, rotation, width, depth, height, color, finish, locked });
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+  function handleSave() {
+    onApply({ name, x, z, rotation, width, depth, height, color, finish, locked });
     setSaved(true);
-    onSaved();
-  }
-
-  async function handleDelete() {
-    setDeleting(true);
-    const result = await deleteFloorItemAction(slug, item.id);
-    setDeleting(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onDeleted();
   }
 
   return (
@@ -184,22 +158,20 @@ export function FloorItemInspector({
           </button>
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
       <div className="flex items-center gap-2.5 border-t border-line-divider bg-surface-footer px-4 py-3.5">
         <button
           type="button"
           aria-label="Delete item"
-          onClick={handleDelete}
-          disabled={deleting}
+          onClick={onDelete}
           className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-input text-destructive hover:bg-destructive/10"
         >
-          {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          <Trash2 className="size-4" />
         </button>
-        {saved && <span className="text-[13px] font-semibold text-success">Saved</span>}
-        <Button onClick={handleSave} disabled={saving} className="h-10 flex-1 rounded-xl text-sm font-bold">
-          {saving ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}
+        {saved && <span className="text-[13px] font-semibold text-success">Updated</span>}
+        <Button onClick={handleSave} className="h-10 flex-1 rounded-xl text-sm font-bold">
+          Apply changes
         </Button>
       </div>
     </aside>
