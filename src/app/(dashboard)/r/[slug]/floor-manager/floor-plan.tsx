@@ -13,7 +13,7 @@ import { SeatedInfoDialog } from "./seated-info-dialog";
 import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
 import { getEffectiveSize } from "@/lib/table-layout";
-import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction } from "./actions";
+import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction, deleteFloorItemAction } from "./actions";
 import { FURNITURE_BY_ID, type FurnitureCatalogItem } from "./furniture-catalog";
 import { STATUS_COLOR, type SceneTable, type SceneFurnitureItem } from "./scene-engine";
 import type { TableShape } from "@/generated/prisma/client";
@@ -93,6 +93,11 @@ export function FloorPlan({
   const [selectedKind, setSelectedKind] = useState<"table" | "item" | null>(null);
   const [quickSeat, setQuickSeat] = useState<{ id: string; number: string } | null>(null);
   const [seatedInfo, setSeatedInfo] = useState<{ number: string; reservation: TableStatusReservation } | null>(null);
+  // ponytail: single-level undo only (drag-move, add, delete) -- covers the
+  // one-click accidental actions; inspector saves have their own "Saved"
+  // confirmation before committing, so they're lower-risk and left out.
+  const [lastAction, setLastAction] = useState<{ label: string; run: () => Promise<void> } | null>(null);
+  const [undoing, setUndoing] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
@@ -167,6 +172,8 @@ export function FloorPlan({
     if (kind === "table") {
       const t = byId.get(id);
       if (!t) return;
+      const prevX = t.posX ?? 0;
+      const prevZ = t.posY ?? 0;
       await updateTableLayoutAction(slug, id, {
         posX: x,
         posY: z,
@@ -181,8 +188,39 @@ export function FloorPlan({
         color: t.color,
         finish: t.finish,
       });
+      setLastAction({
+        label: `Moved Table ${t.number}`,
+        run: async () => {
+          await updateTableLayoutAction(slug, id, {
+            posX: prevX,
+            posY: prevZ,
+            shape: t.shape,
+            rotation: t.rotation,
+            width: t.width,
+            height: t.height,
+            chairsTop: t.chairsTop,
+            chairsRight: t.chairsRight,
+            chairsBottom: t.chairsBottom,
+            chairsLeft: t.chairsLeft,
+            color: t.color,
+            finish: t.finish,
+          });
+          router.refresh();
+        },
+      });
     } else {
+      const it = itemById.get(id);
+      if (!it) return;
+      const prevX = it.x;
+      const prevZ = it.z;
       await updateFloorItemAction(slug, id, { x, z });
+      setLastAction({
+        label: `Moved ${it.name}`,
+        run: async () => {
+          await updateFloorItemAction(slug, id, { x: prevX, z: prevZ });
+          router.refresh();
+        },
+      });
     }
     router.refresh();
   }
@@ -225,7 +263,46 @@ export function FloorPlan({
       color: catalog.color,
       finish: "wood",
     });
-    if (result.ok) router.refresh();
+    if (!result.ok) return;
+    setLastAction({
+      label: `Added ${catalog.name}`,
+      run: async () => {
+        await deleteFloorItemAction(slug, result.id);
+        router.refresh();
+      },
+    });
+    router.refresh();
+  }
+
+  function handleItemDeleted(item: PlacedFloorItem) {
+    setLastAction({
+      label: `Deleted ${item.name}`,
+      run: async () => {
+        const result = await createFloorItemAction(slug, {
+          floorId: currentFloorId,
+          type: item.type,
+          name: item.name,
+          x: item.x,
+          z: item.z,
+          rotation: item.rotation,
+          width: item.width,
+          depth: item.depth,
+          height: item.height,
+          color: item.color,
+          finish: item.finish,
+          locked: item.locked,
+        });
+        if (result.ok) router.refresh();
+      },
+    });
+  }
+
+  async function handleUndo() {
+    if (!lastAction) return;
+    setUndoing(true);
+    await lastAction.run();
+    setUndoing(false);
+    setLastAction(null);
   }
 
   const selectedTable = selectedKind === "table" && selectedId ? byId.get(selectedId) : null;
@@ -254,6 +331,7 @@ export function FloorPlan({
               onClick={() => {
                 setEditMode((v) => !v);
                 closeInspector();
+                setLastAction(null);
               }}
             >
               <Pencil className="size-3.5" />
@@ -262,6 +340,15 @@ export function FloorPlan({
           )}
         </div>
       </div>
+
+      {editMode && lastAction && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-line-card bg-white px-4 py-2.5 text-[13px] shadow-card">
+          <span className="font-medium text-ink">{lastAction.label}</span>
+          <button type="button" onClick={handleUndo} disabled={undoing} className="font-bold text-primary hover:underline disabled:opacity-50">
+            {undoing ? "Undoing..." : "Undo"}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink-muted">
         {LEGEND.map((l) => (
@@ -296,7 +383,7 @@ export function FloorPlan({
             slug={slug}
             item={selectedItem}
             onSaved={() => router.refresh()}
-            onDeleted={() => { closeInspector(); router.refresh(); }}
+            onDeleted={() => { handleItemDeleted(selectedItem); closeInspector(); router.refresh(); }}
             onClose={closeInspector}
           />
         )}

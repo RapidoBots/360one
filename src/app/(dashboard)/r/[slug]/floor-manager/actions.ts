@@ -112,13 +112,16 @@ export type FloorItemInput = {
   height: number;
   color: string;
   finish: string;
+  locked?: boolean;
 };
 
-export async function createFloorItemAction(slug: string, input: FloorItemInput): Promise<FloorActionResult> {
+export type CreateFloorItemResult = { ok: true; id: string } | { ok: false; error: string };
+
+export async function createFloorItemAction(slug: string, input: FloorItemInput): Promise<CreateFloorItemResult> {
   const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
-  await prisma.floorItem.create({ data: { ...input, restaurantId: restaurant.id } });
+  const item = await prisma.floorItem.create({ data: { ...input, restaurantId: restaurant.id } });
   revalidatePath(`/r/${slug}/floor-manager`);
-  return { ok: true };
+  return { ok: true, id: item.id };
 }
 
 export async function updateFloorItemAction(
