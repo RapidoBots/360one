@@ -291,12 +291,18 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
 
   const world = new THREE.Group();
   scene.add(world);
+  const selectionGroup = new THREE.Group();
+  scene.add(selectionGroup);
 
   let floorMesh: THREE.Group | null = null;
   const objGroups = new Map<string, THREE.Group>();
   const hits: THREE.Mesh[] = [];
+  const tableById = new Map<string, SceneTable>();
   let floorW = 20, floorD = 14;
   let light: SceneLight = "day";
+  let editable = false;
+  let selectedId: string | null = null;
+  const GRID = 0.25;
   let need = true;
   let D0 = 24;
   const cam: CamState = { tx: 0, tz: 0, ty: 0, dist: D0, az: 0, pol: 0.95 };
@@ -434,7 +440,60 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
 
   function setTables(tables: SceneTable[]) {
     clearWorld();
-    tables.forEach(buildTable);
+    tableById.clear();
+    tables.forEach((t) => {
+      tableById.set(t.id, t);
+      buildTable(t);
+    });
+    updateSelection();
+  }
+
+  function clampToRoom(x: number, z: number): [number, number] {
+    return [Math.max(-floorW / 2, Math.min(floorW / 2, x)), Math.max(-floorD / 2, Math.min(floorD / 2, z))];
+  }
+  function snap(v: number): number {
+    return Math.round(v / GRID) * GRID;
+  }
+
+  function updateSelection() {
+    while (selectionGroup.children.length) {
+      const c = selectionGroup.children.pop()!;
+      c.traverse((m) => {
+        if (m instanceof THREE.Mesh || m instanceof THREE.LineSegments) m.geometry.dispose();
+      });
+    }
+    const t = selectedId ? tableById.get(selectedId) : null;
+    if (!t) {
+      dirty();
+      return;
+    }
+    const ac = new THREE.Color("#2B50E8");
+    const lineMat = new THREE.LineBasicMaterial({ color: ac, depthTest: false, transparent: true });
+    const holder = new THREE.Group();
+    holder.position.set(t.x, 0, t.z);
+    holder.rotation.y = -t.rotation * DEG;
+    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(t.width, 0.78, t.depth)), lineMat);
+    box.position.y = 0.39;
+    box.renderOrder = 30;
+    holder.add(box);
+    const fp = new THREE.Mesh(
+      new THREE.PlaneGeometry(t.width, t.depth),
+      new THREE.MeshBasicMaterial({ color: ac, transparent: true, opacity: 0.14, depthWrite: false })
+    );
+    fp.rotation.x = -Math.PI / 2;
+    fp.position.y = 0.02;
+    holder.add(fp);
+    selectionGroup.add(holder);
+    dirty();
+  }
+
+  function select(id: string | null) {
+    selectedId = id;
+    updateSelection();
+  }
+
+  function setEditable(v: boolean) {
+    editable = v;
   }
 
   function camApply() {
@@ -477,9 +536,10 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     applyLight();
   }
 
-  // ---------- pointer interaction (orbit / pan / zoom / click) ----------
+  // ---------- pointer interaction (orbit / pan / zoom / click / move) ----------
   const ray = new THREE.Raycaster();
   const V = new THREE.Vector2();
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   function ndc(clientX: number, clientY: number) {
     const r = canvas.getBoundingClientRect();
     V.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -490,10 +550,19 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     const h = ray.intersectObjects(hits, false);
     return h.length ? (h[0]!.object.userData.id as string) : null;
   }
+  function groundPoint(clientX: number, clientY: number): THREE.Vector3 | null {
+    ndc(clientX, clientY);
+    const p = new THREE.Vector3();
+    return ray.ray.intersectPlane(groundPlane, p) ? p : null;
+  }
 
   let onPickCb: ((id: string | null) => void) | null = null;
   function onPick(cb: (id: string | null) => void) {
     onPickCb = cb;
+  }
+  let onMoveCb: ((id: string, x: number, z: number) => void) | null = null;
+  function onMove(cb: (id: string, x: number, z: number) => void) {
+    onMoveCb = cb;
   }
 
   function panBy(dx: number, dy: number) {
@@ -504,12 +573,24 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   }
 
   const ptr = new Map<number, { x: number; y: number }>();
-  let drag: { mode: "orbit" | "pan"; sx: number; sy: number; lx: number; ly: number; moved: boolean } | null = null;
+  let drag:
+    | { mode: "orbit" | "pan"; sx: number; sy: number; lx: number; ly: number; moved: boolean }
+    | { mode: "obj"; id: string; offX: number; offZ: number; sx: number; sy: number; moved: boolean }
+    | null = null;
 
   function onPointerDown(e: PointerEvent) {
     canvas.setPointerCapture(e.pointerId);
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptr.size > 1) return;
+    if (editable && e.button === 0 && !e.shiftKey) {
+      const id = pickId(e.clientX, e.clientY);
+      if (id) {
+        const t = tableById.get(id)!;
+        const gp = groundPoint(e.clientX, e.clientY);
+        drag = { mode: "obj", id, offX: gp ? t.x - gp.x : 0, offZ: gp ? t.z - gp.z : 0, sx: e.clientX, sy: e.clientY, moved: false };
+        return;
+      }
+    }
     const mode = e.button === 2 || (e.shiftKey && e.button === 0) ? "pan" : "orbit";
     drag = { mode, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, moved: false };
   }
@@ -519,6 +600,23 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     p.x = e.clientX;
     p.y = e.clientY;
     if (!drag) return;
+    if (drag.mode === "obj") {
+      if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
+      drag.moved = true;
+      const gp = groundPoint(e.clientX, e.clientY);
+      if (!gp) return;
+      const [x, z] = clampToRoom(snap(gp.x + drag.offX), snap(gp.z + drag.offZ));
+      const g = objGroups.get(drag.id);
+      const t = tableById.get(drag.id);
+      if (g && t) {
+        g.position.set(x, 0, z);
+        t.x = x;
+        t.z = z;
+        if (selectedId === drag.id) updateSelection();
+        dirty();
+      }
+      return;
+    }
     const dx = e.clientX - drag.lx, dy = e.clientY - drag.ly;
     if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
     drag.moved = true;
@@ -538,7 +636,14 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   function onPointerUp(e: PointerEvent) {
     ptr.delete(e.pointerId);
     if (drag && ptr.size === 0) {
-      if (!drag.moved) {
+      if (drag.mode === "obj") {
+        const t = tableById.get(drag.id);
+        if (t) {
+          select(drag.id);
+          onPickCb?.(drag.id);
+          if (drag.moved) onMoveCb?.(drag.id, t.x, t.z);
+        }
+      } else if (!drag.moved) {
         const id = pickId(e.clientX, e.clientY);
         onPickCb?.(id);
       }
@@ -604,8 +709,12 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     canvas.removeEventListener("wheel", onWheel);
     canvas.removeEventListener("contextmenu", onContextMenu);
     clearWorld();
+    select(null);
     renderer.dispose();
   }
 
-  return { setFloor, setTables, onPick, frame, zoom, zoomPct, setLight, resize, destroy };
+  return {
+    setFloor, setTables, onPick, onMove, select, setEditable,
+    frame, zoom, zoomPct, setLight, resize, destroy,
+  };
 }

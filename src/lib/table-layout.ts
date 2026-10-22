@@ -2,10 +2,12 @@
 // canvas -- kept separate from table-status.ts (which is about booking
 // status, not visual layout).
 
+// Metres -- was pixels (56/80/96) before the floor plan moved to a real 3D
+// room; same proportions at the 80px-per-metre ratio the 3D view renders at.
 const SIZE_TIERS = [
-  { maxCapacity: 2, size: 56 },
-  { maxCapacity: 4, size: 80 },
-  { maxCapacity: Infinity, size: 96 },
+  { maxCapacity: 2, size: 0.7 },
+  { maxCapacity: 4, size: 1.0 },
+  { maxCapacity: Infinity, size: 1.2 },
 ];
 
 // Null width/height means "use the capacity-based default" -- the original

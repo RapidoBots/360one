@@ -7,12 +7,16 @@ export function FloorViewport({
   floorWidth,
   floorDepth,
   tables,
-  onTableClick,
+  editMode,
+  onTableSelect,
+  onTableMove,
 }: {
   floorWidth: number;
   floorDepth: number;
   tables: SceneTable[];
-  onTableClick: (id: string) => void;
+  editMode: boolean;
+  onTableSelect: (id: string | null) => void;
+  onTableMove: (id: string, x: number, z: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,10 +44,16 @@ export function FloorViewport({
   }, [tables]);
 
   useEffect(() => {
-    engineRef.current?.onPick((id) => {
-      if (id) onTableClick(id);
-    });
-  }, [onTableClick]);
+    engineRef.current?.onPick(onTableSelect);
+  }, [onTableSelect]);
+
+  useEffect(() => {
+    engineRef.current?.onMove(onTableMove);
+  }, [onTableMove]);
+
+  useEffect(() => {
+    engineRef.current?.setEditable(editMode);
+  }, [editMode]);
 
   useEffect(() => {
     engineRef.current?.setLight(light);
@@ -114,7 +124,15 @@ export function FloorViewport({
       </div>
 
       <div className="absolute bottom-3 left-3 rounded-xl border border-line-card bg-white/85 px-3 py-1.5 text-xs text-ink-muted backdrop-blur-sm">
-        Click a table for status · <b className="text-ink">Drag</b> to orbit · <b className="text-ink">Shift-drag</b> to pan · <b className="text-ink">Scroll</b> to zoom
+        {editMode ? (
+          <>
+            <b className="text-ink">Drag</b> a table to move it · <b className="text-ink">Left-drag</b> empty space to orbit · <b className="text-ink">Shift-drag</b> to pan
+          </>
+        ) : (
+          <>
+            Click a table for status · <b className="text-ink">Drag</b> to orbit · <b className="text-ink">Shift-drag</b> to pan · <b className="text-ink">Scroll</b> to zoom
+          </>
+        )}
       </div>
     </div>
   );

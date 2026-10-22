@@ -81,6 +81,8 @@ export type TableLayoutInput = {
   chairsRight?: number | null;
   chairsBottom?: number | null;
   chairsLeft?: number | null;
+  color?: string | null;
+  finish?: string | null;
 };
 
 export async function updateTableLayoutAction(
