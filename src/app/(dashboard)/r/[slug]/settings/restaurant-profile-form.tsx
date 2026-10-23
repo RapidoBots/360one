@@ -59,10 +59,7 @@ function BannerUpload({
 
   return (
     <div className="relative h-44 overflow-hidden rounded-2xl border-[1.5px] border-dashed border-[#BAC3E0] bg-[#EEF1FA]">
-      {/* The post-upload preview swaps in a local blob: URL (see handleChange)
-          before the page ever reloads -- next/image can't optimize that, so
-          only the persisted Blob URL goes through the optimizer. */}
-      {url && <Image src={url} alt="Banner" fill unoptimized={url.startsWith("blob:")} sizes="(min-width: 1024px) 600px, 100vw" className="object-cover" />}
+      {url && <Image src={url} alt="Banner" fill unoptimized className="object-cover" />}
       <label className="up absolute right-3 bottom-3 flex h-10 w-fit cursor-pointer items-center gap-2 rounded-xl border border-[#D5DAEA] bg-white px-4 text-[13.5px] font-semibold whitespace-nowrap text-ink shadow-[0_1px_2px_rgba(15,23,42,.06)]">
         {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
         {uploading ? "Uploading..." : url ? "Replace banner" : "Upload banner"}
@@ -112,7 +109,7 @@ function LogoUpload({
   return (
     <label className="up absolute bottom-[-46px] left-6 flex size-24 cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-[26px] border-[1.5px] border-dashed border-[#AEB8DA] bg-white text-[12px] font-semibold text-[#475569] shadow-[0_8px_20px_-8px_rgba(15,23,42,.25)]">
       {url ? (
-        <Image src={url} alt="Logo" fill unoptimized={url.startsWith("blob:")} sizes="96px" className="object-cover" />
+        <Image src={url} alt="Logo" fill unoptimized className="object-cover" />
       ) : uploading ? (
         <Loader2 className="size-[22px] animate-spin" />
       ) : (

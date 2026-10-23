@@ -3,24 +3,24 @@ import { getEffectiveSize, getChairCounts } from "@/lib/table-layout";
 
 describe("getEffectiveSize", () => {
   it("uses the smallest tier for capacity 2 or less", () => {
-    expect(getEffectiveSize(2, null, null)).toEqual({ width: 0.7, height: 0.7 });
-    expect(getEffectiveSize(1, null, null)).toEqual({ width: 0.7, height: 0.7 });
+    expect(getEffectiveSize(2, null, null)).toEqual({ width: 56, height: 56 });
+    expect(getEffectiveSize(1, null, null)).toEqual({ width: 56, height: 56 });
   });
 
   it("uses the mid tier for capacity 3-4", () => {
-    expect(getEffectiveSize(4, null, null)).toEqual({ width: 1.0, height: 1.0 });
+    expect(getEffectiveSize(4, null, null)).toEqual({ width: 80, height: 80 });
   });
 
   it("uses the largest tier above capacity 4", () => {
-    expect(getEffectiveSize(8, null, null)).toEqual({ width: 1.2, height: 1.2 });
+    expect(getEffectiveSize(8, null, null)).toEqual({ width: 96, height: 96 });
   });
 
   it("prefers an explicit width/height over the capacity default", () => {
-    expect(getEffectiveSize(2, 2.5, 0.75)).toEqual({ width: 2.5, height: 0.75 });
+    expect(getEffectiveSize(2, 200, 60)).toEqual({ width: 200, height: 60 });
   });
 
   it("falls back to the default independently per axis", () => {
-    expect(getEffectiveSize(2, 2.5, null)).toEqual({ width: 2.5, height: 0.7 });
+    expect(getEffectiveSize(2, 200, null)).toEqual({ width: 200, height: 56 });
   });
 });
 

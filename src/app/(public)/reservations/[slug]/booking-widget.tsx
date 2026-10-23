@@ -115,7 +115,7 @@ export function BookingWidget({
         // Shown here (portrait) only on desktop -- on mobile the banner
         // already renders full-width above everything else, landscape.
         <div className="relative hidden aspect-[3/4] w-full overflow-hidden rounded-[5px] lg:block">
-          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill sizes="320px" className="object-cover" />
+          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
         </div>
       )}
       {notes && <p className="text-sm text-muted-foreground">{notes}</p>}
@@ -184,7 +184,7 @@ export function BookingWidget({
         // Full-width landscape hero at the very top on mobile only -- on
         // desktop the banner instead renders portrait inside the sidebar.
         <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-[5px] lg:hidden">
-          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill sizes="100vw" className="object-cover" />
+          <Image src={bannerUrl} alt={`${restaurantName} banner`} fill className="object-cover" unoptimized />
         </div>
       )}
       {logoUrl && (
@@ -194,6 +194,7 @@ export function BookingWidget({
           width={112}
           height={112}
           className="mx-auto mb-3 size-28 rounded-[5px] object-contain"
+          unoptimized
         />
       )}
 
