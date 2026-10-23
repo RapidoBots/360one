@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { assertRestaurantOwner, FEATURE_COLUMNS, type FeatureKey } from "@/lib/auth-guards";
 import { createUserAccount, setUserPassword } from "@/lib/user-accounts";
@@ -89,6 +89,14 @@ async function uploadRestaurantImage(
   });
 
   await prisma.restaurant.update({ where: { id: restaurant.id }, data: { [input.column]: blob.url } });
+
+  // Replacing a logo/banner otherwise leaves the old file in Blob storage
+  // forever (nothing in the DB points to it anymore). Best-effort: a failed
+  // delete shouldn't fail the upload that already succeeded.
+  const oldUrl = restaurant[input.column];
+  if (oldUrl) {
+    await del(oldUrl).catch(() => {});
+  }
 
   revalidatePath(`/r/${slug}/settings`);
   revalidatePath(`/reservations/${slug}`);

@@ -12,6 +12,14 @@ const NO_FRAME_HEADERS = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
+  images: {
+    // Restaurant logo/banner uploads live in Vercel Blob. Without this,
+    // next/image refuses to optimize them, which is why `unoptimized` got
+    // added at the call sites -- but that skips Vercel's image CDN
+    // entirely, so every page view re-fetched the full original straight
+    // from Blob and blew through the account's Blob data-transfer quota.
+    remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
+  },
   experimental: {
     serverActions: {
       // Default is 1MB -- the logo upload action allows up to 5MB, so
