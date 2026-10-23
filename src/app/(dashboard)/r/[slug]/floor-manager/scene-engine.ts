@@ -201,7 +201,7 @@ function buildSeats(t: SceneTable, g: THREE.Object3D) {
   });
 }
 
-function buildTableTop(t: SceneTable, g: THREE.Object3D) {
+export function buildTableTop(t: SceneTable, g: THREE.Object3D) {
   const f = FINISH[t.finish];
   const tm = mat(t.color, f.roughness, f.metalness);
   const leg = mat("#2B2B2B", 0.35, 0.7);
@@ -232,7 +232,7 @@ function primaryMat(item: SceneFurnitureItem) {
 
 const glowMat = new THREE.MeshStandardMaterial({ color: "#FFF3D6", emissive: "#FFB454", emissiveIntensity: 0.15, roughness: 0.4 });
 
-const FURNITURE_BUILDERS: Record<string, (o: SceneFurnitureItem, g: THREE.Object3D) => void> = {
+export const FURNITURE_BUILDERS: Record<string, (o: SceneFurnitureItem, g: THREE.Object3D) => void> = {
   "table-bar"(o, g) {
     const tm = primaryMat(o), leg = mat("#B8BCC4", 0.25, 0.9);
     const top = cyl(0.5, 0.5, 0.045, tm, 0, o.height - 0.022, 0, g);
@@ -576,8 +576,8 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
 
   function applyLight() {
     const ev = light === "evening";
-    scene.background = new THREE.Color(ev ? "#161B2E" : "#C9D4E3");
-    scene.fog = new THREE.Fog(ev ? "#161B2E" : "#C9D4E3", 80, 200);
+    scene.background = new THREE.Color(ev ? "#161B2E" : "#FFFFFF");
+    scene.fog = new THREE.Fog(ev ? "#161B2E" : "#FFFFFF", 80, 200);
     hemi.color.set(ev ? "#8FA4D8" : "#ffffff");
     hemi.groundColor.set(ev ? "#2A2230" : "#b9a98f");
     hemi.intensity = ev ? 0.26 : 0.72;
@@ -609,7 +609,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     floorMesh.add(fl);
     const gr = new THREE.Mesh(
       new THREE.PlaneGeometry(400, 400),
-      new THREE.MeshStandardMaterial({ color: "#7C8696", roughness: 1 })
+      new THREE.MeshStandardMaterial({ color: "#F5F6F8", roughness: 1 })
     );
     gr.rotation.x = -Math.PI / 2;
     gr.position.y = -0.21;

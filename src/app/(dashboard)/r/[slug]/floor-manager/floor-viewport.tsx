@@ -144,7 +144,7 @@ export function FloorViewport({
   }
 
   return (
-    <div ref={containerRef} className="relative min-h-[560px] flex-1 overflow-hidden rounded-[20px] border border-line-card bg-[#E9ECF4] shadow-card">
+    <div ref={containerRef} className="relative h-full flex-1 overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
       <canvas ref={canvasRef} tabIndex={0} aria-label="3D floor plan" className="absolute inset-0 size-full touch-none outline-none" />
 
       {editMode && (

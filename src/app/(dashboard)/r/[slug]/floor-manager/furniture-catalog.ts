@@ -2,6 +2,8 @@
 // Not database-backed -- every FloorItem just stores a `type` id that
 // indexes into this table for its default dims/color and which 3D builder
 // (scene-engine's FURNITURE_BUILDERS) renders it.
+import type { TableShape } from "@/generated/prisma/client";
+
 export type FurnitureCategory = "Tables" | "Bar" | "Seating" | "Structure" | "Decor";
 
 export type FurnitureCatalogItem = {
@@ -15,6 +17,31 @@ export type FurnitureCatalogItem = {
   color: string;
   seats: number;
 };
+
+// Unlike FurnitureCatalogItem (which seeds a FloorItem), placing one of
+// these creates a real Table row -- tables are a reservation-linked
+// resource, not decoration, so they go through the Table model/actions
+// instead of FloorItem.
+export type TableCatalogItem = {
+  id: string;
+  name: string;
+  category: "Tables";
+  shape: TableShape;
+  capacity: number;
+  width: number;
+  depth: number;
+};
+
+export const TABLE_CATALOG: TableCatalogItem[] = [
+  { id: "table-round-2", name: "Round table · 2", category: "Tables", shape: "ROUND", capacity: 2, width: 0.7, depth: 0.7 },
+  { id: "table-round-4", name: "Round table · 4", category: "Tables", shape: "ROUND", capacity: 4, width: 1.0, depth: 1.0 },
+  { id: "table-round-6", name: "Round table · 6", category: "Tables", shape: "ROUND", capacity: 6, width: 1.3, depth: 1.3 },
+  { id: "table-square-2", name: "Square table · 2", category: "Tables", shape: "SQUARE", capacity: 2, width: 0.7, depth: 0.7 },
+  { id: "table-square-4", name: "Square table · 4", category: "Tables", shape: "SQUARE", capacity: 4, width: 1.0, depth: 1.0 },
+  { id: "table-rect-6", name: "Rectangular table · 6", category: "Tables", shape: "RECTANGLE", capacity: 6, width: 1.8, depth: 0.9 },
+  { id: "table-banquet-8", name: "Banquet table · 8", category: "Tables", shape: "RECTANGLE", capacity: 8, width: 2.4, depth: 0.9 },
+];
+export const TABLE_CATALOG_BY_ID = new Map(TABLE_CATALOG.map((c) => [c.id, c]));
 
 export const FURNITURE_CATALOG: FurnitureCatalogItem[] = [
   { id: "bartable", name: "High bar table", category: "Bar", kind: "table-bar", width: 0.7, depth: 0.7, height: 1.05, color: "#2F3A4A", seats: 2 },

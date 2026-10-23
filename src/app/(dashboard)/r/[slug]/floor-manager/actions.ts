@@ -100,6 +100,55 @@ export async function updateTableLayoutAction(
   return { ok: true };
 }
 
+export type CreateTableResult = { ok: true; id: string } | { ok: false; error: string };
+
+// Placing a table shape from the floor manager's furniture library creates a
+// real Table (unlike FloorItem, tables are a reservation-linked resource).
+// The table number is auto-assigned here since there's no form to type one
+// into -- next integer after the highest existing numeric table number.
+export async function createTableFromLibraryAction(
+  slug: string,
+  input: TableLayoutInput & { floorId: string; capacity: number }
+): Promise<CreateTableResult> {
+  const { restaurant } = await assertFeatureAccess(slug, "floorManager", "EDIT");
+  const existing = await prisma.table.findMany({ where: { restaurantId: restaurant.id }, select: { number: true } });
+  const maxNumber = existing.reduce((max, t) => {
+    const n = Number(t.number);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  const number = String(maxNumber + 1);
+  try {
+    const table = await prisma.table.create({
+      data: {
+        restaurantId: restaurant.id,
+        floorId: input.floorId,
+        number,
+        capacity: input.capacity,
+        posX: input.posX,
+        posY: input.posY,
+        shape: input.shape,
+        rotation: input.rotation,
+        width: input.width,
+        height: input.height,
+        chairsTop: input.chairsTop,
+        chairsRight: input.chairsRight,
+        chairsBottom: input.chairsBottom,
+        chairsLeft: input.chairsLeft,
+        color: input.color,
+        finish: input.finish,
+      },
+    });
+    revalidatePath(`/r/${slug}/floor-manager`);
+    revalidatePath(`/r/${slug}/reservations`);
+    return { ok: true, id: table.id };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: `Table "${number}" already exists.` };
+    }
+    throw e;
+  }
+}
+
 export type FloorItemInput = {
   floorId: string;
   type: string;

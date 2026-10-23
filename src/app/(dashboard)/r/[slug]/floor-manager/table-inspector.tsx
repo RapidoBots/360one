@@ -102,10 +102,10 @@ export function TableInspector({
   }
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
+    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
       <div className="flex items-center justify-between gap-2 border-b border-line-divider px-4 py-3.5">
         <div className="min-w-0">
-          <div className="text-lg font-extrabold tracking-tight text-ink">Table {table.number}</div>
+          <div className="text-lg font-extrabold tracking-tight text-ink">{table.number === "New" ? "New table" : `Table ${table.number}`}</div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-muted">
             <span className="size-2 rounded-full" style={{ backgroundColor: sc }} />
             {STATUS_LABEL[status]} · {table.capacity} seats

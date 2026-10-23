@@ -13,8 +13,15 @@ import { SeatedInfoDialog } from "./seated-info-dialog";
 import { FloorSwitcher, type FloorOption } from "./floor-switcher";
 import { getTableStatus, type TableStatusReservation } from "@/lib/table-status";
 import { getEffectiveSize } from "@/lib/table-layout";
-import { updateTableLayoutAction, createFloorItemAction, updateFloorItemAction, deleteFloorItemAction, type TableLayoutInput } from "./actions";
-import { FURNITURE_BY_ID, type FurnitureCatalogItem } from "./furniture-catalog";
+import {
+  updateTableLayoutAction,
+  createTableFromLibraryAction,
+  createFloorItemAction,
+  updateFloorItemAction,
+  deleteFloorItemAction,
+  type TableLayoutInput,
+} from "./actions";
+import { FURNITURE_BY_ID, type FurnitureCatalogItem, type TableCatalogItem } from "./furniture-catalog";
 import { STATUS_COLOR, type SceneTable, type SceneFurnitureItem } from "./scene-engine";
 import type { TableShape } from "@/generated/prisma/client";
 
@@ -250,19 +257,38 @@ export function FloorPlan({
   }
 
   function handleDeleteSelected() {
-    if (selectedKind !== "item" || !selectedId) return;
-    mutate((d) => ({ ...d, items: d.items.filter((i) => i.id !== selectedId) }));
-    closeInspector();
+    if (!selectedId || !selectedKind) return;
+    if (selectedKind === "item") {
+      mutate((d) => ({ ...d, items: d.items.filter((i) => i.id !== selectedId) }));
+      closeInspector();
+      return;
+    }
+    // A real (already-saved) table is a reservation-linked resource -- not
+    // something to delete from the floor plan. Only a table placed from the
+    // library this session (still unsaved) can be removed here.
+    if (isTempId(selectedId)) {
+      mutate((d) => ({ ...d, tables: d.tables.filter((t) => t.id !== selectedId) }));
+      closeInspector();
+    }
   }
 
   function handleDuplicateSelected() {
-    if (selectedKind !== "item" || !selectedId) return;
-    const item = itemById.get(selectedId);
-    if (!item) return;
-    const clone: PlacedFloorItem = { ...item, id: tempId(), x: item.x + 0.3, z: item.z + 0.3 };
-    mutate((d) => ({ ...d, items: [...d.items, clone] }));
+    if (!selectedId || !selectedKind) return;
+    if (selectedKind === "item") {
+      const item = itemById.get(selectedId);
+      if (!item) return;
+      const clone: PlacedFloorItem = { ...item, id: tempId(), x: item.x + 0.3, z: item.z + 0.3 };
+      mutate((d) => ({ ...d, items: [...d.items, clone] }));
+      setSelectedId(clone.id);
+      setSelectedKind("item");
+      return;
+    }
+    const table = byId.get(selectedId);
+    if (!table) return;
+    const clone: FloorTable = { ...table, id: tempId(), number: "New", posX: (table.posX ?? 0) + 0.3, posY: (table.posY ?? 0) + 0.3 };
+    mutate((d) => ({ ...d, tables: [...d.tables, clone] }));
     setSelectedId(clone.id);
-    setSelectedKind("item");
+    setSelectedKind("table");
   }
 
   function handleNudge(dx: number, dz: number) {
@@ -348,6 +374,29 @@ export function FloorPlan({
     setSelectedKind("table");
   }
 
+  function handlePlaceTable(catalog: TableCatalogItem) {
+    const table: FloorTable = {
+      id: tempId(),
+      number: "New",
+      capacity: catalog.capacity,
+      posX: 0,
+      posY: 0,
+      shape: catalog.shape,
+      rotation: 0,
+      width: catalog.width,
+      height: catalog.depth,
+      chairsTop: null,
+      chairsRight: null,
+      chairsBottom: null,
+      chairsLeft: null,
+      color: null,
+      finish: null,
+    };
+    mutate((d) => ({ ...d, tables: [...d.tables, table] }));
+    setSelectedId(table.id);
+    setSelectedKind("table");
+  }
+
   function handlePlaceFurniture(catalog: FurnitureCatalogItem) {
     const item: PlacedFloorItem = {
       id: tempId(),
@@ -385,6 +434,25 @@ export function FloorPlan({
     const origItemsById = new Map(items.map((i) => [i.id, i]));
 
     for (const t of draft.tables) {
+      if (isTempId(t.id)) {
+        await createTableFromLibraryAction(slug, {
+          floorId: currentFloorId,
+          capacity: t.capacity,
+          posX: t.posX ?? 0,
+          posY: t.posY ?? 0,
+          shape: t.shape,
+          rotation: t.rotation,
+          width: t.width,
+          height: t.height,
+          chairsTop: t.chairsTop,
+          chairsRight: t.chairsRight,
+          chairsBottom: t.chairsBottom,
+          chairsLeft: t.chairsLeft,
+          color: t.color,
+          finish: t.finish,
+        });
+        continue;
+      }
       const orig = origTablesById.get(t.id);
       if (!orig || JSON.stringify(orig) === JSON.stringify(t)) continue;
       await updateTableLayoutAction(slug, t.id, {
@@ -518,7 +586,7 @@ export function FloorPlan({
         ))}
       </div>
 
-      <div className="flex min-h-[560px] flex-1 gap-4">
+      <div className="flex h-[560px] gap-4">
         <FloorViewport
           floorWidth={floorWidth}
           floorDepth={floorDepth}
@@ -549,7 +617,7 @@ export function FloorPlan({
             onClose={closeInspector}
           />
         )}
-        {editMode && !selectedTable && !selectedItem && <FurnitureLibrary onPlace={handlePlaceFurniture} />}
+        {editMode && !selectedTable && !selectedItem && <FurnitureLibrary onPlace={handlePlaceFurniture} onPlaceTable={handlePlaceTable} />}
       </div>
 
       {unplaced.length > 0 && (

@@ -66,7 +66,7 @@ export function FloorItemInspector({
   }
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
+    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-line-card bg-white shadow-card">
       <div className="flex items-center justify-between gap-2 border-b border-line-divider px-4 py-3.5">
         <div className="min-w-0 text-lg font-extrabold tracking-tight text-ink">{item.name}</div>
         <button type="button" aria-label="Close inspector" onClick={onClose} className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[#475569] hover:bg-[#F1F3F9]">
