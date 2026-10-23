@@ -547,7 +547,9 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   let selectedId: string | null = null;
   let toolMode: SceneTool = "move";
   const gizmoHits: THREE.Mesh[] = [];
-  const GRID = 0.25;
+  let snapEnabled = true;
+  let gridSize = 0.25;
+  let labelsVisible = true;
   let need = true;
   let D0 = 24;
   const cam: CamState = { tx: 0, tz: 0, ty: 0, dist: D0, az: 0, pol: 0.95 };
@@ -676,6 +678,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     sp.scale.set(0.07, 0.0263, 1);
     sp.position.y = TABLE_HEIGHT + 0.7;
     sp.renderOrder = 20;
+    sp.visible = labelsVisible;
     g.add(sp);
 
     g.position.set(t.x, 0, t.z);
@@ -739,7 +742,18 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     return [Math.max(-floorW / 2, Math.min(floorW / 2, x)), Math.max(-floorD / 2, Math.min(floorD / 2, z))];
   }
   function snap(v: number): number {
-    return Math.round(v / GRID) * GRID;
+    return snapEnabled ? Math.round(v / gridSize) * gridSize : v;
+  }
+  function setSnapConfig(enabled: boolean, size: number) {
+    snapEnabled = enabled;
+    gridSize = size;
+  }
+  function setLabelsVisible(v: boolean) {
+    labelsVisible = v;
+    world.traverse((o) => {
+      if ((o as THREE.Sprite).isSprite) o.visible = v;
+    });
+    dirty();
   }
 
   const handleMat = new THREE.MeshBasicMaterial({ color: "#2B50E8", depthTest: false });
@@ -821,13 +835,16 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     updateSelection();
   }
 
+  function frameOnPoint(x: number, z: number, span: number) {
+    tweenTo({ tx: x, tz: z, ty: 0, dist: Math.max(7, Math.max(span, 1.5) * 5) });
+  }
+
   function frameSelected() {
     const t = selectedId ? tableById.get(selectedId) : null;
     const it = !t && selectedId ? itemById.get(selectedId) : null;
     const sel = t ?? it;
     if (!sel) return;
-    const span = Math.max(sel.width, sel.depth, 1.5);
-    tweenTo({ tx: sel.x, tz: sel.z, ty: 0, dist: Math.max(7, span * 5) });
+    frameOnPoint(sel.x, sel.z, Math.max(sel.width, sel.depth));
   }
 
   function setEditable(v: boolean) {
@@ -1033,7 +1050,8 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
         const curAngle = Math.atan2(gp.x - drag.cx, gp.z - drag.cz);
         const deltaDeg = (curAngle - drag.startAngle) / DEG;
         let newRot = drag.startRotation - deltaDeg;
-        newRot = (Math.round(newRot / 15) * 15) % 360;
+        if (snapEnabled) newRot = Math.round(newRot / 15) * 15;
+        newRot = newRot % 360;
         if (newRot < 0) newRot += 360;
         entry.rotation = newRot;
         g.rotation.y = -newRot * DEG;
@@ -1118,9 +1136,27 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   function onWheel(e: WheelEvent) {
     e.preventDefault();
     goal = {};
+    const gp = groundPoint(e.clientX, e.clientY);
     const k = Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0012));
-    cam.dist = Math.min(90, Math.max(2.5, cam.dist * k));
+    const newDist = Math.min(90, Math.max(2.5, cam.dist * k));
+    if (gp && newDist < cam.dist) {
+      // Zooming in: nudge the pan target toward the point under the cursor
+      // so that point appears to stay put as the view gets closer.
+      const t = 1 - newDist / cam.dist;
+      cam.tx += (gp.x - cam.tx) * t;
+      cam.tz += (gp.z - cam.tz) * t;
+    }
+    cam.dist = newDist;
     dirty();
+  }
+  function onDblClick(e: MouseEvent) {
+    const hit = pickId(e.clientX, e.clientY);
+    if (hit) {
+      const entry = entryFor(hit);
+      if (entry) frameOnPoint(entry.x, entry.z, Math.max(entry.width, entry.depth));
+    } else {
+      frame("3d");
+    }
   }
   function onContextMenu(e: Event) {
     e.preventDefault();
@@ -1131,6 +1167,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerUp);
   canvas.addEventListener("wheel", onWheel, { passive: false });
+  canvas.addEventListener("dblclick", onDblClick);
   canvas.addEventListener("contextmenu", onContextMenu);
 
   const resizeObserver = new ResizeObserver(resize);
@@ -1172,6 +1209,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
     canvas.removeEventListener("pointerup", onPointerUp);
     canvas.removeEventListener("pointercancel", onPointerUp);
     canvas.removeEventListener("wheel", onWheel);
+    canvas.removeEventListener("dblclick", onDblClick);
     canvas.removeEventListener("contextmenu", onContextMenu);
     clearByKind("table");
     clearByKind("item");
@@ -1181,7 +1219,7 @@ export function createFloorScene(canvas: HTMLCanvasElement, container: HTMLEleme
 
   return {
     setFloor, setTables, setFurniture, onPick, onMove, onRotate, onResize, select, setEditable,
-    setToolMode, frameSelected,
+    setToolMode, frameSelected, setSnapConfig, setLabelsVisible,
     frame, zoom, zoomPct, setLight, resize, destroy,
   };
 }

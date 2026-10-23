@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Move, RotateCw, Maximize2 } from "lucide-react";
+import { Copy, Grid3x3, Maximize2, Move, RotateCw, Trash2 } from "lucide-react";
 import { createFloorScene, type SceneTable, type SceneFurnitureItem, type SceneView, type SceneLight, type SceneTool } from "./scene-engine";
 
 const TOOLS: { tool: SceneTool; key: string; label: string; icon: typeof Move }[] = [
@@ -9,6 +9,8 @@ const TOOLS: { tool: SceneTool; key: string; label: string; icon: typeof Move }[
   { tool: "rotate", key: "R", label: "Rotate", icon: RotateCw },
   { tool: "scale", key: "S", label: "Scale", icon: Maximize2 },
 ];
+
+const SNAP_SIZES = [0.1, 0.25, 0.5, 1] as const;
 
 function isTypingTarget(el: EventTarget | null): boolean {
   const t = el as HTMLElement | null;
@@ -27,6 +29,8 @@ export function FloorViewport({
   onMove,
   onRotate,
   onResize,
+  onDuplicate,
+  onDelete,
 }: {
   floorWidth: number;
   floorDepth: number;
@@ -38,6 +42,8 @@ export function FloorViewport({
   onMove: (id: string, kind: "table" | "item", x: number, z: number) => void;
   onRotate: (id: string, kind: "table" | "item", rotation: number) => void;
   onResize: (id: string, kind: "table" | "item", dims: { width: number; depth: number; height: number }) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,6 +52,9 @@ export function FloorViewport({
   const [light, setLight] = useState<SceneLight>("day");
   const [zoomPct, setZoomPct] = useState(100);
   const [tool, setTool] = useState<SceneTool>("move");
+  const [labelsVisible, setLabelsVisible] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snapSize, setSnapSize] = useState<(typeof SNAP_SIZES)[number]>(0.25);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -99,6 +108,14 @@ export function FloorViewport({
   }, [tool]);
 
   useEffect(() => {
+    engineRef.current?.setLabelsVisible(labelsVisible);
+  }, [labelsVisible]);
+
+  useEffect(() => {
+    engineRef.current?.setSnapConfig(snapEnabled, snapSize);
+  }, [snapEnabled, snapSize]);
+
+  useEffect(() => {
     if (!editMode) return;
     function onKeyDown(e: KeyboardEvent) {
       if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -146,6 +163,25 @@ export function FloorViewport({
               <Icon className="size-4" />
             </button>
           ))}
+          <div className="my-0.5 h-px bg-line-divider" />
+          <button
+            type="button"
+            aria-label="Duplicate (Ctrl+D)"
+            onClick={onDuplicate}
+            disabled={!selectedId}
+            className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-footer hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Copy className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Delete (Del)"
+            onClick={onDelete}
+            disabled={!selectedId}
+            className="flex size-8 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Trash2 className="size-4" />
+          </button>
         </div>
       )}
 
@@ -179,6 +215,16 @@ export function FloorViewport({
               {l}
             </button>
           ))}
+          <button
+            type="button"
+            aria-pressed={labelsVisible}
+            onClick={() => setLabelsVisible((v) => !v)}
+            className={`h-8 rounded-lg px-2.5 text-[12.5px] font-semibold ${
+              labelsVisible ? "bg-white text-ink shadow-sm" : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            Labels
+          </button>
         </div>
         <div className="flex gap-0.5 rounded-xl border border-line-card bg-white/85 p-1 backdrop-blur-sm">
           <button type="button" aria-label="Zoom out" onClick={() => applyZoom((e) => e.zoom(0.8))} className="h-8 w-8 rounded-lg text-sm font-semibold text-ink-muted hover:bg-surface-footer hover:text-ink">
@@ -209,6 +255,36 @@ export function FloorViewport({
           </>
         )}
       </div>
+
+      {editMode && (
+        <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-xl border border-line-card bg-white/85 p-1 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Toggle grid snap"
+            aria-pressed={snapEnabled}
+            onClick={() => setSnapEnabled((v) => !v)}
+            className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold ${
+              snapEnabled ? "bg-white text-ink shadow-sm" : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            <Grid3x3 className="size-3.5" />
+            Snap
+          </button>
+          {SNAP_SIZES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={snapEnabled && snapSize === s}
+              onClick={() => { setSnapSize(s); setSnapEnabled(true); }}
+              className={`h-8 rounded-lg px-2 text-[12.5px] font-semibold ${
+                snapEnabled && snapSize === s ? "bg-white text-ink shadow-sm" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {s}m
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

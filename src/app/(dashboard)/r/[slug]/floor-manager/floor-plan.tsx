@@ -530,6 +530,8 @@ export function FloorPlan({
           onMove={handleMove}
           onRotate={handleRotate}
           onResize={handleResize}
+          onDuplicate={handleDuplicateSelected}
+          onDelete={handleDeleteSelected}
         />
         {editMode && selectedTable && selectedScene && (
           <TableInspector
